@@ -1,0 +1,50 @@
+import { AuditLog } from './core/audit.js';
+import type { Clock } from './core/clock.js';
+import type { Db } from './infra/db/index.js';
+import { FailureLimiter } from './modules/auth/limiter.js';
+import { PrincipalResolver } from './modules/auth/principal.resolver.js';
+import { SessionRepository } from './modules/auth/session.repository.js';
+import { SessionService } from './modules/auth/session.service.js';
+import { StaffAuthService } from './modules/auth/staff-auth.service.js';
+import { StaffRepository } from './modules/auth/staff.repository.js';
+import { DeviceEnrolmentService } from './modules/devices/device-enrolment.service.js';
+import { DeviceRepository } from './modules/devices/device.repository.js';
+import { EnrolWindowRepository } from './modules/devices/enrol-window.repository.js';
+import { ClassRepository } from './modules/students/class.repository.js';
+import { StudentAdminService } from './modules/students/student-admin.service.js';
+import { StudentAuthService } from './modules/students/student-auth.service.js';
+import { StudentRepository } from './modules/students/student.repository.js';
+import { SchoolIdentity } from './modules/system/school-identity.js';
+
+// The one place that builds and wires every object. Everything else receives what it needs.
+export function createContainer(opts: { db: Db; now: Clock; version: string }) {
+  const { db, now } = opts;
+
+  const repos = {
+    sessions: new SessionRepository(db),
+    staff: new StaffRepository(db),
+    devices: new DeviceRepository(db),
+    enrolWindows: new EnrolWindowRepository(db),
+    classes: new ClassRepository(db),
+    students: new StudentRepository(db),
+  };
+
+  const audit = new AuditLog(db, now);
+  const identity = new SchoolIdentity(db, opts.version);
+  identity.ensure(now());
+
+  const resolver = new PrincipalResolver(now, repos.sessions, repos.staff, repos.students, repos.devices);
+  const sessions = new SessionService(now, repos.sessions, resolver);
+
+  return {
+    identity,
+    resolver,
+    sessions,
+    staffAuth: new StaffAuthService(now, repos.staff, sessions, new FailureLimiter(now), audit),
+    enrolment: new DeviceEnrolmentService(now, repos.enrolWindows, repos.devices, identity, new FailureLimiter(now), audit),
+    studentAdmin: new StudentAdminService(now, repos.classes, repos.students),
+    studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, new FailureLimiter(now), audit),
+  };
+}
+
+export type Container = ReturnType<typeof createContainer>;

@@ -1,0 +1,726 @@
+<title>PRAXIS System Design</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a technical field manual. Sticky left index on wide screens, one reading column, diagrams and tables break out wider. */
+:root {
+  --bg: #F4F6F5;
+  --surface: #FFFFFF;
+  --ink: #15211D;
+  --muted: #56645F;
+  --line: #D6DEDA;
+  --accent: #1E6A50;      /* blackboard green */
+  --accent-soft: #E1EEE8;
+  --warm: #A8661C;        /* saffron: things that leave the building */
+  --warm-soft: #F6EADB;
+  --risk: #A23B2E;
+  --risk-soft: #F6E1DD;
+  --code-bg: #EBF0ED;
+  --display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1613; --surface: #16201C; --ink: #E3EBE7; --muted: #9AAAA3; --line: #2A3732;
+    --accent: #5FC29B; --accent-soft: #1B3129; --warm: #E2A256; --warm-soft: #33271A;
+    --risk: #F08A7B; --risk-soft: #3A2220; --code-bg: #1C2824; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1613; --surface: #16201C; --ink: #E3EBE7; --muted: #9AAAA3; --line: #2A3732;
+  --accent: #5FC29B; --accent-soft: #1B3129; --warm: #E2A256; --warm-soft: #33271A;
+  --risk: #F08A7B; --risk-soft: #3A2220; --code-bg: #1C2824; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.shell { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; padding-block: 40px 80px; }
+@media (max-width: 900px) { .shell { grid-template-columns: minmax(0, 1fr); gap: 0; padding-block: 24px 64px; } nav.index { display: none; } }
+
+nav.index { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.index .group { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 20px 0 6px; }
+nav.index a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0 3px 12px; border-left: 2px solid var(--line); }
+nav.index a:hover, nav.index a:focus-visible { border-left-color: var(--accent); color: var(--accent); outline: none; }
+
+main { min-width: 0; }
+header.top { padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+h1, h2, h3 { font-family: var(--display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(34px, 5vw, 52px); letter-spacing: -0.02em; margin-top: 10px; }
+.lede { font-size: 19px; max-width: 62ch; color: var(--ink); margin: 16px 0 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 20px; font-size: 13px; color: var(--muted); font-family: var(--mono); }
+
+section { padding-top: 56px; }
+.part { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding-top: 64px; display: flex; align-items: center; gap: 12px; }
+.part::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+h2 { font-size: 30px; letter-spacing: -0.01em; }
+h3 { font-size: 19px; margin-top: 28px; }
+p, li { max-width: 68ch; }
+p { margin: 12px 0 0; }
+ul, ol { padding-left: 22px; margin: 12px 0 0; }
+li + li { margin-top: 6px; }
+code { font-family: var(--mono); font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 600; }
+a { color: var(--accent); }
+
+.figure { margin-top: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; overflow-x: auto; }
+.figure .cap { font-size: 13px; color: var(--muted); margin-top: 12px; max-width: none; }
+pre.mermaid { margin: 0; background: transparent; font-family: var(--body); min-width: 560px; text-align: center; }
+
+.tablewrap { margin-top: 20px; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; min-width: 0; }
+.card h4 { font-family: var(--display); font-size: 17px; margin: 0; }
+.card .tag { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .06em; margin-top: 2px; }
+.card p { font-size: 14px; margin-top: 8px; }
+
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
+@media (max-width: 640px) { .split { grid-template-columns: 1fr; } }
+.box { border-radius: 10px; padding: 16px 18px; min-width: 0; }
+.box h4 { font-family: var(--display); font-size: 16px; margin: 0 0 6px; }
+.box ul { margin-top: 4px; font-size: 14px; }
+.box.stays { background: var(--accent-soft); }
+.box.leaves { background: var(--warm-soft); }
+.box.stays h4 { color: var(--accent); }
+.box.leaves h4 { color: var(--warm); }
+
+.decision { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 12px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.decision:last-child { border-bottom: 0; }
+.decision .n { font-family: var(--mono); font-size: 13px; color: var(--accent); padding-top: 3px; }
+.decision h4 { font-family: var(--display); font-size: 17px; margin: 0; }
+.decision p { margin-top: 4px; font-size: 15px; }
+
+.pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 999px; letter-spacing: .04em; white-space: nowrap; }
+.pill.obs { background: var(--accent-soft); color: var(--accent); }
+.pill.inf { background: var(--warm-soft); color: var(--warm); }
+.pill.unk { background: var(--code-bg); color: var(--muted); }
+.pill.risk { background: var(--risk-soft); color: var(--risk); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; font-size: 13px; color: var(--muted); align-items: center; }
+
+.msgs { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; margin-top: 20px; }
+.msgs .card code { display: inline-block; margin: 3px 4px 0 0; font-size: 12px; }
+
+details { margin-top: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+details > summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::after { content: "+"; font-family: var(--mono); color: var(--muted); }
+details[open] > summary::after { content: "−"; }
+details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+details .inner { padding: 0 16px 14px; font-size: 14px; }
+details .inner code { font-size: 12px; }
+
+.risk-list { margin-top: 20px; display: grid; gap: 10px; }
+.risk-item { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--risk); border-radius: 8px; padding: 12px 16px; }
+.risk-item h4 { margin: 0; font-family: var(--display); font-size: 16px; }
+.risk-item p { font-size: 14px; margin-top: 4px; }
+
+footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+</style>
+
+<div class="shell">
+<nav class="index" aria-label="Sections">
+  <div class="group">High level</div>
+  <a href="#overview">The big picture</a>
+  <a href="#components">The five parts</a>
+  <a href="#architecture">Architecture map</a>
+  <a href="#decisions">Key design choices</a>
+  <a href="#boundary">What leaves the school</a>
+  <div class="group">Low level</div>
+  <a href="#server">Inside the server</a>
+  <a href="#auth">Sign-in and roles</a>
+  <a href="#discovery">Finding the server</a>
+  <a href="#lesson">A live lesson</a>
+  <a href="#ws">WebSocket messages</a>
+  <a href="#cloud">Cloud sync and licence</a>
+  <a href="#data">Database</a>
+  <a href="#api">API map</a>
+  <a href="#clients">The client apps</a>
+  <div class="group">Review</div>
+  <a href="#risks">Things to watch</a>
+  <a href="#unknowns">What we don't know</a>
+</nav>
+
+<main>
+<header class="top">
+  <div class="eyebrow">Reverse-engineered · PRAXIS 1.1.0</div>
+  <h1>How PRAXIS works under the hood</h1>
+  <p class="lede">PRAXIS is a classroom system for schools. Each school runs one server on its own PC. Every smart board, teacher tablet and student device in the building talks to that server over the school's local network. The internet is only used for the licence, new content and a daily summary.</p>
+  <div class="meta">
+    <span>Source: 3 Windows installers + 1 Android APK</span>
+    <span>Server code: ~19,000 lines of readable JS</span>
+    <span>Built by: PRAXIS Technologies / Whitebox Lab</span>
+  </div>
+  <div class="legend">
+    <span class="pill obs">observed</span> read directly from the code
+    <span class="pill inf">inferred</span> a reasonable guess from the code
+    <span class="pill unk">unknown</span> not visible in these files
+  </div>
+</header>
+
+<div class="part" id="hld">Part 1 · High-level design</div>
+
+<section id="overview">
+  <h2>The big picture</h2>
+  <p>Think of PRAXIS as a <strong>small private cloud inside each school</strong>. The school's server is the centre. Everything else connects to it.</p>
+  <ul>
+    <li><strong>One server per school.</strong> It's a Windows desktop app that keeps running in the system tray. It hosts a web API on port <code>7700</code> and answers "where are you?" questions on UDP port <code>7701</code>. <span class="pill obs">observed</span></li>
+    <li><strong>Classroom devices only talk to that server.</strong> Boards, teacher apps and student apps never call the internet during a lesson. <span class="pill obs">observed</span></li>
+    <li><strong>The cloud is a background helper.</strong> Every 15 minutes the server checks its licence ("heartbeat"). Every 60 minutes it syncs content and a summary of usage. If the internet is down, the school keeps working. <span class="pill obs">observed</span></li>
+    <li><strong>Student data stays in the building.</strong> Names, marks and attendance live in one SQLite file on the server PC. Only counts (like "312 minutes learned today") go to the cloud. <span class="pill obs">observed</span></li>
+  </ul>
+</section>
+
+<section id="components">
+  <h2>The five parts</h2>
+  <p>What came in the folder, and what each piece actually is.</p>
+  <div class="cards">
+    <div class="card">
+      <h4>Institute Server</h4>
+      <div class="tag">PRAXIS-Institute-Server-Setup.exe</div>
+      <p>An Electron app (a desktop app built with web tech). Inside it is a <strong>Fastify</strong> web server, a <strong>SQLite</strong> database and an admin console written in React-style JS. It needs admin rights to install.</p>
+    </div>
+    <div class="card">
+      <h4>Teacher app</h4>
+      <div class="tag">PRAXIS-Teacher-Setup.exe</div>
+      <p>A <strong>Flutter</strong> app compiled for the web, wrapped in a small Electron shell. The shell's main job is to find the school server on the network before the app starts.</p>
+    </div>
+    <div class="card">
+      <h4>Student app</h4>
+      <div class="tag">PRAXIS-Student-Setup.exe</div>
+      <p>The <strong>exact same code</strong> as the teacher app. The only difference is one line in <code>package.json</code>: <code>"praxisRole": "student"</code>. The app switches screens based on that role.</p>
+    </div>
+    <div class="card">
+      <h4>Smart board</h4>
+      <div class="tag">PRAXIS-Board.apk</div>
+      <p>A Flutter app for Android panels. It shows lessons, PDFs, Office files, videos and quizzes, and has a whiteboard with pen strokes. The desktop shell can also run as a board on a Windows PC.</p>
+    </div>
+    <div class="card">
+      <h4>PRAXIS platform (cloud)</h4>
+      <div class="tag">http://80.225.219.245</div>
+      <p>The central service. It issues licences, holds the shared content library and app updates, and receives each school's daily totals. Its own code isn't in these files. <span class="pill unk">unknown</span></p>
+    </div>
+  </div>
+</section>
+
+<section id="architecture">
+  <h2>Architecture map</h2>
+  <p>Solid lines happen during the school day over the local network. Dashed lines are the background trips to the internet.</p>
+  <div class="figure">
+<pre class="mermaid">
+flowchart LR
+  subgraph SCHOOL["Inside the school (local network)"]
+    direction LR
+    subgraph SRV["Institute Server PC"]
+      direction TB
+      CON["Admin console<br/>(Electron window)"]
+      API["Fastify API<br/>HTTP + WebSocket :7700"]
+      BCN["Beacon<br/>UDP :7701"]
+      DB[("SQLite file<br/>praxis-institute.db")]
+      FILES[("Content files<br/>PDFs, videos, packs")]
+      CON --> API
+      API --> DB
+      API --> FILES
+    end
+    BOARD["Smart boards<br/>(Android / Windows)"]
+    TEACH["Teacher app"]
+    STUD["Student app"]
+    FAM["Family portal<br/>(guardian sign-in)"]
+    BOARD -- "1. who's my school?" --> BCN
+    TEACH -- "1. who's my school?" --> BCN
+    STUD -- "1. who's my school?" --> BCN
+    BOARD <-- "REST + live WebSocket" --> API
+    TEACH <-- "REST + live WebSocket" --> API
+    STUD <-- "REST + live WebSocket" --> API
+    FAM -- "REST, /api/family only" --> API
+  end
+  CLOUD["PRAXIS platform<br/>/api/v1/activation/*"]
+  AI["AI service<br/>(optional)"]
+  API -. "activate · heartbeat 15m · sync 60m<br/>content + update downloads" .-> CLOUD
+  API -. "lesson-plan topic only" .-> AI
+</pre>
+    <p class="cap">Every device finds the server with one UDP broadcast, then switches to normal HTTP and a WebSocket for live lessons.</p>
+  </div>
+</section>
+
+<section id="decisions">
+  <h2>Key design choices</h2>
+  <p>The code is full of comments explaining <em>why</em>. These are the choices that shape everything else.</p>
+  <div class="decision"><div class="n">A</div><div><h4>Offline first</h4><p>The school must keep teaching when the internet is down. So nothing is sent to the cloud while a request is being handled. Cloud calls run only on timers, and if one fails it's logged and tried again later.</p></div></div>
+  <div class="decision"><div class="n">B</div><div><h4>Remember who the server is, not where it is</h4><p>School routers hand out new IP addresses all the time. So a board saves the server's <strong>ID</strong>, not its IP. On start it shouts "PRAXIS-WHERE-IS-MY-SCHOOL" on the network and the server replies with every address it can be reached on.</p></div></div>
+  <div class="decision"><div class="n">C</div><div><h4>Download once, share many times</h4><p>Content and app updates are downloaded once by the server over the school's single internet line. Then 300 tablets fetch them from the server over the local network.</p></div></div>
+  <div class="decision"><div class="n">D</div><div><h4>The licence can switch the school off</h4><p>If the platform says the licence is revoked, the server enters <strong>lockdown</strong>. Classroom requests get a 503 error, but the admin console still works so staff can see why. A dead internet line alone never causes lockdown.</p></div></div>
+  <div class="decision"><div class="n">E</div><div><h4>Record the lesson, not the room</h4><p>"Recording" doesn't save video. It saves the list of events in the lesson: which file opened, which page, which quiz question. Each event gets a time offset in milliseconds, so the lesson can be replayed.</p></div></div>
+  <div class="decision"><div class="n">F</div><div><h4>Watching is always visible</h4><p>The office can see a board's screen and a teacher can see a student's screen. But the watched device is <strong>always told</strong> and shows an indicator. Frames are only passed along live and never saved.</p></div></div>
+  <div class="decision"><div class="n">G</div><div><h4>Pick tools that install cleanly</h4><p>SQLite runs as WebAssembly instead of a native module, so it never needs rebuilding for a school's Windows setup. The Windows apps are Flutter web builds inside Electron, so no Visual Studio is needed to build them.</p></div></div>
+</section>
+
+<section id="boundary">
+  <h2>What leaves the school</h2>
+  <p>The database file's own header says: <em>"Student and staff records NEVER leave this file."</em> The sync code matches that. <span class="pill obs">observed</span></p>
+  <div class="split">
+    <div class="box stays">
+      <h4>Stays on the server PC</h4>
+      <ul>
+        <li>Students, guardians, staff, passwords (as hashes)</li>
+        <li>Attendance, marks, quiz answers, report cards</li>
+        <li>Per-student activity log</li>
+        <li>Messages, notices, assignments, submissions</li>
+        <li>Lesson recordings (event lists)</li>
+        <li>"Next steps" for a child, worked out locally with no AI</li>
+      </ul>
+    </div>
+    <div class="box leaves">
+      <h4>Sent to the PRAXIS platform</h4>
+      <ul>
+        <li>Licence key, machine ID, MAC address, hostname</li>
+        <li>Device list: name, type, serial, app version, last seen</li>
+        <li>Daily totals: active students and teachers, lessons, minutes learned</li>
+        <li>Server's LAN address and port, app version</li>
+        <li>AI lesson-plan requests: topic, class and length only</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="part" id="lld">Part 2 · Low-level design</div>
+
+<section id="server">
+  <h2>Inside the server</h2>
+  <p>The server has four layers. A request passes through them top to bottom.</p>
+  <div class="figure">
+<pre class="mermaid">
+flowchart TB
+  subgraph L1["1 · Electron main process"]
+    direction LR
+    M1["Single-instance lock"] --- M2["Tray icon + console window"] --- M3["Start with Windows"] --- M4["Timers: heartbeat, sync, daily roll-up"]
+  end
+  subgraph L2["2 · Fastify hooks (run on every request)"]
+    direction LR
+    H1["noteCaller<br/>who reached us"] --> H2["Resolve token<br/>→ principal"] --> H3["Family fence<br/>/api/family only"] --> H4["Lockdown gate<br/>not activated / suspended → 503"]
+  end
+  subgraph L3["3 · 31 route modules"]
+    direction LR
+    R1["relay + /ws"] --- R2["content, library, playlists"] --- R3["students, staff, devices"] --- R4["quizzes, assignments, reports …"]
+  end
+  subgraph L4["4 · Services + data"]
+    direction LR
+    S1["auth"] --- S2["cloud"] --- S3["recorder"] --- S4["analytics"] --- S5["db: SQLite (WASM)"]
+  end
+  L1 --> L2 --> L3 --> L4
+</pre>
+    <p class="cap">Closing the console window doesn't stop the server. It hides in the tray, because every classroom depends on it.</p>
+  </div>
+  <h3>Startup order</h3>
+  <ol>
+    <li>Take the single-instance lock. Two copies would fight over the port and the database.</li>
+    <li>Open the database, run the schema, add any missing columns from older versions, then build indexes.</li>
+    <li>Fill in any missing daily totals and close recordings left "running" by a crash.</li>
+    <li>Start Fastify on <code>0.0.0.0:7700</code>, then the UDP beacon on <code>7701</code>.</li>
+    <li>Install the starter activity pack (<code>.praxis</code> files, such as <code>class-1--addition-apple-tree</code>).</li>
+    <li>Show the window, build the tray, start the timers. Startup errors go to <code>startup.log</code> next to the database.</li>
+  </ol>
+</section>
+
+<section id="auth">
+  <h2>Sign-in and roles</h2>
+  <p>Every request carries a token. The server turns it into a <strong>principal</strong>: who you are and what kind of user you are.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Kind</th><th>How they sign in</th><th>Session lasts</th><th>What they can reach</th></tr></thead>
+    <tbody>
+      <tr><td><strong>admin</strong></td><td>Email + password. The account comes down from the cloud at activation.</td><td class="num">1 day</td><td>Everything</td></tr>
+      <tr><td><strong>staff</strong></td><td>Username + password</td><td class="num">1 day</td><td>Staff routes. Can host lessons and upload material only if allowed.</td></tr>
+      <tr><td><strong>student</strong></td><td>Username + password, a PIN, or an enrolment code</td><td class="num">1 day</td><td>Own work, library, joining lessons. Can't open a lesson.</td></tr>
+      <tr><td><strong>device</strong></td><td>Board enters its activation key once</td><td class="num">10 years</td><td>Hosts its own room only</td></tr>
+      <tr><td><strong>guardian</strong></td><td>Family PIN for one child</td><td class="num">7 days</td><td><code>/api/family/*</code> only. Blocked from the live WebSocket.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>How tokens work</h3>
+  <ul>
+    <li>A token is 32 random bytes. The server stores only its <strong>SHA-256 hash</strong>, so a stolen database doesn't hand over live tokens.</li>
+    <li>Passwords are stored as <strong>bcrypt</strong> hashes (cost 10).</li>
+    <li>The token is sent as <code>Authorization: Bearer …</code>. GET requests and the WebSocket can also send it as <code>?token=</code>, because a video player or image tag can't set headers.</li>
+    <li>Permissions are re-read from the database on every request. When the office flips a switch, the teacher's app sees it on its next call.</li>
+  </ul>
+</section>
+
+<section id="discovery">
+  <h2>Finding the server</h2>
+  <p>This is how a board or app finds its school without anyone typing an IP address.</p>
+  <div class="figure">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  participant D as Board / app
+  participant B as Beacon (UDP 7701)
+  participant S as Server API (TCP 7700)
+  D->>B: broadcast "PRAXIS-WHERE-IS-MY-SCHOOL"
+  Note over B: logs who asked (to spot routers that block device-to-device traffic)
+  B-->>D: reply: serverId, institute code, port, list of addresses
+  loop each address, best first
+    D->>S: GET /health
+    S-->>D: serverId, instituteCode, activated, addresses
+  end
+  Note over D: keeps the first address whose serverId matches its saved one
+  D->>S: POST /api/auth/device/activate (first time only, with key)
+  S-->>D: device token (lasts 10 years)
+</pre>
+    <p class="cap">Virtual network adapters (Hyper-V, WSL, VPN) go to the back of the address list, because tablets can't reach them.</p>
+  </div>
+  <p>The server also tracks devices that <strong>ask</strong> but never <strong>connect</strong>. That pattern means the Wi-Fi router is blocking devices from talking to each other (often called "AP isolation"), and the console warns about it.</p>
+</section>
+
+<section id="lesson">
+  <h2>A live lesson, step by step</h2>
+  <p>The relay is the heart of the product. It's an in-memory switchboard: each lesson is a "room", and the server passes messages to everyone in that room.</p>
+  <div class="figure">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  participant T as Teacher app
+  participant S as Server (relay)
+  participant B as Board
+  participant K as Student app
+  T->>S: POST /api/relay/sessions (board, class, subject)
+  Note over S: one room per board. If the board already has one, join it instead
+  S-->>T: session id + pairing code
+  B->>S: open /ws?token, send session.attach
+  T->>S: open /ws?token, send session.attach
+  K->>S: POST /api/relay/sessions/join (pairing code)
+  K->>S: open /ws?token, send session.attach
+  S-->>K: session.attached, who holds the pen, any running quiz
+  T->>S: board.open / page / play / scene
+  S-->>B: same message to everyone in the room
+  S-->>K: same message to everyone in the room
+  Note over S: the recorder saves each event with a ms offset
+  K->>S: answer.submit (quiz)
+  S-->>T: live standings
+  T->>S: POST /sessions/:id/end
+  S-->>B: session.ended
+  S-->>K: session.ended
+</pre>
+  </div>
+  <h3>How the relay holds state</h3>
+  <ul>
+    <li><code>connections</code>: a map of every open socket and its principal. <span class="pill obs">observed</span></li>
+    <li><code>rooms</code>: session ID → the set of connections in it.</li>
+    <li><code>watchers</code>: board ID → office users watching its screen. A second map does the same for teacher → student.</li>
+    <li>All of this lives <strong>in memory only</strong>. A socket that closes is simply gone. Durable facts (the session, its participants, the quiz run) go to SQLite.</li>
+    <li>Late joiners are sent the current state when they attach: pen holders, a running quiz, what's on screen. Without that they'd sit on "wait for your teacher".</li>
+    <li>Each message is handled inside a <code>guarded()</code> wrapper. One bad message is dropped and logged; it can't crash the server for the whole school.</li>
+    <li>Screen frames larger than ~700 KB are dropped rather than queued, so a slow room shows an older picture instead of using up memory.</li>
+  </ul>
+  <h3>Fallback when the socket isn't there</h3>
+  <p>Admin commands to a board (lock, reload, open) are also written to the <code>device_commands</code> table. The board can collect them with <code>GET /api/devices/:id/commands</code> and confirm with <code>/ack</code>, so a command isn't lost if the board was offline when it was sent. <span class="pill inf">inferred</span></p>
+</section>
+
+<section id="ws">
+  <h2>WebSocket messages</h2>
+  <p>All messages are JSON with a <code>type</code> field. The server accepts two shapes, fields at the top level (Flutter apps) or nested under <code>payload</code> (console), because both were already in use.</p>
+  <div class="msgs">
+    <div class="card"><h4>Joining</h4><div class="tag">client ⇄ server</div>
+      <code>connected</code><code>session.attach</code><code>session.attached</code><code>roster.update</code><code>roster.left</code><code>session.ended</code><code>ping</code><code>pong</code><code>error</code></div>
+    <div class="card"><h4>Driving the lesson</h4><div class="tag">teacher → room</div>
+      <code>board.open</code><code>page</code><code>scene</code><code>play</code><code>pause</code><code>seek</code><code>media.control</code><code>playlist.at</code><code>split.set</code><code>activity.open</code><code>activity.at</code><code>state.push</code></div>
+    <div class="card"><h4>Pen and whiteboard</h4><div class="tag">shared ink</div>
+      <code>annotate.request</code><code>annotate.decide</code><code>annotate.granted</code><code>annotate.refused</code><code>annotate.holders</code><code>annotate.stroke</code><code>annotate.undo</code><code>annotate.clear</code><code>whiteboard</code></div>
+    <div class="card"><h4>Screens and casting</h4><div class="tag">live frames, never stored</div>
+      <code>cast.start</code><code>cast.frame</code><code>view.watch</code><code>view.unwatch</code><code>view.frame</code><code>view.watching</code><code>watch.student</code><code>unwatch.student</code><code>watch.state</code><code>watch.refused</code><code>screen.frame</code><code>screen.report</code><code>board.screen</code></div>
+    <div class="card"><h4>Quizzes</h4><div class="tag">live class quiz</div>
+      <code>quiz.started</code><code>quiz.question</code><code>answer.submit</code></div>
+    <div class="card"><h4>Device and system</h4><div class="tag">server → devices</div>
+      <code>command.ack</code><code>board.activity</code><code>content.changed</code><code>update.ready</code></div>
+  </div>
+</section>
+
+<section id="cloud">
+  <h2>Cloud sync and licence</h2>
+  <p>The server talks to the platform through five endpoints under <code>/api/v1/activation/</code>, using a <code>server_token</code> it receives at activation.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Call</th><th>When</th><th>Sends</th><th>Gets back</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /activate</code></td><td>Once, at install</td><td>Licence key, machine ID, MAC</td><td>Institute profile, admin account, classes, subjects, languages, content list. Saved in one transaction.</td></tr>
+      <tr><td><code>POST /heartbeat</code></td><td>Every 15 min</td><td>Machine ID, version, LAN address, quick stats</td><td>Whether the school may operate, subscription details</td></tr>
+      <tr><td><code>POST /sync</code></td><td>Every 60 min</td><td>Changed devices and daily totals (rows marked <code>dirty</code>), content cursor</td><td>New or changed content, games, app releases, admin updates</td></tr>
+      <tr><td><code>GET /content/:id</code></td><td>After sync</td><td>(nothing)</td><td>The file. Downloaded one at a time, checksum-verified.</td></tr>
+      <tr><td><code>GET /release/:id</code></td><td>When an admin chooses</td><td>(nothing)</td><td>App installer, checksum-verified, then shared to devices over the LAN</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Licence states</h3>
+  <div class="figure">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> NotActivated
+  NotActivated --> Operational: activate with licence key
+  Operational --> Operational: heartbeat OK, or internet down
+  Operational --> Lockdown: heartbeat says operational false, or 401
+  Lockdown --> Operational: next heartbeat says OK
+  note right of Lockdown
+    Classroom API returns 503 LOCKED.
+    Console, /api/server, /api/auth and /health still work.
+  end note
+</pre>
+  </div>
+  <p>The cloud address is resolved in this order: an admin setting, then the address used at activation, then the one built into the app. The app can be moved to a new platform host without reinstalling. <span class="pill obs">observed</span></p>
+</section>
+
+<section id="data">
+  <h2>Database</h2>
+  <p>One SQLite file, <code>praxis-institute.db</code>, with <strong>63 tables</strong>, in the app's user-data folder. Foreign keys are on. Upgrades add missing columns at startup rather than running numbered migrations.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Area</th><th>Tables</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Licence &amp; system</strong></td><td><code>activation</code> (exactly one row) · <code>meta</code> · <code>settings</code> · <code>audit_log</code> · <code>app_releases</code></td></tr>
+      <tr><td><strong>People &amp; sign-in</strong></td><td><code>admins</code> · <code>staff</code> · <code>staff_assignments</code> · <code>students</code> · <code>sessions</code> (tokens) · <code>enrolment_codes</code> · <code>device_pins</code></td></tr>
+      <tr><td><strong>School structure</strong></td><td><code>grades</code> · <code>sections</code> · <code>subjects</code> · <code>grade_subjects</code> · <code>languages</code> · <code>student_enrolments</code> · <code>student_subjects</code> · <code>timetable_periods</code> · <code>timetable_entries</code></td></tr>
+      <tr><td><strong>Devices</strong></td><td><code>devices</code> (incl. lock state, current lesson, <code>dirty</code> flag) · <code>device_grades</code> · <code>device_commands</code></td></tr>
+      <tr><td><strong>Content</strong></td><td><code>content</code> · <code>content_assets</code> · <code>content_targets</code> · <code>content_notes</code> · <code>content_progress</code> · <code>playlists</code> · <code>playlist_items</code> · <code>learning_paths</code> · <code>learning_path_steps</code> · <code>activities</code> · <code>activity_targets</code> · <code>external_activities</code></td></tr>
+      <tr><td><strong>Live lessons</strong></td><td><code>sessions_live</code> (with <code>pairing_code</code>) · <code>session_participants</code> · <code>whiteboards</code> · <code>whiteboard_pages</code> · <code>recordings</code> · <code>recording_events</code> · <code>study_rooms</code> · <code>study_room_members</code> · <code>planned_lessons</code></td></tr>
+      <tr><td><strong>Assessment</strong></td><td><code>quizzes</code> · <code>quiz_questions</code> · <code>quiz_options</code> · <code>quiz_runs</code> · <code>quiz_run_teams</code> · <code>quiz_responses</code> · <code>activity_runs</code> · <code>external_runs</code> · <code>assignments</code> · <code>assignment_references</code> · <code>submissions</code> · <code>report_cards</code></td></tr>
+      <tr><td><strong>Tracking</strong></td><td><code>attendance</code> · <code>activity_log</code> (per student, never sent) · <code>daily_stats</code> (totals, synced)</td></tr>
+      <tr><td><strong>Communication</strong></td><td><code>messages</code> · <code>notices</code> · <code>notice_targets</code></td></tr>
+    </tbody>
+  </table></div>
+  <h3>Core relationships</h3>
+  <div class="figure">
+<pre class="mermaid">
+erDiagram
+  GRADES ||--o{ SECTIONS : has
+  SECTIONS ||--o{ STUDENT_ENROLMENTS : holds
+  STUDENTS ||--o{ STUDENT_ENROLMENTS : enrolled_in
+  DEVICES ||--o{ SESSIONS_LIVE : hosts
+  STAFF ||--o{ SESSIONS_LIVE : teaches
+  CONTENT ||--o{ SESSIONS_LIVE : shown_in
+  SESSIONS_LIVE ||--o{ SESSION_PARTICIPANTS : has
+  STUDENTS ||--o{ SESSION_PARTICIPANTS : joins
+  SESSIONS_LIVE ||--o{ RECORDINGS : recorded_as
+  RECORDINGS ||--o{ RECORDING_EVENTS : contains
+  QUIZZES ||--o{ QUIZ_RUNS : run_as
+  SESSIONS_LIVE ||--o{ QUIZ_RUNS : runs
+  QUIZ_RUNS ||--o{ QUIZ_RESPONSES : collects
+  CONTENT ||--o{ CONTENT_ASSETS : made_of
+  DEVICES ||--o{ DEVICE_COMMANDS : receives
+  STUDENTS ||--o{ ACTIVITY_LOG : generates
+  ACTIVITY_LOG }o--|| DAILY_STATS : rolled_up_into
+  GRADES { text id PK }
+  SECTIONS { text id PK }
+  STUDENTS {
+    text id PK
+    text admission_no
+    text first_name
+    text guardian_name
+    text pin_code
+    text status
+  }
+  STAFF {
+    text id PK
+    text username
+    text role
+    int can_host_session
+    int can_upload_content
+  }
+  DEVICES {
+    text id PK
+    text kind
+    text activation_key
+    text grade_id FK
+    text section_id FK
+    text current_session_id FK
+    int locked
+    int dirty
+  }
+  SESSIONS_LIVE {
+    text id PK
+    text device_id FK
+    text staff_id FK
+    text content_id FK
+    text pairing_code
+    text state
+  }
+  SESSION_PARTICIPANTS {
+    text session_id FK
+    text student_id FK
+    text joined_at
+  }
+  CONTENT {
+    text id PK
+    text source
+    text kind
+    text checksum
+    text download_state
+    text grade_id FK
+    text subject_id FK
+  }
+  CONTENT_ASSETS { text id PK }
+  RECORDINGS {
+    text id PK
+    text session_id FK
+    int duration_ms
+    int event_count
+  }
+  RECORDING_EVENTS {
+    text recording_id FK
+    int seq
+    int at_ms
+    text type
+    text payload
+  }
+  QUIZZES { text id PK }
+  QUIZ_RUNS {
+    text id PK
+    text quiz_id FK
+    text session_id FK
+    text current_question_id
+    text state
+  }
+  QUIZ_RESPONSES { text run_id FK }
+  DEVICE_COMMANDS {
+    text id PK
+    text device_id FK
+    text command
+    text delivered_at
+    text acked_at
+  }
+  ACTIVITY_LOG {
+    text id PK
+    text student_id FK
+    text content_id FK
+    text kind
+    int minutes
+    int score
+  }
+  DAILY_STATS {
+    text date PK
+    int active_students
+    int minutes_learned
+    int dirty
+  }
+</pre>
+  </div>
+</section>
+
+<section id="api">
+  <h2>API map</h2>
+  <p><strong>258 HTTP endpoints</strong> in 31 modules, plus <code>/health</code> and the <code>/ws</code> WebSocket. All JSON, checked with <strong>zod</strong>. Errors look like <code>{"error": {"code", "message"}}</code>.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Group</th><th>Modules (endpoint count)</th></tr></thead>
+    <tbody>
+      <tr><td>Live classroom</td><td>relay (14) · quizzes (19) · classroom (11) · lock (5) · recordings (6) · study (6) · activities (8) · external (8)</td></tr>
+      <tr><td>Content</td><td>content (11) · library (13) · playlists (8) · paths (9) · planner (8) · ai (3)</td></tr>
+      <tr><td>People</td><td>auth (7) · students (8) · staff (7) · enrolment (5) · family (9)</td></tr>
+      <tr><td>School admin</td><td>academics (5) · timetable (6) · assignments (11) · reportcards (7) · notices (4) · messages (6)</td></tr>
+      <tr><td>Devices &amp; server</td><td>devices (15) · server (12) · settings (9) · updates (5)</td></tr>
+      <tr><td>Insight</td><td>analytics (6) · reports (6)</td></tr>
+    </tbody>
+  </table></div>
+  <details><summary>Live classroom endpoints</summary><div class="inner">
+    <p><code>GET /api/relay/bootstrap</code> <code>GET /api/relay/content</code> <code>POST /api/relay/sessions</code> <code>GET /api/relay/sessions/mine</code> <code>POST /api/relay/sessions/join</code> <code>POST /api/relay/sessions/:id/end</code> <code>…/open</code> <code>…/playlist</code> <code>…/split</code> <code>…/room</code> <code>…/cast</code> <code>…/activity</code> <code>GET /api/relay/sessions/active</code> <code>GET /ws</code></p>
+    <p><code>POST /api/quiz-runs</code> <code>…/teams</code> <code>…/advance</code> <code>…/answer</code> <code>…/finish</code> <code>GET …/standings</code> <code>GET …/live</code> <code>GET …/results</code> <code>POST /api/quizzes/:id/self-paced</code></p>
+    <p><code>GET/PUT /api/lock/policy</code> <code>POST /api/devices/:id/lock</code> <code>POST /api/lock/all</code> <code>POST /api/lock/unlock</code></p>
+    <p><code>POST /api/recordings/start</code> <code>POST /api/recordings/stop</code> <code>GET /api/recordings/live</code></p>
+  </div></details>
+  <details><summary>Devices and server endpoints</summary><div class="inner">
+    <p><code>GET/POST /api/devices</code> <code>POST /api/devices/state</code> <code>POST /api/devices/ping</code> <code>POST /api/devices/:id/command</code> <code>…/control</code> <code>…/status</code> <code>…/rekey</code> <code>GET …/watching</code> <code>GET …/commands</code> <code>POST /api/devices/commands/:commandId/ack</code></p>
+    <p><code>GET /api/server/status</code> <code>POST /api/server/activate</code> <code>…/reactivate</code> <code>…/heartbeat</code> <code>…/sync</code> <code>…/deactivate</code> <code>…/fetch-all-content</code> <code>…/download-content</code> <code>POST /api/server/firewall/allow</code> <code>GET /api/server/audit</code></p>
+    <p><code>GET /api/updates</code> <code>GET /api/updates/check</code> <code>POST /api/updates/:id/download</code> <code>GET /api/updates/:id/file</code></p>
+  </div></details>
+  <details><summary>People and sign-in endpoints</summary><div class="inner">
+    <p><code>POST /api/auth/admin/login</code> <code>…/staff/login</code> <code>…/student/login</code> <code>…/student/enrol</code> <code>…/student/pin</code> <code>…/device/activate</code> <code>GET /api/auth/me</code> <code>POST /api/auth/logout</code></p>
+    <p><code>POST /api/family/login</code> <code>GET /api/family/home</code> <code>GET /api/family/reports</code> <code>GET/POST /api/family/messages</code> <code>PUT /api/family/language</code></p>
+    <p><code>POST /api/students/bulk</code> <code>POST /api/students/:id/enrolment-code</code> <code>POST /api/enrolment-codes/class</code> <code>POST /api/students/:id/guardian-pin</code></p>
+  </div></details>
+</section>
+
+<section id="clients">
+  <h2>The client apps</h2>
+  <h3>Desktop shell (teacher, student, Windows board)</h3>
+  <ul>
+    <li><strong>One codebase, three roles.</strong> <code>main.js</code> is the same file in both installers. The role comes from <code>package.json</code>, and each role gets its own profile folder so they don't overwrite each other.</li>
+    <li><strong>Local web server.</strong> The Flutter web build is served from a loopback HTTP server on a <strong>fixed</strong> port. A random port would wipe saved sign-ins on every launch, because browser storage is tied to the port.</li>
+    <li><strong>UDP discovery before start.</strong> The shell does the broadcast a browser can't, then hands the server address to the app.</li>
+    <li><strong>Locked down.</strong> No downloads, no Save As, no printing, no DevTools, no opening the real browser. Only camera and microphone are allowed. Screen capture by the page is refused; casting goes frame by frame through the server.</li>
+    <li><strong>Strict content policy.</strong> Scripts load only from the app itself and YouTube (for embedded lesson videos).</li>
+    <li><strong>Quick apps.</strong> Through <code>praxis:apps:list</code> / <code>praxis:apps:open</code>, the board can launch games installed on the PC. These are the "external activities" the platform grants.</li>
+  </ul>
+  <h3>Android board (APK)</h3>
+  <p>A Flutter app compiled to native code (<code>libapp.so</code>). Module names found in it: <span class="pill obs">observed</span></p>
+  <div class="cards">
+    <div class="card"><h4>Connection</h4><p><code>locator</code> · <code>server</code> · <code>relay</code> · <code>key_field</code> · <code>updater</code></p></div>
+    <div class="card"><h4>Screens</h4><p><code>searching</code> · <code>setup</code> · <code>home</code> · <code>lesson</code> · <code>lock</code> · <code>quiz</code> · <code>cast</code> · <code>camera</code> · <code>split</code> · <code>activity</code> · <code>notices</code> · <code>register_sheet</code></p></div>
+    <div class="card"><h4>Content viewers</h4><p>PDF (pdfium) · Office and legacy Office · video links · <code>playlist</code> · <code>media_transport</code></p></div>
+    <div class="card"><h4>Whiteboard</h4><p><code>ink</code> · <code>annotation_layer</code> · <code>whiteboard_screen</code> · Devanagari typing support</p></div>
+  </div>
+</section>
+
+<div class="part">Part 3 · Review</div>
+
+<section id="risks">
+  <h2>Things to watch</h2>
+  <p>Points a security or architecture reviewer would raise. Each one comes straight from the code. <span class="pill obs">observed</span></p>
+  <div class="risk-list">
+    <div class="risk-item"><h4>Cloud traffic is plain HTTP to a bare IP</h4><p>Licence tokens and institute details go to <code>http://80.225.219.245</code> unencrypted. The code's own comment admits this and says it must be fixed on the platform side.</p></div>
+    <div class="risk-item"><h4>No encryption on the school network</h4><p>Devices talk to the server over plain HTTP and WebSocket. Anyone on the same Wi-Fi can read tokens and lesson traffic.</p></div>
+    <div class="risk-item"><h4>Tokens in URLs</h4><p>GET requests and the WebSocket accept <code>?token=</code>. URLs often end up in logs and history.</p></div>
+    <div class="risk-item"><h4>Very open CORS</h4><p><code>origin: true</code> with credentials allowed means any web page can make calls to the server from a browser on the school network.</p></div>
+    <div class="risk-item"><h4>Large uploads allowed</h4><p>The body limit is 512 MB, with up to 20 files per upload. A misbehaving client could fill the disk.</p></div>
+    <div class="risk-item"><h4>The client IP can be faked</h4><p><code>trustProxy</code> is on and <code>clientIp()</code> reads <code>X-Forwarded-For</code>, so the IP a device reports for itself can be spoofed.</p></div>
+    <div class="risk-item"><h4>Boards hold 10-year tokens</h4><p>Admins can re-key a lost board (<code>/rekey</code>), but someone has to notice it's gone first.</p></div>
+  </div>
+</section>
+
+<section id="unknowns">
+  <h2>What we don't know</h2>
+  <ul>
+    <li><span class="pill unk">unknown</span> How the PRAXIS platform works inside: its database, its admin panel and how it hands out content. Only its API from the client side is visible.</li>
+    <li><span class="pill unk">unknown</span> The AI service. It's switched off unless <code>PRAXIS_AI_URL</code> is set, and no address is built into this version.</li>
+    <li><span class="pill inf">inferred</span> The Flutter apps' screen logic. It was read from compiled strings and endpoint names, not decompiled. The server side is complete; the client side is a map, not a full read.</li>
+    <li><span class="pill unk">unknown</span> <code>RDP-MultiUser-v3.9.5.rar</code> was left out on purpose. It isn't part of PRAXIS, and tools like it are often flagged as malware.</li>
+  </ul>
+</section>
+
+<footer>
+  Made by reading the unpacked PRAXIS 1.1.0 installers: the server's <code>app.asar</code> (TypeScript compiled to readable JavaScript, with comments), the desktop shell's <code>main.js</code>, the Flutter web bundle and the Android <code>libapp.so</code>. Endpoint counts, table names and message types are taken from the code, not estimated.
+</footer>
+</main>
+</div>
+<script>
+  // Draws the diagrams when the page is opened as a plain file in a browser.
+  // Skipped where the viewer has already drawn them.
+  (function () {
+    function pending() {
+      return Array.prototype.filter.call(document.querySelectorAll('pre.mermaid'), function (el) {
+        return !el.querySelector('svg') && el.getAttribute('data-processed') !== 'true';
+      });
+    }
+    function draw() {
+      if (!pending().length) return;
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js';
+      s.onload = function () {
+        var dark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+          (document.documentElement.getAttribute('data-theme') !== 'light' &&
+           window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        window.mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'neutral', securityLevel: 'loose', fontFamily: 'IBM Plex Sans, system-ui, sans-serif' });
+        window.mermaid.run({ nodes: pending() });
+      };
+      document.head.appendChild(s);
+    }
+    if (document.readyState === 'complete') setTimeout(draw, 800);
+    else window.addEventListener('load', function () { setTimeout(draw, 800); });
+  })();
+</script>

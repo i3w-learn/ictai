@@ -1,0 +1,2096 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICT App Spec</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Same field-manual layout as the PRAXIS page so the two read side by side. */
+:root {
+  --bg: #F4F6F5;
+  --surface: #FFFFFF;
+  --ink: #15211D;
+  --muted: #56645F;
+  --line: #D6DEDA;
+  --accent: #1E6A50;      /* blackboard green */
+  --accent-soft: #E1EEE8;
+  --warm: #A8661C;        /* saffron: things that leave the building */
+  --warm-soft: #F6EADB;
+  --risk: #A23B2E;
+  --risk-soft: #F6E1DD;
+  --code-bg: #EBF0ED;
+  --display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1613; --surface: #16201C; --ink: #E3EBE7; --muted: #9AAAA3; --line: #2A3732;
+    --accent: #5FC29B; --accent-soft: #1B3129; --warm: #E2A256; --warm-soft: #33271A;
+    --risk: #F08A7B; --risk-soft: #3A2220; --code-bg: #1C2824; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1613; --surface: #16201C; --ink: #E3EBE7; --muted: #9AAAA3; --line: #2A3732;
+  --accent: #5FC29B; --accent-soft: #1B3129; --warm: #E2A256; --warm-soft: #33271A;
+  --risk: #F08A7B; --risk-soft: #3A2220; --code-bg: #1C2824; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.shell { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; padding-block: 40px 80px; }
+@media (max-width: 900px) { .shell { grid-template-columns: minmax(0, 1fr); gap: 0; padding-block: 24px 64px; } nav.index { display: none; } }
+
+nav.index { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.index .group { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 20px 0 6px; }
+nav.index a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0 3px 12px; border-left: 2px solid var(--line); }
+nav.index a:hover, nav.index a:focus-visible { border-left-color: var(--accent); color: var(--accent); outline: none; }
+
+main { min-width: 0; }
+header.top { padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+h1, h2, h3 { font-family: var(--display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(34px, 5vw, 52px); letter-spacing: -0.02em; margin-top: 10px; }
+.lede { font-size: 19px; max-width: 62ch; color: var(--ink); margin: 16px 0 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 20px; font-size: 13px; color: var(--muted); font-family: var(--mono); }
+
+section { padding-top: 56px; }
+.part { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding-top: 64px; display: flex; align-items: center; gap: 12px; }
+.part::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+h2 { font-size: 30px; letter-spacing: -0.01em; }
+h3 { font-size: 19px; margin-top: 28px; }
+p, li { max-width: 68ch; }
+p { margin: 12px 0 0; }
+ul, ol { padding-left: 22px; margin: 12px 0 0; }
+li + li { margin-top: 6px; }
+code { font-family: var(--mono); font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 600; }
+a { color: var(--accent); }
+
+.figure { margin-top: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; overflow-x: auto; }
+.figure .cap { font-size: 13px; color: var(--muted); margin-top: 12px; max-width: none; }
+pre.mermaid { margin: 0; background: transparent; font-family: var(--body); min-width: 560px; text-align: center; }
+
+.tablewrap { margin-top: 20px; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; min-width: 0; }
+.card h4 { font-family: var(--display); font-size: 17px; margin: 0; }
+.card .tag { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .06em; margin-top: 2px; }
+.card p { font-size: 14px; margin-top: 8px; }
+
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
+@media (max-width: 640px) { .split { grid-template-columns: 1fr; } }
+.box { border-radius: 10px; padding: 16px 18px; min-width: 0; }
+.box h4 { font-family: var(--display); font-size: 16px; margin: 0 0 6px; }
+.box ul { margin-top: 4px; font-size: 14px; }
+.box.stays { background: var(--accent-soft); }
+.box.leaves { background: var(--warm-soft); }
+.box.stays h4 { color: var(--accent); }
+.box.leaves h4 { color: var(--warm); }
+
+.decision { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 12px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.decision:last-child { border-bottom: 0; }
+.decision .n { font-family: var(--mono); font-size: 13px; color: var(--accent); padding-top: 3px; }
+.decision h4 { font-family: var(--display); font-size: 17px; margin: 0; }
+.decision p { margin-top: 4px; font-size: 15px; }
+
+.pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 999px; letter-spacing: .04em; white-space: nowrap; }
+.pill.obs { background: var(--accent-soft); color: var(--accent); }
+.pill.inf { background: var(--warm-soft); color: var(--warm); }
+.pill.unk { background: var(--code-bg); color: var(--muted); }
+.pill.risk { background: var(--risk-soft); color: var(--risk); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; font-size: 13px; color: var(--muted); align-items: center; }
+
+.msgs { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; margin-top: 20px; }
+.msgs .card code { display: inline-block; margin: 3px 4px 0 0; font-size: 12px; }
+
+details { margin-top: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+details > summary { cursor: pointer; padding: 12px 16px; font-weight: 500; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::after { content: "+"; font-family: var(--mono); color: var(--muted); }
+details[open] > summary::after { content: "−"; }
+details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+details .inner { padding: 0 16px 14px; font-size: 14px; }
+details .inner code { font-size: 12px; }
+
+.risk-list { margin-top: 20px; display: grid; gap: 10px; }
+.risk-item { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--risk); border-radius: 8px; padding: 12px 16px; }
+.risk-item h4 { margin: 0; font-family: var(--display); font-size: 16px; }
+.risk-item p { font-size: 14px; margin-top: 4px; }
+
+footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+
+.pill.both { background: var(--code-bg); color: var(--ink); border: 1px solid var(--line); }
+.pill.p0 { background: var(--accent-soft); color: var(--accent); }
+.pill.p1 { background: var(--warm-soft); color: var(--warm); }
+.pill.p2 { background: var(--code-bg); color: var(--muted); }
+pre.code { margin-top: 16px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; }
+pre.code code { background: none; padding: 0; }
+blockquote { margin: 20px 0 0; background: var(--risk-soft); border-left: 3px solid var(--risk); border-radius: 8px; padding: 10px 16px; }
+blockquote p { margin: 0; }
+.lede-wrap p, .lede-wrap li { font-size: 16px; color: var(--muted); }
+.lede-wrap p:first-child { font-size: 19px; color: var(--ink); }
+td code, li code { font-size: 12px; }
+</style>
+<div class="shell">
+<nav class="index" aria-label="Sections">
+  <div class="group">Sections</div>
+  <a href="#0-decisions-already-made">0. Decisions already made</a>
+  <a href="#1-what-we-are-building">1. What we are building</a>
+  <a href="#2-design-rules-do-not-break-these">2. Design rules (do not break these)</a>
+  <a href="#3-roles-and-sign-in">3. Roles and sign-in</a>
+  <a href="#4-features-console-server-pc">4. Features: Console (server PC)</a>
+  <a href="#5-features-board-app-android-or-windows-smart-board">5. Features: Board app (Android or Windows smart board)</a>
+  <a href="#6-features-student-app-windows-lab-pc">6. Features: Student app (Windows lab PC)</a>
+  <a href="#7-server-service-how-it-runs">7. Server service: how it runs</a>
+  <a href="#8-networking-and-real-time">8. Networking and real-time</a>
+  <a href="#9-offline-ai">9. Offline AI</a>
+  <a href="#10-cloud-licence-usb-kit-and-analytics">10. Cloud, licence, USB kit and analytics</a>
+  <a href="#11-praxis-weak-spots-and-how-we-fix-them">11. PRAXIS weak spots and how we fix them</a>
+  <a href="#12-tech-stack">12. Tech stack</a>
+  <a href="#13-data-model">13. Data model</a>
+  <a href="#14-rest-api-on-the-school-network">14. REST API (on the school network)</a>
+  <a href="#15-targets-and-tests">15. Targets and tests</a>
+  <a href="#16-build-order">16. Build order</a>
+  <a href="#17-questions-we-settled-after-writing-this-spec">17. Questions we settled after writing this spec</a>
+</nav>
+<main>
+<header class="top">
+  <div class="eyebrow">Final build spec · v1.0 · 23 Oct 2026</div>
+  <h1>ICT App: Final Build Spec</h1>
+  <div class="lede-wrap">
+<p><strong>ICT App = PRAXIS (every feature) + Tech PRD: Offline-First ICT Lab v1.1 (every feature) + fixes for the PRAXIS weak spots.</strong></p>
+<p>Version 1.0 · 23 October 2026 · Source files in this folder:</p>
+<ul>
+<li><code>praxis-system-design.md</code>: how PRAXIS 1.1.0 works (reverse-engineered)</li>
+<li><code>tech-prd-ict-lab-v1.1.md</code>: the ICT Lab Tech PRD v1.1</li>
+</ul>
+<p>Every feature below is tagged with where it came from:</p>
+<ul>
+<li><span class="pill inf">PRAXIS</span>: PRAXIS has it; the PRD does not.</li>
+<li><span class="pill obs">PRD</span>: the PRD asks for it; PRAXIS does not have it.</li>
+<li><span class="pill both">BOTH</span>: both have it; we use the stronger version.</li>
+<li><span class="pill risk">NEW</span>: added here to fix a gap or a PRAXIS weakness.</li>
+</ul>
+<p>Priority: <strong>P0</strong> = first pilot, <strong>P1</strong> = general release, <strong>P2</strong> = later.</p>
+</div>
+</header>
+
+<section><h2 id="0-decisions-already-made">0. Decisions already made</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Decision</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Devices</td>
+<td><strong>Windows server + Windows lab PCs + Android smart boards</strong></td>
+<td>The PRD covers Windows labs; PRAXIS also supports Android panels. We keep both.</td>
+</tr>
+<tr>
+<td>Lesson recording</td>
+<td><strong>Both:</strong> event recording (default) <strong>and</strong> optional screen + audio video</td>
+<td>Event recording is tiny and replays exactly (PRAXIS). Video catches what events can't, like spoken explanation (PRD).</td>
+</tr>
+<tr>
+<td>Tech tools</td>
+<td><strong>Named in this spec</strong> (Section 12)</td>
+<td>So the team can start building now.</td>
+</tr>
+<tr>
+<td>Internet</td>
+<td>Never needed to teach. Used only for check-in, downloads and analytics upload.</td>
+<td>PRD rule; PRAXIS also works this way.</td>
+</tr>
+<tr>
+<td>Student data</td>
+<td>Never leaves the server PC</td>
+<td>Both agree.</td>
+</tr>
+<tr>
+<td>When PRAXIS and the PRD disagree</td>
+<td>The <strong>safer</strong> rule wins (PRD security, PRD sessions, PRD signing)</td>
+<td>PRAXIS has known security gaps (Section 11).</td>
+</tr>
+</tbody>
+</table></div>
+
+</section><section><h2 id="1-what-we-are-building">1. What we are building</h2>
+<p>One server PC per school runs everything. All classroom devices connect to it over the school's local network:</p>
+<ul>
+<li>up to 60 Windows lab PCs</li>
+<li>Android or Windows smart boards</li>
+<li>an optional HDMI screen on the server</li>
+</ul>
+<p>The cloud is only a background helper. The server reaches out to it; the cloud never connects in.</p>
+<div class="figure"><pre class="mermaid">flowchart LR
+  subgraph SCHOOL[&quot;Inside the school (local network)&quot;]
+    direction LR
+    subgraph SRV[&quot;Server PC&quot;]
+      direction TB
+      SVC[&quot;Server service (Windows service)&lt;br/&gt;REST + WebSocket relay on TCP 7700&lt;br/&gt;discovery beacon on UDP 7701&lt;br/&gt;jobs, database, file store, AI gateway&quot;]
+      AIR[&quot;AI runtime&lt;br/&gt;localhost only&quot;]
+      CON[&quot;Console app&lt;br/&gt;Super Admin + Teachers&quot;]
+      CON --&gt; SVC
+      SVC --&gt; AIR
+    end
+    PRE[&quot;Present window&lt;br/&gt;HDMI screen (optional)&quot;]
+    PCS[&quot;Student app&lt;br/&gt;up to 60 Windows lab PCs&quot;]
+    BRD[&quot;Board app&lt;br/&gt;Android / Windows smart boards&quot;]
+    SRV == HDMI ==&gt; PRE
+    PCS &lt;-- &quot;REST + WebSocket&quot; --&gt; SVC
+    BRD &lt;-- &quot;REST + WebSocket&quot; --&gt; SVC
+  end
+  CLOUD[&quot;Cloud platform&lt;br/&gt;registry, licence, check-in,&lt;br/&gt;content and updates, analytics&quot;]
+  SVC -. &quot;outbound HTTPS only, when online&quot; .-&gt; CLOUD</pre></div>
+<h3 id="the-apps">The apps</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>App</th>
+<th>Runs on</th>
+<th>Who uses it</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Server service</strong></td>
+<td>Server PC, starts at boot as a Windows service</td>
+<td>(no screen)</td>
+<td><span class="pill both">BOTH</span> PRAXIS ran it inside a tray app; PRD makes it a real Windows service so it survives sign-out and crashes</td>
+</tr>
+<tr>
+<td><strong>Console</strong></td>
+<td>Server PC monitor (separate process)</td>
+<td>Super Admin, Teachers</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td><strong>Present window</strong></td>
+<td>Server PC, full-screen on HDMI</td>
+<td>Class watches it</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td><strong>Student app</strong></td>
+<td>Each Windows lab PC</td>
+<td>Students (and guardians in Family mode, P2)</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td><strong>Board app</strong></td>
+<td>Android smart panels, or a Windows PC acting as a board</td>
+<td>Teacher at the front of the class</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td><strong>Teacher remote</strong> (P1)</td>
+<td>Teacher's Windows laptop or Android tablet on the school Wi-Fi</td>
+<td>Teachers driving a board lesson from the room</td>
+<td><span class="pill inf">PRAXIS</span> PRAXIS has a separate Teacher app</td>
+</tr>
+<tr>
+<td><strong>Cloud platform</strong></td>
+<td>Our hosting</td>
+<td>Tech team only</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>One codebase for all screens.</strong> Console, Present window, Student app, Board app and Teacher remote are built from one Flutter codebase. The app's role is set at install time; PRAXIS did the same with one <code>praxisRole</code> setting. <span class="pill both">BOTH</span></p>
+<p>One Windows installer. Its first screen asks: <strong>Server</strong>, <strong>Student PC</strong> or <strong>Board</strong>. The Android board is a separate APK. [PRD + PRAXIS]</p>
+
+</section><section><h2 id="2-design-rules-do-not-break-these">2. Design rules (do not break these)</h2>
+<ol type="1">
+<li><strong>Offline first.</strong> Nothing waits on the cloud while handling a request. Cloud calls run only on timers; failures are logged and retried. <span class="pill both">BOTH</span></li>
+<li><strong>The server owns all data and logic.</strong> Every app is a thin screen over REST + WebSocket. <span class="pill obs">PRD</span></li>
+<li><strong>The console is a separate process.</strong> Closing or crashing it never stops the server. <span class="pill obs">PRD</span></li>
+<li><strong>The cloud never calls in.</strong> The school server starts every cloud request. <span class="pill obs">PRD</span></li>
+<li><strong>Remember the server's ID, not its IP.</strong> Devices store the <code>serverId</code> and find its current address by broadcast. School routers change IPs often. <span class="pill inf">PRAXIS</span></li>
+<li><strong>Download once, share many times.</strong> The server downloads content and app updates once over the internet, then devices fetch them over the LAN. <span class="pill inf">PRAXIS</span></li>
+<li><strong>Never lose an answer.</strong> Answers, attendance and submissions are confirmed ("acked") by the server. Until then the app keeps them in an outbox and resends. <span class="pill obs">PRD</span></li>
+<li><strong>Everything from outside is signed.</strong> Licences, updates, content, AI models and USB kits are signature- and checksum-checked before use. <span class="pill obs">PRD</span></li>
+<li><strong>Watching is always visible.</strong> If anyone views a screen (office → board, teacher → student), the watched device shows an indicator. Live frames are never stored. <span class="pill inf">PRAXIS</span></li>
+<li><strong>Privacy by allow-list.</strong> Analytics accept only allow-listed fields; an automated test proves it. <span class="pill obs">PRD</span></li>
+<li><strong>One bad message can't crash the school.</strong> Every relay message handler is wrapped so errors are logged and dropped. <span class="pill inf">PRAXIS</span></li>
+<li><strong>Licence lockdown never comes from a dead internet line alone.</strong> Only a signed "not allowed" answer or an expired grace period can lock the school. <span class="pill both">BOTH</span></li>
+</ol>
+
+</section><section><h2 id="3-roles-and-sign-in">3. Roles and sign-in</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Who</th>
+<th>Signs in on</th>
+<th>Credential</th>
+<th>Session</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Super Admin</strong></td>
+<td>Our field person, on-site</td>
+<td>Console</td>
+<td>Username + password from the signed field-person list; works offline</td>
+<td>15 min idle</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td><strong>Teacher</strong></td>
+<td>School teachers</td>
+<td>Console, Board, Teacher remote</td>
+<td>Username + password set by the Super Admin</td>
+<td>15 min idle; "Switch teacher" ends it</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td><strong>Student</strong></td>
+<td>Students</td>
+<td>Student app</td>
+<td>Class + name + 4-digit PIN, or printed QR card, or one-time enrolment code (first login)</td>
+<td>Sign-out, lesson end, or 10 min idle</td>
+<td><span class="pill both">BOTH</span> PIN/QR from PRD, enrolment code from PRAXIS</td>
+</tr>
+<tr>
+<td><strong>Device</strong></td>
+<td>Lab PC or Board</td>
+<td>(automatic)</td>
+<td>Device token from the enrol window</td>
+<td>90 days, auto-renewed while in use; revoked on retire or re-key</td>
+<td><span class="pill risk">NEW</span> PRAXIS used 10-year tokens</td>
+</tr>
+<tr>
+<td><strong>Guardian</strong> (P2)</td>
+<td>Parent at a school meeting</td>
+<td>Student app in Family mode</td>
+<td>Family PIN for one child</td>
+<td>1 hour; only <code>/api/v1/family/*</code>; no live WebSocket</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Teacher permission switches</strong> <span class="pill inf">PRAXIS</span>: by default all teachers are equal (PRD). The Super Admin can turn off <strong>can host lessons</strong> or <strong>can upload content</strong> for a teacher.</p>
+<h3 id="permission-keys">Permission keys</h3>
+<p>Defined once. The server checks them on every REST route and every relay message, and the UI uses them to hide buttons. <span class="pill obs">PRD</span></p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Permission</th>
+<th>Super Admin</th>
+<th>Teacher</th>
+<th>Student</th>
+<th>Guardian</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>staff.manage</code></td>
+<td>Y</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>students.manage</code> (add, edit, import, PIN cards, enrolment codes, guardian PINs)</td>
+<td>Y</td>
+<td>Y</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>setup.*</code> (devices, master data, content, timetable)</td>
+<td>Y</td>
+<td>Y</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>teaching.*</code> (quizzes, playlists, paths, week ahead, work, activities, recordings, notices, messages, study rooms, Together monitor)</td>
+<td>Y</td>
+<td>Y</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>lesson.start</code> / <code>lesson.control</code> / <code>lesson.present</code></td>
+<td>Y</td>
+<td>Y (unless switched off)</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>screen.watch</code> (view a board or student screen)</td>
+<td>Y</td>
+<td>Y (own lesson's students)</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>results.view</code></td>
+<td>Y</td>
+<td>Y</td>
+<td>own only</td>
+<td>own child only</td>
+</tr>
+<tr>
+<td><code>ai.teacher</code> / <code>ai.tutor</code></td>
+<td>teacher</td>
+<td>teacher</td>
+<td>tutor</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>licence.view</code>, <code>updates.view</code></td>
+<td>Y</td>
+<td>Y</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>licence.renew</code>, <code>updates.install</code>, <code>settings.*</code>, <code>server.manage</code></td>
+<td>Y</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Sign-in safety</strong> [BOTH + NEW]:</p>
+<ul>
+<li>PIN lockout after 5 wrong tries, for 5 minutes. Sign-in is rate-limited per device.</li>
+<li>Passwords and PINs are stored with <strong>bcrypt</strong> (cost 10). Session tokens are 32 random bytes, and only their <strong>SHA-256</strong> hash is stored. <span class="pill inf">PRAXIS</span></li>
+<li>Permissions are re-read on every request, so a switch flipped in the console takes effect at once. <span class="pill inf">PRAXIS</span></li>
+<li>Tokens are sent only in the <code>Authorization</code> header, never in URLs. Media files use short-lived signed links. <span class="pill risk">NEW</span></li>
+</ul>
+
+</section><section><h2 id="4-features-console-server-pc">4. Features: Console (server PC)</h2>
+<p>All features are for Super Admin and Teachers unless marked otherwise.</p>
+<h3 id="41-overview-and-people">4.1 Overview and people</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Pri.</th>
+<th>What it does</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Overview</td>
+<td><span class="pill p0">P0</span></td>
+<td>Today's planned and live lessons, PCs and boards connected, students signed in. Alerts: PCs offline, disk low, licence expiring, no check-in for 14+ days, <strong>Wi-Fi blocks devices from reaching the server</strong>. Footer shows "Serving the lab" and the last check-in.</td>
+<td><span class="pill both">BOTH</span> The Wi-Fi alert is from PRAXIS</td>
+</tr>
+<tr>
+<td>Students</td>
+<td><span class="pill p0">P0</span></td>
+<td>Add, edit, delete, bulk import (Excel/CSV), move section, promote class, print PIN/QR cards, reset PIN, one-time enrolment codes per student or per class. Soft delete; duplicate check on name + class + roll; import returns a per-row error report.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Guardians</td>
+<td><span class="pill p2">P2</span></td>
+<td>Set guardian name and family PIN per student</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Staff (Super Admin)</td>
+<td><span class="pill p0">P0</span></td>
+<td>Add, edit, delete teachers; reset password; switch "can host lessons" and "can upload content"</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Audit log (Super Admin)</td>
+<td><span class="pill p0">P0</span></td>
+<td>Who did what and when: sign-ins, deletes, licence and update actions, screen watching</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="42-lab-and-school-setup">4.2 Lab and school setup</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Pri.</th>
+<th>What it does</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Devices</td>
+<td><span class="pill p0">P0</span></td>
+<td>Enrol lab PCs <strong>and boards</strong> in a 30-minute enrol window. Link a board to a class and section. List status, last seen, version, current lesson. Rename, retire, re-key. Commands: lock, unlock, lock all, restart app, reload, open content, "look at the front". Commands are sent over the relay with an ack, and also queued in the database so an offline device gets them when it returns. PC limit comes from the licence.</td>
+<td><span class="pill both">BOTH</span> The command queue is from PRAXIS</td>
+</tr>
+<tr>
+<td>Lock policy</td>
+<td><span class="pill p1">P1</span></td>
+<td>Rules for when devices lock automatically (e.g. outside lab periods)</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Master data</td>
+<td><span class="pill p0">P0</span></td>
+<td>Classes, subjects and languages come from the school profile (read-only). The school names sections and sets period times.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Timetable</td>
+<td><span class="pill p1">P1</span></td>
+<td>Weekly lab grid by period with clash checks; drives the week ahead, the student Today screen and reminders</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Content library</td>
+<td><span class="pill p0">P0</span></td>
+<td>PDF, images, video, audio, slides, <strong>Office files (Word, Excel, PowerPoint)</strong>, HTML5 packages, video links. Filed by class, subject and chapter. Max 512 MB per upload, streamed, file type checked from the file's contents. Files are named by their SHA-256 fingerprint, so duplicates are stored once. Links are flagged <code>needs_internet</code>. Text is extracted and indexed for AI. Office files are converted to PDF on the server for viewing.</td>
+<td><span class="pill both">BOTH</span> Office support is from PRAXIS</td>
+</tr>
+<tr>
+<td>Shared library</td>
+<td><span class="pill p0">P0</span></td>
+<td>Content pushed from the cloud library (by class and subject), downloaded once and checksum-checked. Teachers' own uploads sit alongside.</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Content notes and progress</td>
+<td><span class="pill p1">P1</span></td>
+<td>Teacher notes on a content item; per-student reading/watching progress</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="43-teaching-and-assessment">4.3 Teaching and assessment</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Pri.</th>
+<th>What it does</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quizzes &amp; polls</td>
+<td><span class="pill p0">P0</span></td>
+<td>Question types: single, multiple, true/false, image, number, short text. Poll types: choice, rating, word cloud. Settings: seconds per question (0 = teacher moves on). Live run with server-timed countdown, tally, reveal, leaderboard (can be hidden). Self-paced mode as homework. Generate with AI. Answers count if the student's timestamp is before the close. Polls are never scored.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Team quiz</td>
+<td><span class="pill p1">P1</span></td>
+<td>Split the class into teams; team standings</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Plan a lesson (AI)</td>
+<td><span class="pill p0">P0</span></td>
+<td>Give a topic, class, subject and minutes (default 40). Get objectives, timed steps, library items, checks and homework. Edit or regenerate parts. Save to the week ahead or open in Present mode.</td>
+<td><span class="pill both">BOTH</span> PRAXIS sent this to a remote AI; we run it locally</td>
+</tr>
+<tr>
+<td>Work (assignments)</td>
+<td><span class="pill p0">P0</span></td>
+<td>From a quiz, worksheet, file task or library item. Due date, marks, reference files. Students submit text, file, drawing or webcam photo. Submissions are append-only; late ones are flagged. Teacher marks with comments.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Activities</td>
+<td><span class="pill p0">P0</span></td>
+<td>Offline interactive packages (<code>.praxis</code>-style packs, Anganwadi to Class 12). They run sandboxed and report score, time and completion through a message API. A starter pack ships with the installer.</td>
+<td><span class="pill both">BOTH</span> The starter pack is from PRAXIS</td>
+</tr>
+<tr>
+<td>External activities</td>
+<td><span class="pill p1">P1</span></td>
+<td>Games or apps installed on the lab PC, granted by the platform, launched from the app ("quick apps")</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Playlists</td>
+<td><span class="pill p1">P1</span></td>
+<td>Ordered videos, links, PDFs and activities for a chapter. Played on the board or Present screen, or sent to lab PCs. <code>needs_internet</code> items are skipped when offline.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Learning paths</td>
+<td><span class="pill p1">P1</span></td>
+<td>Steps: watch, read, activity, quiz check, assignment. Optional prerequisites. AI can draft one from the library. Completion is recorded per student.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>The week ahead</td>
+<td><span class="pill p1">P1</span></td>
+<td>Mon–Sun plan per slot (content, playlist, path step, quiz). 5 minutes before, a reminder fires and the files are pre-loaded onto that class's PCs.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Recorded lessons</td>
+<td><span class="pill p1">P1</span></td>
+<td><strong>Event recording</strong> (default): every lesson event (open file, page, scene, quiz question, ink) is saved with a millisecond offset, so the lesson can be replayed exactly. <strong>Video recording</strong> (optional): Present or board screen + audio, no camera. Replay from My books. Teachers can delete.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Whiteboard</td>
+<td><span class="pill p0">P0</span></td>
+<td>Multi-page whiteboard per lesson; pages saved on the server</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Notices</td>
+<td><span class="pill p1">P1</span></td>
+<td>One-way notices to the school, a class or a section, with pin and expiry</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Messages</td>
+<td><span class="pill p1">P1</span></td>
+<td>Teacher ↔︎ student messages (and teacher ↔︎ guardian in P2). Kept on the server.</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Study rooms</td>
+<td><span class="pill p1">P1</span></td>
+<td>Teacher-run group space with whiteboard and chosen content</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Together monitor</td>
+<td><span class="pill p1">P1</span></td>
+<td>See open student Together rooms and members; join read-only or with pen; close</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="44-results-and-insights-in-school-only">4.4 Results and insights (in school only)</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Pri.</th>
+<th>What it does</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Quiz results &amp; marks</td>
+<td><span class="pill p0">P0</span></td>
+<td>Per student and class; export Excel/PDF. Never in the analytics upload.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Attendance</td>
+<td><span class="pill p0">P0</span></td>
+<td>Taken automatically when a student joins a lesson; teachers can edit</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Student analytics</td>
+<td><span class="pill p1">P1</span></td>
+<td>Attendance, lessons joined, accuracy by subject and chapter, work on time, path progress, weakest chapters</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>"Next steps" per child</td>
+<td><span class="pill p1">P1</span></td>
+<td>Suggestions worked out on the server from the student's activity log, with simple rules (no AI)</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Reports</td>
+<td><span class="pill p1">P1</span></td>
+<td>Lab usage, attendance and assessment summaries; export</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Report cards</td>
+<td><span class="pill p1">P1</span></td>
+<td>Built from marks with teacher remarks. Draft, then published, then frozen (cannot change). PDF print.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="45-system">4.5 System</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Pri.</th>
+<th>What it does</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Licence</td>
+<td><span class="pill p0">P0</span></td>
+<td>School ID, valid until, PCs allowed, last check. Signed token checked offline; 30-day grace period. Teachers view; Super Admin renews online or by file.</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Lockdown</td>
+<td><span class="pill p0">P0</span></td>
+<td>If the licence is revoked or the grace period ends, classroom features return "locked". The console, sign-in, licence and health pages still work so staff can see why and renew.</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Updates</td>
+<td><span class="pill p0">P0</span></td>
+<td>Installed and available versions with notes. Super Admin installs, rolls back, imports an update kit, sets a policy (e.g. after hours). Never installs during a live lesson. The server downloads once, then lab PCs and boards update from it over the LAN.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Settings (Super Admin)</td>
+<td><span class="pill p0">P0</span></td>
+<td>School name, logo, periods, student sign-in method, AI switches, Together on/off, backup location, cloud address override</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Server manager (Super Admin)</td>
+<td><span class="pill p0">P0</span></td>
+<td>Relay status, PCs connected, PCs that "asked but could not connect", cloud check-in and upload backlog, content on disk, network addresses (virtual adapters hidden), AI engine status. Buttons: check in now, fix firewall, export analytics to USB, fetch content, restart relay/AI, export a connection file.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Backups</td>
+<td><span class="pill p0">P0</span></td>
+<td>Nightly backup of the database + file list; keep 7; restore from the console</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="46-present-mode-optional-hdmi-on-the-server">4.6 Present mode (optional, HDMI on the server)</h3>
+<p><span class="pill obs">PRD</span></p>
+<ul>
+<li>Used only when a screen is plugged into the server PC. Without one, lessons run from a board or the console, and the teacher reads the join code aloud.</li>
+<li><strong>Two screens:</strong> Present is full-screen on the HDMI screen, and the console stays on the server monitor. <strong>One screen:</strong> Present is full-screen with a floating control bar.</li>
+<li><strong>Shows:</strong> idle screen (school, period, clock, next lesson), content, join code (can be hidden), quiz countdown and results, whiteboard, playlist steps, Ask AI output (P1).</li>
+<li><strong>Controls:</strong> next/previous, play/pause, annotate, whiteboard, quiz/poll start and reveal, blank, lock lab PCs, show/hide code, end lesson. Keyboard shortcuts and USB touch.</li>
+<li>The Present window only ever shows presentation screens: never student lists, results or settings.</li>
+<li>It connects to the relay like any other device, as a special "present" device of the server.</li>
+</ul>
+
+</section><section><h2 id="5-features-board-app-android-or-windows-smart-board">5. Features: Board app (Android or Windows smart board)</h2>
+<p><span class="pill inf">PRAXIS</span>, with PRD rules applied.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Pri.</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Setup</td>
+<td><span class="pill p0">P0</span></td>
+<td>Finds the server by broadcast. The installer enters the enrol code once, and the board is linked to a class/section.</td>
+</tr>
+<tr>
+<td>Home</td>
+<td><span class="pill p0">P0</span></td>
+<td>School, current period, next lesson, "Start lesson" for the signed-in teacher</td>
+</tr>
+<tr>
+<td>Teacher sign-in</td>
+<td><span class="pill p0">P0</span></td>
+<td>Username + password, or a code shown on the console</td>
+</tr>
+<tr>
+<td>Lesson</td>
+<td><span class="pill p0">P0</span></td>
+<td>Opens content (PDF, Office, video, images, HTML5 activities, playlists). Page, scene and media controls. Split screen (two items side by side).</td>
+</tr>
+<tr>
+<td>Ink &amp; whiteboard</td>
+<td><span class="pill p0">P0</span></td>
+<td>Pen and annotation layer over any content; multi-page whiteboard; Devanagari typing</td>
+</tr>
+<tr>
+<td>Pen sharing</td>
+<td><span class="pill p1">P1</span></td>
+<td>A student asks for the pen; the teacher allows or refuses; several holders at once</td>
+</tr>
+<tr>
+<td>Quiz</td>
+<td><span class="pill p0">P0</span></td>
+<td>Runs live quizzes and polls; shows countdown, tally, leaderboard</td>
+</tr>
+<tr>
+<td>Cast</td>
+<td><span class="pill p1">P1</span></td>
+<td>Shows a student's screen on the board (live frames, never saved)</td>
+</tr>
+<tr>
+<td>Camera</td>
+<td><span class="pill p1">P1</span></td>
+<td>Document camera: show a book or object through the board's camera</td>
+</tr>
+<tr>
+<td>Lock screen</td>
+<td><span class="pill p0">P0</span></td>
+<td>Locked or blanked when commanded</td>
+</tr>
+<tr>
+<td>Notices</td>
+<td><span class="pill p1">P1</span></td>
+<td>School and class notices</td>
+</tr>
+<tr>
+<td>Attendance register</td>
+<td><span class="pill p1">P1</span></td>
+<td>Quick attendance sheet for the class</td>
+</tr>
+<tr>
+<td>Self-update</td>
+<td><span class="pill p0">P0</span></td>
+<td>Downloads new versions from the school server, not the internet</td>
+</tr>
+</tbody>
+</table></div>
+
+</section><section><h2 id="6-features-student-app-windows-lab-pc">6. Features: Student app (Windows lab PC)</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Pri.</th>
+<th>What it does</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sign-in</td>
+<td><span class="pill p0">P0</span></td>
+<td>Pick class, tap name/photo, enter PIN; scan QR card with the webcam; or use an enrolment code the first time</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Today</td>
+<td><span class="pill p0">P0</span></td>
+<td>Greeting, current lab period, "Join the lesson" with a 6-digit code, live-lesson card (P1), shortcut cards. Clear messages: "not running in your class", "lesson has ended".</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>In-lesson view</td>
+<td><span class="pill p0">P0</span></td>
+<td>Follows the teacher's screen, or free mode. Answers quizzes and polls. Draws when given the pen. Private notes. Raise hand, "I'm stuck". Locked or blanked on command. Late joiners get the current state at once.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Screen watched indicator</td>
+<td><span class="pill p0">P0</span></td>
+<td>A clear banner whenever a teacher is viewing this screen</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>My books</td>
+<td><span class="pill p0">P0</span></td>
+<td>Books and library items by subject and chapter; recorded lessons; remembers the page. Cached on the PC (least-recently-used files removed first, 10 GB cap).</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Things to do</td>
+<td><span class="pill p0">P0</span></td>
+<td>Activities, playlists and path steps with done ticks and the next step</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>My work</td>
+<td><span class="pill p0">P0</span></td>
+<td>To do, submitted, marked. Submit text, file, drawing or webcam photo, even offline (outbox). See marks and comments.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>How I am doing</td>
+<td><span class="pill p1">P1</span></td>
+<td>Own attendance, lessons joined, work on time, accuracy by subject, path progress, "try this next"</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Notices &amp; messages</td>
+<td><span class="pill p1">P1</span></td>
+<td>Class notices (newest first) and messages from teachers</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Together</td>
+<td><span class="pill p1">P1</span></td>
+<td>Start or join a room by code. Shared whiteboard (pen, shapes, text, sticky notes, library images) for up to 6. Saved to My work. No chat or voice. Same class by default. Closes after 60 min idle. Banner: "teacher can see this room". Super Admin can switch it off.</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Ask (AI tutor)</td>
+<td><span class="pill p1">P1</span></td>
+<td>Typed questions answered from the school's own books, with citations. Hints, not assignment answers. Daily limit.</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Family mode</td>
+<td><span class="pill p2">P2</span></td>
+<td>A guardian signs in with the family PIN to see their child's attendance, reports and messages, and to set language</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Settings</td>
+<td><span class="pill p0">P0</span></td>
+<td>Language, text size, high contrast, dyslexia-friendly font, sign out. Meets WCAG 2.1 AA.</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Status chip</td>
+<td><span class="pill p0">P0</span></td>
+<td>"Connected", "Reconnecting…", "Working offline: N answers waiting"</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Locked-down shell</td>
+<td><span class="pill p0">P0</span></td>
+<td>No downloads, Save As, printing or dev tools; can't open other apps except granted quick apps. Only the camera and microphone are allowed.</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+</tbody>
+</table></div>
+
+</section><section><h2 id="7-server-service-how-it-runs">7. Server service: how it runs</h2>
+<h3 id="71-startup-order">7.1 Startup order</h3>
+<ol type="1">
+<li>Starts at boot as a Windows service and restarts itself on failure. <span class="pill obs">PRD</span></li>
+<li>Takes a single-instance lock. Two copies would fight over the port and database. <span class="pill both">BOTH</span></li>
+<li>Opens the database, runs numbered migrations, checks the licence. <span class="pill obs">PRD</span> PRAXIS added missing columns at startup instead of using migrations.</li>
+<li>Fills in any missing daily totals and closes recordings left "running" after a crash. <span class="pill inf">PRAXIS</span></li>
+<li>Listens on TCP <code>7700</code> (private network adapters only) and UDP <code>7701</code>. If 7700 is taken, the console shows which program has it. <span class="pill both">BOTH</span></li>
+<li>Installs the starter activity pack if it isn't there yet. <span class="pill inf">PRAXIS</span></li>
+<li>Starts the AI runtime if models are installed, at lower priority, and restarts it if it crashes. <span class="pill obs">PRD</span></li>
+<li>Starts background jobs. The console connects to <code>localhost:7700</code>. <span class="pill obs">PRD</span></li>
+<li>Startup errors are written to <code>startup.log</code> next to the database. <span class="pill inf">PRAXIS</span></li>
+</ol>
+<h3 id="72-background-jobs">7.2 Background jobs</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Job</th>
+<th>When</th>
+<th>What it does</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Check-in</td>
+<td>Every 15 min, if online</td>
+<td>Heartbeat to the cloud, then act on the returned actions</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Sync</td>
+<td>After check-in (at least hourly)</td>
+<td>Send changed device records and daily totals (rows marked <code>dirty</code>); fetch new content, games, releases and profile changes</td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Downloads</td>
+<td>After check-in</td>
+<td>Content, updates and models, one at a time. Resumable; checksum and signature checked.</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Analytics</td>
+<td>Nightly roll-up; upload after check-in</td>
+<td>Seal batches, upload oldest first, go slow during school hours</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Backup</td>
+<td>Nightly</td>
+<td>Database + file list to the backup folder; keep 7</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Indexing</td>
+<td>When content changes</td>
+<td>Extract text, split into chunks, embed, store vectors</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Reminders</td>
+<td>Every minute</td>
+<td>Lessons starting in 5 min: notify the console, pre-load files</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Cleanup</td>
+<td>Nightly</td>
+<td>Expire codes, close idle rooms, delete AI prompts older than 90 days, drop unsent analytics older than 180 days</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="73-windows-integration">7.3 Windows integration</h3>
+<ul>
+<li>The installer adds firewall rules for TCP 7700 and UDP 7701 on Private networks and warns on Public ones. A "fix firewall" button repeats this. <span class="pill both">BOTH</span></li>
+<li>The school key, licence and TLS key are encrypted with Windows machine-level protection (DPAPI). <span class="pill obs">PRD</span></li>
+<li>The licence is tied to the main physical network card; virtual adapters are ignored. <span class="pill obs">PRD</span></li>
+</ul>
+
+</section><section><h2 id="8-networking-and-real-time">8. Networking and real-time</h2>
+<h3 id="81-finding-the-server-discovery">8.1 Finding the server (discovery)</h3>
+<div class="figure"><pre class="mermaid">sequenceDiagram
+  autonumber
+  participant D as Lab PC / Board
+  participant B as Beacon (UDP 7701)
+  participant S as Server (TCP 7700)
+  D-&gt;&gt;B: broadcast {&quot;t&quot;:&quot;discover&quot;,&quot;v&quot;:1,&quot;app&quot;:&quot;student&quot;,&quot;ver&quot;:&quot;1.0.3&quot;}
+  B--&gt;&gt;D: {&quot;t&quot;:&quot;here&quot;,&quot;v&quot;:1,&quot;serverId&quot;,&quot;schoolId&quot;,&quot;name&quot;,&quot;addrs&quot;:[...],&quot;port&quot;:7700,&quot;certFp&quot;}
+  loop each address, best first
+    D-&gt;&gt;S: GET /health (2 s timeout)
+    S--&gt;&gt;D: serverId, schoolId, activated
+  end
+  Note over D: keeps the first address whose serverId matches the saved one
+  alt no answer (retry every 3 s for 10 s)
+    Note over D: manual IP, a connection file from USB, or mDNS
+  end</pre></div>
+<ul>
+<li>Devices save the <strong>serverId</strong>, not the IP. They re-discover only when the saved address fails. <span class="pill both">BOTH</span></li>
+<li>Virtual adapters (Hyper-V, WSL, VPN) are left out of the address list or put last. <span class="pill both">BOTH</span></li>
+<li>The server records devices that ask but never connect. That pattern means the Wi-Fi is blocking devices from talking to each other ("AP isolation"), and the console warns about it. <span class="pill both">BOTH</span></li>
+</ul>
+<h3 id="82-encryption-on-the-school-network-new">8.2 Encryption on the school network <span class="pill risk">NEW</span></h3>
+<p>PRAXIS sends everything on the school network as plain HTTP, so anyone on the Wi-Fi can read tokens. We fix that:</p>
+<ul>
+<li>At install, the server makes its own TLS certificate.</li>
+<li>The enrol window gives each device the certificate's fingerprint (<code>certFp</code>). From then on, the device only trusts that exact certificate ("pinning").</li>
+<li>All traffic uses HTTPS and WSS (WebSocket over TLS) on port 7700. No internet or outside certificate authority is needed.</li>
+</ul>
+<h3 id="83-real-time-relay">8.3 Real-time relay</h3>
+<p>One WebSocket per device at <code>wss://&lt;server&gt;:7700/relay</code>, using the session token. Rooms are joined by message. <span class="pill obs">PRD</span></p>
+<p><strong>Message envelope:</strong></p>
+<pre class="code"><code>{&quot;t&quot;:&quot;&lt;type&gt;&quot;,&quot;room&quot;:&quot;&lt;roomId&gt;&quot;,&quot;seq&quot;:1042,&quot;ts&quot;:1729650000123,&quot;id&quot;:&quot;&lt;uuid&gt;&quot;,&quot;p&quot;:{...}}
+ seq = server order per room   ts = server clock   id = client message id (to drop duplicates)</code></pre>
+<p><strong>Message types</strong> (PRD names, plus the PRAXIS features the PRD lacks):</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Types</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Session</td>
+<td><code>hello</code>, <code>ping</code>/<code>pong</code> (clock sync), <code>join</code>, <code>leave</code>, <code>state</code> (full snapshot), <code>roster.update</code>, <code>error</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Navigation &amp; media</td>
+<td><code>nav.open</code>, <code>nav.page</code>, <code>nav.scroll</code>, <code>nav.scene</code>, <code>split.set</code>, <code>playlist.next</code>, <code>media.play</code>, <code>media.pause</code>, <code>media.seek</code>, <code>activity.open</code>, <code>activity.state</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Ink &amp; whiteboard</td>
+<td><code>ink.stroke</code> (batched every 50 ms), <code>ink.undo</code>, <code>ink.clear</code>, <code>ink.pen</code>, <code>pen.request</code>, <code>pen.grant</code>, <code>pen.refuse</code>, <code>pen.holders</code>, <code>wb.page</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Assessment</td>
+<td><code>quiz.start</code>, <code>quiz.question</code>, <code>quiz.tick</code>, <code>quiz.answer</code>, <code>quiz.ack</code>, <code>quiz.reveal</code>, <code>quiz.board</code>, <code>poll.result</code></td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Control</td>
+<td><code>ctl.lock</code>, <code>ctl.unlock</code>, <code>ctl.blank</code>, <code>ctl.attention</code>, <code>ctl.command</code> + <code>ctl.ack</code>, <code>lesson.end</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Screens</td>
+<td><code>cast.start</code>, <code>cast.frame</code>, <code>cast.stop</code>, <code>watch.start</code>, <code>watch.stop</code>, <code>watch.state</code> (tells the watched device), <code>screen.frame</code></td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Student signals</td>
+<td><code>hand.raise</code>, <code>hand.stuck</code>, <code>presence</code></td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>System</td>
+<td><code>content.changed</code>, <code>update.ready</code>, <code>system.status</code>, <code>ai.chunk</code>, <code>ai.done</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Rules:</strong></p>
+<ul>
+<li>Role and room membership are checked on every message. <span class="pill obs">PRD</span></li>
+<li>Control messages over 64 KB are rejected; big data goes over REST. Screen frames are allowed up to ~700 KB, and if a device is slow its old frames are dropped rather than queued. <span class="pill both">BOTH</span></li>
+<li>Slow devices get a fresh <code>state</code> snapshot instead of a growing queue. <span class="pill obs">PRD</span></li>
+<li>Late joiners get the current state at once: what's on screen, pen holders, any running quiz. <span class="pill both">BOTH</span></li>
+<li>Critical writes (answers, attendance, submissions) are acked; devices resend from the outbox until they get an ack. <span class="pill obs">PRD</span></li>
+<li>Reconnect waits 1, 2, 4 … up to 30 s, then rejoins and gets the state. <span class="pill obs">PRD</span></li>
+<li>Join codes are 6 digits, unique among open rooms, and die with the room. Wrong guesses are rate-limited. <span class="pill obs">PRD</span></li>
+<li>One room per board: if a board already has a lesson, a new teacher joins it instead of opening a second one. <span class="pill inf">PRAXIS</span></li>
+<li>Every handler is wrapped so one bad message is logged and dropped, never crashing the server. <span class="pill inf">PRAXIS</span></li>
+<li>Live room state is held in memory. Lasting facts (lesson, participants, quiz run, recording events) go to the database. <span class="pill inf">PRAXIS</span></li>
+<li>Speed targets: navigation/control under 300 ms (p95) to 60 PCs; ink under 200 ms; media screens in sync within 500 ms. <span class="pill obs">PRD</span></li>
+</ul>
+<h3 id="84-a-live-lesson">8.4 A live lesson</h3>
+<div class="figure"><pre class="mermaid">sequenceDiagram
+  autonumber
+  participant T as Teacher (board / console)
+  participant S as Server (relay)
+  participant K as Student app
+  T-&gt;&gt;S: POST /api/v1/lessons (board, class, subject)
+  S--&gt;&gt;T: roomId + 6-digit join code
+  K-&gt;&gt;S: POST /api/v1/lessons/join (code)
+  K-&gt;&gt;S: WSS /relay, join room
+  S--&gt;&gt;K: state (full snapshot)
+  T-&gt;&gt;S: nav.open / nav.page / ink.stroke
+  S--&gt;&gt;K: same messages (recorder saves each with a ms offset)
+  T-&gt;&gt;S: quiz.start
+  S--&gt;&gt;K: quiz.question + quiz.tick
+  K-&gt;&gt;S: quiz.answer (from outbox)
+  S--&gt;&gt;K: quiz.ack
+  S--&gt;&gt;T: live tally
+  T-&gt;&gt;S: quiz.reveal, then lesson.end
+  S--&gt;&gt;K: lesson.end</pre></div>
+
+</section><section><h2 id="9-offline-ai">9. Offline AI</h2>
+<p><span class="pill obs">PRD</span>, replacing the PRAXIS remote AI service.</p>
+<div class="figure"><pre class="mermaid">flowchart LR
+  APP[&quot;Console / Board /&lt;br/&gt;Student app&quot;] -- REST --&gt; GW
+  subgraph GW[&quot;AI gateway (inside server service)&quot;]
+    direction TB
+    G1[&quot;permission + feature switch&quot;] --&gt; G2[&quot;priority queue&lt;br/&gt;live lesson &gt; teacher &gt; student&quot;] --&gt; G3[&quot;search library&lt;br/&gt;top matching chunks&quot;] --&gt; G4[&quot;prompt template&lt;br/&gt;per feature&quot;]
+  end
+  GW --&gt; RT[&quot;Local AI runtime (localhost only)&lt;br/&gt;LLM + embedding + translation models&quot;]
+  RT -- &quot;structured or streamed answer&quot; --&gt; APP</pre></div>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Endpoint</th>
+<th>Returns</th>
+<th>Pri.</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lesson plan</td>
+<td><code>/ai/lesson-plan</code></td>
+<td>objectives[], steps[{minutes, activity, contentIds[]}], checks[], homework</td>
+<td><span class="pill p0">P0</span></td>
+</tr>
+<tr>
+<td>Quiz &amp; worksheet</td>
+<td><code>/ai/quiz</code></td>
+<td>questions[{type, text, options[], answer}], saved as a draft quiz</td>
+<td><span class="pill p0">P0</span></td>
+</tr>
+<tr>
+<td>Ask the library</td>
+<td><code>/ai/ask</code></td>
+<td>streamed answer + citations[{contentId, page}]</td>
+<td><span class="pill p1">P1</span></td>
+</tr>
+<tr>
+<td>Draft learning path</td>
+<td><code>/ai/path-draft</code></td>
+<td>steps[{type, contentId}] from existing chapter items</td>
+<td><span class="pill p1">P1</span></td>
+</tr>
+<tr>
+<td>Student tutor</td>
+<td><code>/ai/tutor</code></td>
+<td>streamed hints, limited to the class syllabus</td>
+<td><span class="pill p1">P1</span></td>
+</tr>
+<tr>
+<td>Translate &amp; simplify</td>
+<td><code>/ai/translate</code></td>
+<td>Hindi and other Indian languages</td>
+<td><span class="pill p1">P1</span></td>
+</tr>
+<tr>
+<td>Present / board Ask AI</td>
+<td><code>/ai/ask</code> (lesson priority)</td>
+<td>streamed to the board or Present window via the relay</td>
+<td><span class="pill p1">P1</span></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Models: open models whose licences allow government and commercial use, picked by benchmarking (see Section 12).</li>
+<li>Model packages are signed (name, version, checksum, recommended settings) and delivered by USB kit or cloud.</li>
+<li>Install checks CPU, RAM and GPU and tunes the runtime.</li>
+<li>Limits: one request per user at a time, a daily cap for students, 120 s timeout. Users see their place in the queue.</li>
+<li>No model installed: <code>/ai/*</code> returns <code>AI_NOT_INSTALLED</code> and the UI shows an empty state.</li>
+<li>Prompts and outputs are deleted after 90 days.</li>
+</ul>
+
+</section><section><h2 id="10-cloud-licence-usb-kit-and-analytics">10. Cloud, licence, USB kit and analytics</h2>
+<h3 id="101-cloud-services-prd">10.1 Cloud services <span class="pill obs">PRD</span></h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Job</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>School registry + admin UI</td>
+<td>Schools (School ID, UDISE+, district, state, profile, PC quota, field person, status); internal UI behind company sign-in</td>
+</tr>
+<tr>
+<td>Licence service</td>
+<td>Signed licence tokens; offline activation and renewal files</td>
+</tr>
+<tr>
+<td>Check-in API</td>
+<td>Receives heartbeats; returns pending actions</td>
+</tr>
+<tr>
+<td>Content &amp; update store</td>
+<td>Content packs, shared library, games, signed app builds (Windows + Android), AI models, signed manifests; CDN delivery</td>
+</tr>
+<tr>
+<td>Kit builder</td>
+<td>Builds a school's USB kit from the registry</td>
+</tr>
+<tr>
+<td>Analytics ingest + warehouse</td>
+<td>Checks and stores usage events; read by the tech team's BI tool</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="102-identity-and-signing">10.2 Identity and signing</h3>
+<ul>
+<li>At activation the server gets its School ID and licence, makes its own key pair, and registers the public key. <span class="pill obs">PRD</span></li>
+<li>Every cloud request carries the School ID, the time and a signature. The cloud rejects unknown keys and clocks more than 10 minutes off. <span class="pill obs">PRD</span></li>
+<li>HTTPS with certificate pinning to our own certificate authority, never plain HTTP to a bare IP (a PRAXIS problem). [PRD + NEW]</li>
+<li>Cloud address order: admin setting, then the address used at activation, then the built-in default. This lets us move hosts without reinstalling. <span class="pill inf">PRAXIS</span></li>
+</ul>
+<h3 id="103-check-in-contract">10.3 Check-in contract</h3>
+<pre class="code"><code>POST /v1/checkin
+{ &quot;schoolId&quot;:&quot;SCH-0007&quot;, &quot;ver&quot;:{&quot;server&quot;:&quot;1.0.3&quot;,&quot;student&quot;:&quot;1.0.3&quot;,&quot;board&quot;:&quot;1.0.3&quot;,&quot;models&quot;:&quot;2026.10&quot;},
+  &quot;health&quot;:{&quot;uptimeH&quot;:212,&quot;diskFreeGb&quot;:118,&quot;pcsOnline&quot;:34,&quot;boardsOnline&quot;:4,&quot;backlogBatches&quot;:3},
+  &quot;manifests&quot;:{&quot;content&quot;:&quot;&lt;hash&gt;&quot;,&quot;profile&quot;:&quot;&lt;hash&gt;&quot;,&quot;fieldPeople&quot;:&quot;&lt;hash&gt;&quot;} }
+
+200 { &quot;licence&quot;:&quot;&lt;signed token|null&gt;&quot;, &quot;uploadAnalytics&quot;:true,
+      &quot;actions&quot;:[{&quot;type&quot;:&quot;download&quot;,&quot;kind&quot;:&quot;content&quot;,&quot;manifest&quot;:&quot;&lt;url&gt;&quot;},
+                 {&quot;type&quot;:&quot;update&quot;,&quot;kind&quot;:&quot;app&quot;,&quot;target&quot;:&quot;student&quot;,&quot;version&quot;:&quot;1.0.4&quot;,&quot;policy&quot;:&quot;after-hours&quot;},
+                 {&quot;type&quot;:&quot;fieldPeople&quot;,&quot;bundle&quot;:&quot;&lt;signed&gt;&quot;},{&quot;type&quot;:&quot;profile&quot;,&quot;bundle&quot;:&quot;&lt;signed&gt;&quot;}] }</code></pre>
+<ul>
+<li><strong>Licence token:</strong> signed {schoolId, adapter hash, pcQuota, boardQuota, validUntil, graceDays}; checked offline.</li>
+<li><strong>Downloads:</strong> listed in signed manifests (path, size, checksum); resumable; checked before use.</li>
+<li><strong>Field-person bundle:</strong> signed list {username, password hash, active}; replaces the local list in one step.</li>
+</ul>
+<h3 id="104-licence-states">10.4 Licence states</h3>
+<div class="figure"><pre class="mermaid">stateDiagram-v2
+  [*] --&gt; NotActivated
+  NotActivated --&gt; Active: activate online or with USB kit file
+  Active --&gt; Active: check-in OK, or internet down (within grace)
+  Active --&gt; Grace: licence past validUntil
+  Grace --&gt; Active: renewed online or by file
+  Grace --&gt; Locked: 30 grace days used up
+  Active --&gt; Locked: cloud says revoked (signed)
+  Locked --&gt; Active: renewed online or by file
+  note right of Locked
+    Classroom features return LOCKED.
+    Console, sign-in, licence, health still work.
+  end note</pre></div>
+<h3 id="105-usb-kit-schools-with-no-internet">10.5 USB kit (schools with no internet)</h3>
+<p><span class="pill obs">PRD</span></p>
+<pre class="code"><code>KIT-SCH-0007-2026-10-23/
+  kit.json           signed manifest of everything below
+  installer/         signed Windows installer + board APK
+  activation.lic     signed activation (schoolId, licence, cloud public key)
+  profile.json       signed profile (master data, settings, update policy)
+  field-people.json  signed field-person list
+  content/ models/   packs + manifests
+  returns/           server writes analytics exports here</code></pre>
+<p>Import checks every signature and checksum, then applies them in order: activation, profile, field people, content, models, app update.</p>
+<h3 id="106-analytics">10.6 Analytics</h3>
+<blockquote>
+<p><strong>Hard rule:</strong> analytics never contain a person or learning data. Only allow-listed fields get through, and an automated test checks this. <span class="pill obs">PRD</span></p>
+</blockquote>
+<pre class="code"><code>{&quot;e&quot;:&quot;lesson.presented&quot;,&quot;ts&quot;:&quot;2026-10-23T09:05:11Z&quot;,&quot;schoolId&quot;:&quot;SCH-0007&quot;,&quot;app&quot;:&quot;server&quot;,
+ &quot;ver&quot;:&quot;1.0.3&quot;,&quot;role&quot;:&quot;teacher&quot;,&quot;dims&quot;:{&quot;class&quot;:&quot;7&quot;,&quot;subject&quot;:&quot;science&quot;},
+ &quot;m&quot;:{&quot;minutes&quot;:38,&quot;pcsJoined&quot;:32}}</code></pre>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Allowed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>e</code></td>
+<td>Catalogue event: lesson.presented, quiz.run, poll.run, work.set, content.opened, playlist.used, path.used, together.opened, ai.request, signin.count, pc.online, board.online, app.crash, sync.checkin, …</td>
+</tr>
+<tr>
+<td><code>ts, schoolId, app, ver</code></td>
+<td>UTC time, school, app, version</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>teacher, student, super_admin or system. Never a user ID.</td>
+</tr>
+<tr>
+<td><code>dims</code></td>
+<td>class, subject, contentId, feature, windowsVersion, androidVersion, errorCode</td>
+</tr>
+<tr>
+<td><code>m</code></td>
+<td>Numbers only: counts, minutes, latency, sizes</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Never allowed:</strong> names, usernames, user or student IDs, scores, marks, attendance, answers, free text, prompts.</li>
+<li>Unsent raw events are kept up to 180 days; daily totals are never deleted before upload.</li>
+<li>Uploads are signed ~1 MB batches with a batch ID; sending the same batch twice is safe.</li>
+<li>With no internet, the Super Admin exports batches to the USB kit's <code>returns/</code> folder.</li>
+<li>The <strong>device list</strong> sent to the cloud (name, type, version, last seen) is allowed <span class="pill inf">PRAXIS</span>; it holds no student data.</li>
+</ul>
+
+</section><section><h2 id="11-praxis-weak-spots-and-how-we-fix-them">11. PRAXIS weak spots and how we fix them</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>PRAXIS problem</th>
+<th>Our fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cloud traffic is plain HTTP to a bare IP</td>
+<td>HTTPS + certificate pinning + signed requests (10.2)</td>
+</tr>
+<tr>
+<td>No encryption on the school network</td>
+<td>Server-made TLS certificate, pinned at enrolment (8.2)</td>
+</tr>
+<tr>
+<td>Tokens in URLs (<code>?token=</code>)</td>
+<td>Header only; short-lived signed links for media (3)</td>
+</tr>
+<tr>
+<td>CORS open to any website</td>
+<td>CORS off; our apps are native, so no browser origin is allowed</td>
+</tr>
+<tr>
+<td>Client IP can be faked (<code>trustProxy</code> on, reads <code>X-Forwarded-For</code>)</td>
+<td><code>trustProxy</code> off; use the real socket address</td>
+</tr>
+<tr>
+<td>Boards hold 10-year tokens</td>
+<td>90-day tokens, auto-renewed, revocable; re-key button</td>
+</tr>
+<tr>
+<td>512 MB uploads could fill the disk</td>
+<td>Keep 512 MB per file, but check free disk first; per-teacher storage quota; alert when the disk is low</td>
+</tr>
+<tr>
+<td>Schema changes by "add missing columns"</td>
+<td>Numbered migrations, with a backup before each one</td>
+</tr>
+<tr>
+<td>Server lived inside a tray app</td>
+<td>Proper Windows service; console is a separate app</td>
+</tr>
+</tbody>
+</table></div>
+
+</section><section><h2 id="12-tech-stack">12. Tech stack</h2>
+<blockquote>
+<p><strong>Update:</strong> the app screens now use <strong>Tauri 2 + React</strong> instead of Flutter. See <strong>Section 17.4</strong> for the final stack. The Flutter rows below are kept for comparison.</p>
+</blockquote>
+<p>Each pick is explained in plain words. They're chosen so the whole system installs cleanly on ordinary school Windows PCs and works fully offline.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Pick</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Server language</td>
+<td><strong>TypeScript on Node.js 22 LTS</strong></td>
+<td>PRAXIS proves it works for this job; one language for server and cloud</td>
+</tr>
+<tr>
+<td>Web server</td>
+<td><strong>Fastify</strong> + <code>@fastify/websocket</code></td>
+<td>Fast, simple; PRAXIS uses it</td>
+</tr>
+<tr>
+<td>Input checking + API contract</td>
+<td><strong>zod</strong> schemas, which generate the <strong>OpenAPI</strong> file</td>
+<td>One source of truth: the server and apps can't drift apart (PRD contract tests)</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><strong>SQLite</strong> in WAL mode, via <code>better-sqlite3</code>; numbered migrations</td>
+<td>A single file, nothing extra to install; easy to back up. WAL lets reads and writes happen together.</td>
+</tr>
+<tr>
+<td>AI search store</td>
+<td><strong>sqlite-vec</strong> extension</td>
+<td>Keeps library search vectors in the same SQLite file</td>
+</tr>
+<tr>
+<td>Windows service</td>
+<td>Bundled <code>node.exe</code> run by <strong>WinSW</strong></td>
+<td>Starts at boot, restarts on crash, no Node install needed</td>
+</tr>
+<tr>
+<td>Office → PDF</td>
+<td>Bundled <strong>LibreOffice</strong> (headless), run on upload</td>
+<td>So boards and PCs only need a PDF viewer</td>
+</tr>
+<tr>
+<td>Video recording</td>
+<td>Bundled <strong>FFmpeg</strong></td>
+<td>Records the Present or board screen + audio</td>
+</tr>
+<tr>
+<td>All app screens</td>
+<td><strong>Flutter</strong> (Dart): one codebase builds Windows desktop <strong>and</strong> Android</td>
+<td>Covers console, Present, Student app, Board app and Teacher remote. PRAXIS also uses Flutter.</td>
+</tr>
+<tr>
+<td>PDF viewing</td>
+<td><code>pdfrx</code> (pdfium)</td>
+<td>Same PDF engine PRAXIS uses</td>
+</tr>
+<tr>
+<td>Video/audio playback</td>
+<td><code>media_kit</code></td>
+<td>Plays local and LAN video on Windows and Android</td>
+</tr>
+<tr>
+<td>Discovery in the apps</td>
+<td>Dart <code>RawDatagramSocket</code> (UDP broadcast)</td>
+<td>Works on both Windows and Android, no wrapper needed</td>
+</tr>
+<tr>
+<td>Local app storage (cache, outbox)</td>
+<td><strong>SQLite</strong> (<code>sqflite_common_ffi</code> on Windows, <code>sqflite</code> on Android)</td>
+<td>The outbox survives crashes and power cuts</td>
+</tr>
+<tr>
+<td>Student PC lock-down</td>
+<td>Flutter app in kiosk mode + a small Windows helper for lock/blank and launching quick apps</td>
+<td>Blocks other apps during lessons</td>
+</tr>
+<tr>
+<td>Local AI runtime</td>
+<td><strong>llama.cpp</strong> (<code>llama-server</code>) on localhost</td>
+<td>Runs small models on plain CPUs, uses a GPU if there is one</td>
+</tr>
+<tr>
+<td>Models to benchmark</td>
+<td>LLM: <strong>Gemma</strong> (Google; main pick) small instruct model, 4-bit GGUF, with <strong>Qwen</strong> (Apache-2.0) as the backup. Embeddings: <strong>multilingual-e5-small</strong> or <strong>bge-m3</strong> (MIT). Translation: <strong>IndicTrans2</strong> (MIT).</td>
+<td>Licences allow government and commercial use; good with Indian languages</td>
+</tr>
+<tr>
+<td>Installer</td>
+<td><strong>Inno Setup</strong>, code-signed; Android APK signed</td>
+<td>One Windows installer with a Server / Student PC / Board choice</td>
+</tr>
+<tr>
+<td>Cloud server</td>
+<td>TypeScript + Fastify + <strong>PostgreSQL</strong></td>
+<td>Same language as the school server</td>
+</tr>
+<tr>
+<td>Cloud files</td>
+<td>S3-compatible storage + CDN</td>
+<td>Content, builds and models</td>
+</tr>
+<tr>
+<td>Cloud admin UI</td>
+<td>React</td>
+<td>Internal tool only</td>
+</tr>
+<tr>
+<td>Analytics warehouse</td>
+<td>PostgreSQL first (partitioned by month); move to ClickHouse only if it gets slow</td>
+<td>Start simple</td>
+</tr>
+<tr>
+<td>Signing</td>
+<td>Ed25519 keys</td>
+<td>Small, fast signatures for licences, manifests, kits and requests</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="121-repo-layout">12.1 Repo layout</h3>
+<pre class="code"><code>ict-app/
+  server/            Node + Fastify school server (service, relay, beacon, jobs, AI gateway)
+    src/routes/      one file per API group
+    src/relay/       WebSocket rooms, recorder, watchers
+    src/jobs/        check-in, sync, downloads, analytics, backup, indexing, reminders, cleanup
+    src/db/          migrations + queries
+  apps/              one Flutter codebase
+    lib/roles/       console, present, student, board, teacher_remote
+    lib/core/        discovery, api client, relay client, outbox, cache
+  ai/                llama.cpp config, prompt templates, model manifests
+  cloud/             registry, licence, check-in, store, kit builder, analytics ingest, admin UI
+  contracts/         OpenAPI + relay message schemas (generated from zod)
+  packs/             starter activity pack
+  installer/         Inno Setup script, WinSW config, firewall rules
+  tests/             contract, load, chaos, privacy, AI tests</code></pre>
+
+</section><section><h2 id="13-data-model">13. Data model</h2>
+<p>One SQLite file on the server PC. UUID keys, UTC times, soft delete for users and students, and a <code>version</code> column on records edited during lessons. <span class="pill obs">PRD</span> Foreign keys on. <span class="pill inf">PRAXIS</span></p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Tables</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>School &amp; system</td>
+<td><code>school</code>, <code>settings</code>, <code>licence</code>, <code>field_person_accounts</code>, <code>meta</code>, <code>audit_log</code>, <code>app_releases</code></td>
+</tr>
+<tr>
+<td>People &amp; sign-in</td>
+<td><code>users</code> (super_admin or teacher, password_hash, can_host_lessons, can_upload_content, status), <code>students</code> (name, class, section, roll_no, gender, dob, pin_hash, qr_token, guardian_name, family_pin_hash), <code>sessions</code> (token_hash, kind, expires_at), <code>enrolment_codes</code></td>
+</tr>
+<tr>
+<td>School structure</td>
+<td><code>classes</code>, <code>sections</code>, <code>subjects</code>, <code>class_subjects</code>, <code>languages</code>, <code>student_enrolments</code>, <code>periods</code>, <code>timetable_slots</code></td>
+</tr>
+<tr>
+<td>Devices</td>
+<td><code>devices</code> (kind lab_pc or board, name, token_hash, class_id, section_id, current_lesson_id, locked, last_seen, app_version, status, dirty), <code>enrol_windows</code>, <code>device_commands</code> (command, delivered_at, acked_at), <code>lock_policies</code></td>
+</tr>
+<tr>
+<td>Content</td>
+<td><code>content_items</code> (type, source local or library, class, subject, chapter, needs_internet, file_hash, download_state), <code>files</code> (sha256, size, mime), <code>content_chunks</code>, <code>content_vectors</code>, <code>content_notes</code>, <code>content_progress</code>, <code>playlists</code>, <code>playlist_items</code>, <code>paths</code>, <code>path_steps</code>, <code>activities</code>, <code>external_activities</code></td>
+</tr>
+<tr>
+<td>Live</td>
+<td><code>lessons</code> (room_id, join_code, device_id, started_by, content_id, status), <code>participants</code>, <code>whiteboards</code>, <code>whiteboard_pages</code>, <code>recordings</code> (kind events or video, duration_ms, event_count, file_hash), <code>recording_events</code> (seq, at_ms, type, payload), <code>together_rooms</code>, <code>study_rooms</code>, <code>study_room_members</code>, <code>planned_lessons</code></td>
+</tr>
+<tr>
+<td>Assessment</td>
+<td><code>quizzes</code> (kind quiz or poll, seconds_per_q), <code>questions</code>, <code>question_options</code>, <code>quiz_runs</code> (lesson_id, current_question_id, state), <code>quiz_run_teams</code>, <code>answers</code>, <code>activity_runs</code>, <code>assignments</code>, <code>assignment_refs</code>, <code>submissions</code>, <code>marks</code>, <code>report_cards</code> (draft, published or frozen)</td>
+</tr>
+<tr>
+<td>Tracking</td>
+<td><code>attendance</code>, <code>path_progress</code>, <code>activity_log</code> (per student, never uploaded), <code>daily_stats</code> (totals, uploaded)</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td><code>notices</code>, <code>notice_targets</code>, <code>messages</code></td>
+</tr>
+<tr>
+<td>AI</td>
+<td><code>ai_requests</code> (feature, role, latency, status, prompt, output; text deleted after 90 days)</td>
+</tr>
+<tr>
+<td>Analytics &amp; sync</td>
+<td><code>app_events</code>, <code>app_daily</code>, <code>upload_batches</code>, <code>sync_state</code>, <code>download_queue</code></td>
+</tr>
+</tbody>
+</table></div>
+
+</section><section><h2 id="14-rest-api-on-the-school-network">14. REST API (on the school network)</h2>
+<p>Base <code>https://&lt;server&gt;:7700/api/v1</code>. JSON with zod checks, errors as <code>{code, message}</code>, cursor paging, streamed uploads up to 512 MB. OpenAPI is generated and shared by the server and apps.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Main endpoints</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>System</td>
+<td><code>GET /health</code>, <code>GET /server/status</code>, <code>POST /server/checkin-now</code>, <code>/server/sync</code>, <code>/server/export-analytics</code>, <code>/server/firewall/allow</code>, <code>/server/fetch-content</code>, <code>GET /server/audit</code>, <code>POST /kits/import</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Auth</td>
+<td><code>POST /auth/staff</code>, <code>/auth/student</code>, <code>/auth/student/pin</code>, <code>/auth/student/enrol</code>, <code>/auth/device/enrol</code>, <code>/auth/switch</code>, <code>/auth/logout</code>, <code>GET /auth/me</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>People</td>
+<td><code>/staff</code>, <code>/students</code>, <code>/students/import</code>, <code>/students/cards.pdf</code>, <code>/students/:id/enrolment-code</code>, <code>/enrolment-codes/class</code>, <code>/students/:id/family-pin</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Setup</td>
+<td><code>/classes</code>, <code>/sections</code>, <code>/subjects</code>, <code>/periods</code>, <code>/timetable</code>, <code>/devices</code>, <code>/devices/enrol-window</code>, <code>/devices/:id/command</code>, <code>/devices/:id/rekey</code>, <code>GET /devices/:id/commands</code>, <code>POST /devices/commands/:id/ack</code>, <code>/lock/policy</code>, <code>POST /lock/all</code>, <code>POST /lock/unlock</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Content</td>
+<td><code>/content</code>, <code>/content/upload</code>, <code>/library</code>, <code>GET /files/:hash</code> (range requests, signed link), <code>/content/:id/notes</code>, <code>/content/:id/progress</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Teaching</td>
+<td><code>/quizzes</code>, <code>/quizzes/:id/questions</code>, <code>/quizzes/:id/self-paced</code>, <code>/playlists</code>, <code>/paths</code>, <code>/planned-lessons</code>, <code>/assignments</code>, <code>/submissions</code>, <code>/marks</code>, <code>/activities</code>, <code>/external-activities</code>, <code>/recordings</code>, <code>/notices</code>, <code>/messages</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Live</td>
+<td><code>POST /lessons</code>, <code>GET /lessons/active</code>, <code>GET /lessons/mine</code>, <code>POST /lessons/join</code>, <code>POST /lessons/:id/end</code>, <code>/quiz-runs</code> (+ <code>/teams</code>, <code>/advance</code>, <code>/finish</code>, <code>/standings</code>), <code>POST /recordings/start</code>, <code>POST /recordings/stop</code>, <code>/together-rooms</code>, <code>/study-rooms</code>, <code>GET /whiteboards/:id</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Results</td>
+<td><code>/results/quizzes</code>, <code>/results/students/:id</code>, <code>/analytics/class/:id</code>, <code>/students/:id/next-steps</code>, <code>/attendance</code>, <code>/reports</code>, <code>/report-cards</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>AI</td>
+<td><code>/ai/lesson-plan</code>, <code>/ai/quiz</code>, <code>/ai/ask</code>, <code>/ai/path-draft</code>, <code>/ai/tutor</code>, <code>/ai/translate</code></td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Licence &amp; updates</td>
+<td><code>GET /licence</code>, <code>POST /licence/renew-file</code>, <code>GET /updates</code>, <code>POST /updates/:id/download</code>, <code>POST /updates/install</code>, <code>GET /updates/:target/file</code> (lab PC and board self-update)</td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+<tr>
+<td>Family (P2)</td>
+<td><code>POST /family/login</code>, <code>GET /family/home</code>, <code>GET /family/reports</code>, <code>GET/POST /family/messages</code>, <code>PUT /family/language</code></td>
+<td><span class="pill inf">PRAXIS</span></td>
+</tr>
+<tr>
+<td>Relay</td>
+<td><code>WSS /relay</code></td>
+<td><span class="pill both">BOTH</span></td>
+</tr>
+</tbody>
+</table></div>
+
+</section><section><h2 id="15-targets-and-tests">15. Targets and tests</h2>
+<h3 id="targets-prd">Targets <span class="pill obs">PRD</span></h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Capacity per server</td>
+<td>60 lab PCs + 10 boards, 5 live rooms, 2,000 students, 500 GB content</td>
+</tr>
+<tr>
+<td>40 students join a lesson</td>
+<td>under 60 s total</td>
+</tr>
+<tr>
+<td>Content under 100 MB opens on a lab PC</td>
+<td>under 3 s when cached</td>
+</tr>
+<tr>
+<td>Student app idle memory</td>
+<td>under 300 MB on a 4 GB PC</td>
+</tr>
+<tr>
+<td>Recovery after a power cut</td>
+<td>under 2 min to serving; no loss of acked writes</td>
+</tr>
+<tr>
+<td>Uptime in school hours</td>
+<td>99.5%</td>
+</tr>
+<tr>
+<td>Relay speed</td>
+<td>control under 300 ms p95 to 60 PCs; ink under 200 ms; media sync within 500 ms</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="tests">Tests</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Test</th>
+<th>What it proves</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Contract</td>
+<td>Apps and server agree on every API and relay message</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Load</td>
+<td>60 simulated PCs + boards in a lesson meet the speed targets</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Offline / chaos</td>
+<td>Pull the network, kill the server, cut the power: outbox and reconnect lose no answers</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Windows matrix</td>
+<td>Windows 10 22H2 and 11 on 4 GB and 8 GB PCs; one real lab rig in the office</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Android matrix</td>
+<td>2–3 common smart-panel models (Android 9+)</td>
+<td><span class="pill risk">NEW</span></td>
+</tr>
+<tr>
+<td>Network</td>
+<td>Wi-Fi with AP isolation, changing IPs, virtual adapters present: discovery still works or warns clearly</td>
+<td><span class="pill risk">NEW</span></td>
+</tr>
+<tr>
+<td>Privacy</td>
+<td>Every analytics event passes the allow-list with no identifiers</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+<tr>
+<td>Security</td>
+<td>No tokens in URLs or logs; TLS on every connection; locked-out PINs; revoked device tokens rejected</td>
+<td><span class="pill risk">NEW</span></td>
+</tr>
+<tr>
+<td>AI</td>
+<td>Fixed prompts return valid structured output in time on reference hardware</td>
+<td><span class="pill obs">PRD</span></td>
+</tr>
+</tbody>
+</table></div>
+
+</section><section><h2 id="16-build-order">16. Build order</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Milestone</th>
+<th>What ships</th>
+<th>Done when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>M1 Foundation</strong></td>
+<td>Windows service, SQLite + migrations, auth and roles, discovery beacon, TLS with pinning, enrol window, OpenAPI contract, installer</td>
+<td>A lab PC and a board find the server, enrol and sign in with no typed IP</td>
+</tr>
+<tr>
+<td><strong>M2 Live lesson (P0 core)</strong></td>
+<td>Relay rooms, join codes, navigation, PDF/video/Office viewing, ink + whiteboard, lock/blank, device commands with queue, outbox + ack, late-join state</td>
+<td>A 40-PC lesson runs with a board driving it; network-pull test loses nothing</td>
+</tr>
+<tr>
+<td><strong>M3 Assessment &amp; work (P0)</strong></td>
+<td>Live quizzes and polls, self-paced quizzes, assignments and submissions, marks, attendance, results export, activities + starter pack</td>
+<td>A teacher runs a quiz, sets work and exports marks</td>
+</tr>
+<tr>
+<td><strong>M4 Cloud &amp; licence (P0)</strong></td>
+<td>Check-in, signed licence + grace + lockdown, downloads, shared library, updates over the LAN, USB kit, analytics pipeline + privacy test</td>
+<td>A school activates offline from a USB kit and updates all PCs from the server</td>
+</tr>
+<tr>
+<td><strong>M5 Offline AI (P0)</strong></td>
+<td>llama.cpp runtime, AI gateway + queue, lesson-plan and quiz generators, indexing</td>
+<td>Lesson plan and quiz return valid output on a 8 GB reference PC</td>
+</tr>
+<tr>
+<td><strong>M6 Pilot</strong></td>
+<td>Present mode, console Overview and Server manager, backups, audit log</td>
+<td>First pilot school</td>
+</tr>
+<tr>
+<td><strong>M7 General release (P1)</strong></td>
+<td>Timetable, week ahead, playlists, paths, event + video recording, notices, messages, study rooms, Together, cast + screen watching, pen sharing, team quizzes, student analytics, next steps, report cards, Ask/tutor/translate AI, Teacher remote</td>
+<td>All P1 rows in this spec</td>
+</tr>
+<tr>
+<td><strong>M8 Later (P2)</strong></td>
+<td>Family mode, guardian messages</td>
+<td>All P2 rows</td>
+</tr>
+</tbody>
+</table></div>
+
+</section><section><h2 id="17-questions-we-settled-after-writing-this-spec">17. Questions we settled after writing this spec</h2>
+<h3 id="171-if-everything-is-offline-why-do-we-need-a-server">17.1 If everything is offline, why do we need a "server"?</h3>
+<p>In this spec, <strong>"server" means one ordinary Windows PC inside the school lab</strong>, usually the teacher's PC. It is not an internet server.</p>
+<ul>
+<li>A lab has up to 60 student PCs. When the teacher opens page 5, all 60 screens must change. When a student answers a quiz, the teacher must see it.</li>
+<li>That only works if one PC is the meeting point: it keeps the data and passes messages between PCs over the lab's local network (cables or Wi-Fi inside the room).</li>
+<li>The local network works without the internet, so the whole lab stays <strong>fully offline</strong>.</li>
+</ul>
+<p><strong>Node.js is fine offline.</strong> It's just a program that runs code on Windows, like Python or Java. We pack <code>node.exe</code> inside our installer, so the school never downloads anything.</p>
+<h3 id="172-do-we-need-gcp-cloud-server-bucket-postgres">17.2 Do we need GCP (cloud server, bucket, Postgres)?</h3>
+<p><strong>Not to run a class.</strong> The cloud parts in Section 10 are only our company's back office:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Cloud part</th>
+<th>What it's for</th>
+<th>On GCP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cloud server</td>
+<td>Licences, check-in, sending updates</td>
+<td>Cloud Run</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>School registry, analytics</td>
+<td>Cloud SQL (PostgreSQL)</td>
+</tr>
+<tr>
+<td>Bucket</td>
+<td>Content packs, app builds, AI models</td>
+<td>Cloud Storage (+ Cloud CDN)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>For the first offline Windows version, we can skip the cloud completely.</strong> Licences, content and updates go to schools on a <strong>USB kit</strong> (Section 10.5). We add GCP later, when we want automatic updates and usage numbers.</p>
+<p>What we actually build for offline Windows:</p>
+<ol type="1">
+<li><strong>Server app</strong> on the lab PC: Node.js + TypeScript + Fastify, with a SQLite database file.</li>
+<li><strong>Student app</strong> on the 60 lab PCs (and the <strong>Board app</strong> for Android panels).</li>
+<li><strong>One Windows installer</strong> that asks "Server or Student PC?"</li>
+</ol>
+<h3 id="173-which-framework-for-the-app-screens">17.3 Which framework for the app screens?</h3>
+<p>Our team knows <strong>JavaScript and backend</strong> best, so we compared the options:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Language</th>
+<th>Windows</th>
+<th>Android board</th>
+<th>Weight on a 4 GB PC</th>
+<th>Fit for us</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tauri 2 + React</strong></td>
+<td>JS/TS (a small Rust layer)</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Light: uses the browser engine already in Windows (WebView2)</td>
+<td><strong>Best fit</strong></td>
+</tr>
+<tr>
+<td>Electron + React</td>
+<td>100% JS/TS</td>
+<td>Yes</td>
+<td>No (Android needs another tool, e.g. Capacitor)</td>
+<td>Heavy: ships its own Chrome, ~150 MB per app, more memory</td>
+<td>Safe fallback</td>
+</tr>
+<tr>
+<td>Flutter</td>
+<td>Dart</td>
+<td>Yes (real <code>.exe</code>)</td>
+<td>Yes</td>
+<td>Light</td>
+<td>Good, but a new language for us</td>
+</tr>
+<tr>
+<td>React Native (Windows)</td>
+<td>JS/TS</td>
+<td>Yes, but weak</td>
+<td>Yes</td>
+<td>Medium</td>
+<td>Not recommended</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Why not React Native:</strong> its Windows support is the weak spot. Many libraries we need (PDF viewer, video player, drawing/whiteboard) don't support Windows, so we'd end up writing native Windows code.</p>
+<p><strong>Why Tauri + React:</strong></p>
+<ul>
+<li>It's normal web development: React, HTML, CSS, JS.</li>
+<li>Mature web libraries cover our needs: <strong>PDF.js</strong> for PDFs, plain <code>&lt;video&gt;</code> for video, <strong>Konva</strong> or <strong>Excalidraw</strong> for the whiteboard, WebSocket for live lessons.</li>
+<li>It's light enough for 4 GB school PCs (Section 15 target: under 300 MB).</li>
+<li>One codebase builds both the Windows apps and the Android board app.</li>
+<li>The small Rust layer is only for things a browser can't do: the UDP "find the server" broadcast, locking the PC, and launching other apps. Ready-made Tauri plugins cover most of these.</li>
+</ul>
+<p><strong>If we want zero Rust:</strong> use <strong>Electron</strong>. It's 100% JavaScript and very mature, but heavier on memory.</p>
+<h3 id="174-final-stack-compared-replaces-the-app-rows-in-section-12">17.4 Final stack, compared (replaces the app rows in Section 12)</h3>
+<p>For every part: our pick, the other options we looked at, and why the pick wins.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Our pick</th>
+<th>Other options</th>
+<th>Why our pick wins</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Server runtime</strong> (lab PC)</td>
+<td><strong>Node.js 22 + TypeScript</strong></td>
+<td>Bun, Deno, Go, Python (FastAPI), .NET (C#)</td>
+<td>You already know JS and backend. Node is mature on Windows, and PRAXIS proves it works for exactly this job. Bun and Deno are newer, and their Windows support is younger. Go, Python and C# mean learning a new language.</td>
+</tr>
+<tr>
+<td><strong>Web framework</strong></td>
+<td><strong>Fastify</strong></td>
+<td>Express, NestJS, Hono</td>
+<td>Faster than Express, with schema checks and file uploads built in. NestJS adds a lot of structure we don't need. Hono is good but has fewer ready Node plugins (uploads, static files).</td>
+</tr>
+<tr>
+<td><strong>Live messages</strong></td>
+<td><strong><code>@fastify/websocket</code></strong> (plain WebSocket)</td>
+<td>Socket.IO, uWebSockets.js</td>
+<td>Plain WebSocket is light, and we control our own message format and acks (Section 8.3). Socket.IO adds its own protocol and fallbacks we don't need. uWebSockets is faster but harder to install on Windows.</td>
+</tr>
+<tr>
+<td><strong>Database</strong></td>
+<td><strong>SQLite</strong> via <code>better-sqlite3</code></td>
+<td>PostgreSQL, MySQL, <code>node:sqlite</code> (built into Node), sql.js (WASM)</td>
+<td>One file and nothing to install, which suits an ordinary school PC. Postgres and MySQL need a separate database service that someone must install and look after. <code>better-sqlite3</code> is the fastest and most proven SQLite driver for Node. <code>node:sqlite</code> is still experimental, and sql.js keeps the whole database in memory.</td>
+</tr>
+<tr>
+<td><strong>Input checking</strong></td>
+<td><strong>zod</strong></td>
+<td>TypeBox, Joi, Yup, Ajv</td>
+<td>One schema gives both the TypeScript types and the runtime checks, and it can generate the OpenAPI file. TypeBox is a fine second choice (slightly faster with Fastify). Joi and Yup don't give types as cleanly.</td>
+</tr>
+<tr>
+<td><strong>App shell</strong> (Windows + Android)</td>
+<td><strong>Tauri 2</strong></td>
+<td>Electron, Flutter, React Native Windows, WinUI/WPF (C#)</td>
+<td>Compared in 17.3: light on 4 GB PCs, web skills, and builds both Windows and Android. WinUI and WPF are Windows-only and use C#.</td>
+</tr>
+<tr>
+<td><strong>UI library</strong></td>
+<td><strong>React + TypeScript</strong></td>
+<td>Vue, Svelte, Solid</td>
+<td>You know React, and it has the biggest set of ready-made libraries. The others are good, but switching gives us nothing here.</td>
+</tr>
+<tr>
+<td><strong>PDF viewing</strong></td>
+<td><strong>PDF.js</strong> (or <code>react-pdf</code>, which wraps it)</td>
+<td>pdfium through Rust, a commercial SDK (PSPDFKit, Apryse)</td>
+<td>Free, the engine Firefox uses, works offline inside the app. Commercial SDKs cost money per device. Pdfium through Rust means extra native code.</td>
+</tr>
+<tr>
+<td><strong>Video &amp; audio</strong></td>
+<td><strong>HTML5 <code>&lt;video&gt;</code> / <code>&lt;audio&gt;</code></strong></td>
+<td>video.js, mpv or FFmpeg through Rust</td>
+<td>Built into WebView2, so there's nothing to add. To be safe, the server converts uploads to MP4 (H.264 + AAC) with FFmpeg, which every Windows PC plays. video.js only adds a skin; mpv adds native code.</td>
+</tr>
+<tr>
+<td><strong>Whiteboard &amp; ink</strong></td>
+<td><strong>Konva</strong> for pen strokes over content; <strong>Excalidraw</strong> for Together rooms</td>
+<td>Fabric.js, tldraw, plain canvas</td>
+<td>Konva is fast and light for drawing on top of a PDF or video. Excalidraw gives a ready whiteboard (shapes, text, sticky notes) for free (MIT licence). tldraw needs a paid licence for commercial use. Plain canvas means building everything ourselves.</td>
+</tr>
+<tr>
+<td><strong>Local app storage</strong> (cache + outbox)</td>
+<td><strong>SQLite</strong> through the Tauri SQL plugin</td>
+<td>IndexedDB, localStorage, plain files</td>
+<td>SQLite survives crashes and power cuts, and it's easy to query ("show unsent answers"). IndexedDB lives inside the browser engine's profile, can be wiped, and is harder to inspect. localStorage is too small.</td>
+</tr>
+<tr>
+<td><strong>Finding the server</strong> (UDP broadcast)</td>
+<td><strong>Small Rust command in Tauri</strong> (or a UDP plugin)</td>
+<td>mDNS only, typing the IP by hand, a Node helper process</td>
+<td>Browser code can't send UDP, so a few lines of Rust do it. mDNS is often blocked on school Wi-Fi (we keep it as a fallback). Typing IPs breaks whenever the router changes them. A Node helper would add ~50 MB to every PC.</td>
+</tr>
+<tr>
+<td><strong>PC lock-down &amp; quick apps</strong></td>
+<td><strong>Tauri kiosk window + small Rust helper</strong></td>
+<td>Windows Assigned Access (built-in kiosk mode), lab software (NetSupport School, Veyon)</td>
+<td>Our helper lets the teacher lock and unlock from the lesson, which is part of our product. Assigned Access locks the PC to one app permanently and is a good add-on for P1. Third-party lab tools cost money or add a second system to manage.</td>
+</tr>
+<tr>
+<td><strong>Local AI</strong></td>
+<td><strong>llama.cpp</strong> (<code>llama-server</code>)</td>
+<td>Ollama, OpenVINO, ONNX Runtime GenAI, vLLM</td>
+<td>One small program that runs on plain CPUs and uses a GPU if there is one. Ollama is built on llama.cpp but adds its own background service, and gives us less control. OpenVINO can be faster on Intel CPUs, so we include it in benchmarking. vLLM needs an NVIDIA GPU and Linux.</td>
+</tr>
+<tr>
+<td><strong>Cloud</strong> (later)</td>
+<td><strong>GCP: Cloud Run + Cloud SQL + Cloud Storage</strong></td>
+<td>GKE (Kubernetes), Compute Engine VMs, Firebase</td>
+<td>Cloud Run runs our Node code without servers to manage, and costs nothing when idle. Cloud SQL is managed PostgreSQL, and Cloud Storage holds content, builds and models. GKE is far more than we need. VMs need patching. Firebase's database isn't SQL, which makes the analytics harder.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Result:</strong> one language, <strong>TypeScript</strong>, across the server, the apps and the cloud. Only two small pieces of Rust are needed: the discovery broadcast and the lock-down helper.</p>
+</section>
+<footer>Built from <code>ict-app-final-spec.md</code>, which combines <code>praxis-system-design.md</code> and <code>tech-prd-ict-lab-v1.1.md</code>.</footer>
+</main>
+</div>
+<script>
+  // Draws the diagrams when the page is opened as a plain file in a browser.
+  // Skipped where the viewer has already drawn them.
+  (function () {
+    function pending() {
+      return Array.prototype.filter.call(document.querySelectorAll('pre.mermaid'), function (el) {
+        return !el.querySelector('svg') && el.getAttribute('data-processed') !== 'true';
+      });
+    }
+    function draw() {
+      if (!pending().length) return;
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js';
+      s.onload = function () {
+        var dark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+          (document.documentElement.getAttribute('data-theme') !== 'light' &&
+           window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        window.mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'neutral', securityLevel: 'loose', fontFamily: 'IBM Plex Sans, system-ui, sans-serif' });
+        window.mermaid.run({ nodes: pending() });
+      };
+      document.head.appendChild(s);
+    }
+    if (document.readyState === 'complete') setTimeout(draw, 800);
+    else window.addEventListener('load', function () { setTimeout(draw, 800); });
+  })();
+</script>

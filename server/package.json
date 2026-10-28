@@ -1,0 +1,29 @@
+{
+  "name": "@ict/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=cjs --external:better-sqlite3 --outfile=dist/server.cjs"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.5",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "@ict/contracts": "workspace:*",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.0.3",
+    "fastify": "^5.12.7",
+    "selfsigned": "^5.5.0",
+    "zod": "^4.6.7"
+  }
+}

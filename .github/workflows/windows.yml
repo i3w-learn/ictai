@@ -1,0 +1,82 @@
+# Builds the Windows installer (ICT-Setup-x.y.z.exe) on every push.
+# Tauri can't reliably build Windows apps on a Mac, so this runs on a Windows machine.
+name: windows
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 22.12.0      # the Node shipped inside the installer (spec: Node 22 LTS)
+  WINSW_VERSION: v2.12.0
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  installer:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/client/src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build client (Tauri, no bundle; Inno Setup packages it)
+        run: pnpm --filter @ict/client tauri build --no-bundle
+
+      - name: Build server bundle
+        run: pnpm --filter @ict/server build
+
+      - name: Stage files
+        shell: pwsh
+        run: |
+          $stage = "stage"
+          New-Item -ItemType Directory -Force "$stage/client", "$stage/server/node_modules" | Out-Null
+          Copy-Item apps/client/src-tauri/target/release/ict-client.exe "$stage/client/"
+          Copy-Item server/dist/server.cjs "$stage/server/"
+          Copy-Item installer/ict-server.xml "$stage/server/"
+          # better-sqlite3 is native; the package ships prebuilt N-API binaries for Windows.
+          Copy-Item -Recurse (Resolve-Path server/node_modules/better-sqlite3).Path "$stage/server/node_modules/better-sqlite3"
+          Invoke-WebRequest "https://nodejs.org/dist/v$env:NODE_VERSION/win-x64/node.exe" -OutFile "$stage/server/node.exe"
+          Invoke-WebRequest "https://github.com/winsw/winsw/releases/download/$env:WINSW_VERSION/WinSW-x64.exe" -OutFile "$stage/server/ict-server.exe"
+
+      - name: Smoke-test the staged server
+        shell: pwsh
+        run: |
+          $env:ICT_DATA_DIR = "$env:RUNNER_TEMP/ictdata"
+          $p = Start-Process stage/server/node.exe -ArgumentList "stage/server/server.cjs" -PassThru
+          Start-Sleep 5
+          curl.exe -k --fail https://localhost:7700/health
+          Stop-Process $p.Id
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DStage="$PWD\stage" installer/ict-setup.iss
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ICT-Setup
+          path: installer/Output/ICT-Setup-*.exe

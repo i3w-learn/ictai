@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.data/
+*.db
+*.db-wal
+*.db-shm
+target/
+.DS_Store
+apps/client/src-tauri/gen/
+stage/
+installer/Output/

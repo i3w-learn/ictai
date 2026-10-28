@@ -1,0 +1,585 @@
+<title>ICT App System Design</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; wide diagrams break out to 1200px and scroll sideways on phones. */
+:root {
+  --bg: #f5f7f6; --surface: #ffffff; --ink: #17201d; --muted: #5b6a64; --line: #c9d3cf;
+  --school: #2f7a4f; --school-bg: #eef6f0;
+  --server: #c4581f; --server-bg: #fdf1ea;
+  --device: #2a62c4; --device-bg: #edf2fc;
+  --cloud: #6a4fb8; --cloud-bg: #f3effb;
+  --kit: #8a6a12; --kit-bg: #fbf5e3;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121715; --surface: #1a211e; --ink: #e5ece8; --muted: #9aaaa3; --line: #34403b;
+  --school: #6cc391; --school-bg: #16231c;
+  --server: #f08a52; --server-bg: #2a1d15;
+  --device: #7ea6f2; --device-bg: #172034;
+  --cloud: #b19cf0; --cloud-bg: #211b33;
+  --kit: #e0bf5c; --kit-bg: #2a2412;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121715; --surface: #1a211e; --ink: #e5ece8; --muted: #9aaaa3; --line: #34403b;
+  --school: #6cc391; --school-bg: #16231c;
+  --server: #f08a52; --server-bg: #2a1d15;
+  --device: #7ea6f2; --device-bg: #172034;
+  --cloud: #b19cf0; --cloud-bg: #211b33;
+  --kit: #e0bf5c; --kit-bg: #2a2412;
+  color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+.page { max-width: 1240px; margin: 0 auto; padding-block: 40px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.prose { max-width: 70ch; }
+h1 { font-family: var(--display); font-size: clamp(2rem, 4vw, 3rem); line-height: 1.05; margin: 0 0 12px; text-wrap: balance; }
+h2 { font-family: var(--display); font-size: 1.6rem; margin: 0 0 8px; text-wrap: balance; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.lede { font-size: 1.1rem; color: var(--muted); margin: 0; }
+section { margin-top: 64px; display: grid; gap: 16px; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 20px; font-size: 14px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 2px solid; display: inline-block; }
+
+figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.scroll { overflow-x: auto; }
+figure svg { display: block; width: 100%; min-width: 960px; height: auto; }
+figcaption { padding: 12px 18px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+
+/* SVG styling, all through tokens so both themes work */
+svg text { font-family: var(--body); font-size: 12px; fill: var(--ink); }
+svg .b { font-weight: 600; font-size: 13px; }
+svg .m { fill: var(--muted); font-size: 11px; }
+svg .mono { font-family: var(--mono); font-size: 11px; }
+svg .zl { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; font-weight: 500; }
+.z-school { fill: var(--school-bg); stroke: var(--school); stroke-width: 1.5; stroke-dasharray: 7 5; }
+.z-cloud { fill: var(--cloud-bg); stroke: var(--cloud); stroke-width: 1.5; stroke-dasharray: 7 5; }
+.bx-server { fill: var(--server-bg); stroke: var(--server); stroke-width: 1.5; }
+.bx-service { fill: var(--surface); stroke: var(--server); stroke-width: 1.2; }
+.bx-plain { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+.bx-device { fill: var(--device-bg); stroke: var(--device); stroke-width: 1.5; }
+.bx-cloud { fill: var(--surface); stroke: var(--cloud); stroke-width: 1.2; }
+.bx-kit { fill: var(--kit-bg); stroke: var(--kit); stroke-width: 1.5; }
+.bx-test { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+.chip { fill: var(--server-bg); stroke: var(--server); stroke-width: .8; }
+.c-school { fill: var(--school); } .c-server { fill: var(--server); } .c-device { fill: var(--device); }
+.c-cloud { fill: var(--cloud); } .c-kit { fill: var(--kit); }
+.ln { stroke: var(--ink); stroke-width: 1.4; fill: none; }
+.ln-dash { stroke: var(--ink); stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+.ln-cloud { stroke: var(--cloud); stroke-width: 1.8; fill: none; stroke-dasharray: 7 4; }
+.ln-kit { stroke: var(--kit); stroke-width: 1.8; fill: none; stroke-dasharray: 7 4; }
+.ln-lan { stroke: var(--device); stroke-width: 3; fill: none; }
+.ln-dev { stroke: var(--device); stroke-width: 1.6; fill: none; }
+.ah { fill: var(--ink); } .ah-cloud { fill: var(--cloud); } .ah-kit { fill: var(--kit); }
+.ic { fill: none; stroke: currentColor; stroke-width: 1.5; }
+.ic-server { color: var(--server); } .ic-device { color: var(--device); }
+.life { stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 4 4; }
+.note { fill: var(--kit-bg); stroke: var(--kit); stroke-width: 1; }
+.st-ok { fill: var(--school-bg); stroke: var(--school); stroke-width: 1.5; }
+.st-warn { fill: var(--kit-bg); stroke: var(--kit); stroke-width: 1.5; }
+.st-bad { fill: var(--server-bg); stroke: var(--server); stroke-width: 1.5; }
+.st-idle { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+
+.twocol { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; min-width: 0; display: grid; gap: 8px; align-content: start; }
+.card h3 { margin: 0; font-size: 1.05rem; }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14.5px; }
+th, td { text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+tr:last-child td { border-bottom: 0; }
+td.same { color: var(--muted); }
+.tag { font-family: var(--mono); font-size: 11.5px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--school); color: var(--school); white-space: nowrap; }
+.tag.diff { border-color: var(--server); color: var(--server); }
+
+.steps { display: grid; gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.step { display: grid; grid-template-columns: 64px 1fr; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.step:last-child { border-bottom: 0; }
+.step .n { font-family: var(--mono); font-weight: 500; color: var(--server); }
+.step b { display: block; }
+.step span { color: var(--muted); font-size: 14.5px; }
+.callout { border: 1px solid var(--kit); background: var(--kit-bg); border-radius: 12px; padding: 16px 20px; display: grid; gap: 8px; }
+.callout ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+</style>
+
+<div class="page">
+  <header class="prose">
+    <p class="eyebrow">ICT App · system design for developers · 27 Oct 2026</p>
+    <h1>ICT App System Design</h1>
+    <p class="lede">One Windows PC in each school runs everything. Lab PCs and smart boards talk to it over the school's own network, so teaching never needs the internet. Our cloud is a back office that the school server calls when it can.</p>
+    <div class="legend">
+      <span><i class="sw" style="border-color:var(--school);background:var(--school-bg)"></i>Inside the school</span>
+      <span><i class="sw" style="border-color:var(--server);background:var(--server-bg)"></i>Server PC</span>
+      <span><i class="sw" style="border-color:var(--device);background:var(--device-bg)"></i>Classroom devices</span>
+      <span><i class="sw" style="border-color:var(--cloud);background:var(--cloud-bg)"></i>Our cloud (later)</span>
+      <span><i class="sw" style="border-color:var(--kit);background:var(--kit-bg)"></i>USB kit</span>
+    </div>
+  </header>
+
+  <!-- 1. Big picture -->
+  <section>
+    <div class="prose">
+      <p class="eyebrow">1 · The big picture</p>
+      <h2>What runs where</h2>
+      <p>Every app is a screen only. All the data and logic live in the server service on the server PC. The cloud never connects into the school; the school server always starts the call.</p>
+    </div>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 1200 760" role="img" aria-label="Architecture: a server PC in the school runs the server service, database, file store and local AI. Lab PCs, smart boards and teacher remotes connect to it over the school network. The server calls out to our cloud every 15 minutes, and schools with no internet get a signed USB kit instead.">
+        <defs>
+          <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-cloud" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-kit" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+
+        <!-- school zone -->
+        <rect class="z-school" x="20" y="40" width="820" height="700" rx="14"/>
+        <text class="zl c-school" x="40" y="64">SCHOOL BUILDING · LOCAL NETWORK · NO INTERNET NEEDED</text>
+
+        <!-- server PC -->
+        <rect class="bx-server" x="40" y="84" width="470" height="486" rx="10"/>
+        <text class="zl c-server" x="56" y="106">SERVER PC · ONE ORDINARY WINDOWS PC IN THE LAB</text>
+
+        <rect class="bx-plain" x="60" y="120" width="210" height="52" rx="6"/>
+        <text class="b" x="75" y="142">Console app</text>
+        <text class="m" x="75" y="160">Tauri + React · admin and teachers</text>
+        <rect class="bx-plain" x="290" y="120" width="200" height="52" rx="6"/>
+        <text class="b" x="305" y="142">Present window</text>
+        <text class="m" x="305" y="160">full screen on HDMI TV / projector</text>
+
+        <line class="ln" x1="165" y1="172" x2="165" y2="212" marker-end="url(#a)"/>
+        <text class="m mono" x="173" y="196">localhost:7700</text>
+        <line class="ln" x1="390" y1="172" x2="390" y2="212" marker-end="url(#a)"/>
+        <text class="m mono" x="398" y="196">localhost</text>
+
+        <rect class="bx-service" x="60" y="214" width="430" height="176" rx="8"/>
+        <text class="b" x="75" y="236">Server service</text>
+        <text class="m" x="75" y="252">Windows service · Node 22 + TypeScript + Fastify · starts at boot</text>
+        <rect class="chip" x="75" y="264" width="195" height="32" rx="5"/><text class="mono" x="87" y="284">REST API · HTTPS :7700</text>
+        <rect class="chip" x="280" y="264" width="195" height="32" rx="5"/><text class="mono" x="292" y="284">Live relay · WSS /relay</text>
+        <rect class="chip" x="75" y="302" width="195" height="32" rx="5"/><text class="mono" x="87" y="322">Finder beacon · UDP 7701</text>
+        <rect class="chip" x="280" y="302" width="195" height="32" rx="5"/><text class="mono" x="292" y="322">AI gateway · queue</text>
+        <rect class="chip" x="75" y="340" width="195" height="32" rx="5"/><text class="mono" x="87" y="360">Jobs · check-in, backup</text>
+        <rect class="chip" x="280" y="340" width="195" height="32" rx="5"/><text class="mono" x="292" y="360">Licence check · offline</text>
+
+        <!-- storage row -->
+        <line class="ln" x1="127" y1="390" x2="127" y2="424" marker-start="url(#a)" marker-end="url(#a)"/>
+        <text class="m" x="135" y="412">reads / writes</text>
+        <line class="ln" x1="277" y1="390" x2="277" y2="424" marker-start="url(#a)" marker-end="url(#a)"/>
+        <text class="m" x="285" y="412">serves files</text>
+        <line class="ln" x1="425" y1="390" x2="425" y2="424" marker-end="url(#a)"/>
+        <text class="m" x="433" y="412">prompts</text>
+
+        <rect class="bx-plain" x="60" y="426" width="135" height="84" rx="6"/>
+        <g class="ic ic-server"><ellipse cx="127" cy="440" rx="12" ry="4"/><path d="M115,440 V456 A12,4 0 0 0 139,456 V440"/></g>
+        <text class="b" x="127" y="480" text-anchor="middle">SQLite database</text>
+        <text class="m" x="127" y="497" text-anchor="middle">one file, all school data</text>
+
+        <rect class="bx-plain" x="210" y="426" width="135" height="84" rx="6"/>
+        <g class="ic ic-server"><path d="M265,437 h8 l3,3 h13 v17 h-24 z"/></g>
+        <text class="b" x="277" y="480" text-anchor="middle">File store</text>
+        <text class="m" x="277" y="497" text-anchor="middle">PDFs, videos, recordings</text>
+
+        <rect class="bx-plain" x="360" y="426" width="130" height="84" rx="6"/>
+        <g class="ic ic-server"><rect x="415" y="436" width="20" height="20" rx="2"/><rect x="420" y="441" width="10" height="10"/></g>
+        <text class="b" x="425" y="480" text-anchor="middle">llama.cpp + Gemma</text>
+        <text class="m" x="425" y="497" text-anchor="middle">local AI, localhost only</text>
+
+        <text class="m" x="56" y="536">Firewall opens TCP 7700 + UDP 7701 on the Private network only.</text>
+        <text class="m" x="56" y="553">Licence, school key and TLS key are encrypted with Windows DPAPI.</text>
+
+        <!-- LAN -->
+        <text class="zl c-device" x="580" y="186" text-anchor="middle">SCHOOL LAN</text>
+        <line class="ln-lan" x1="580" y1="196" x2="580" y2="454"/>
+        <line class="ln" x1="492" y1="276" x2="576" y2="276" marker-start="url(#a)" marker-end="url(#a)"/>
+        <text class="mono" x="534" y="268" text-anchor="middle">HTTPS+WSS</text>
+        <text class="m" x="534" y="292" text-anchor="middle">pinned TLS</text>
+        <line class="ln-dash" x1="576" y1="324" x2="492" y2="324" marker-end="url(#a)"/>
+        <text class="mono" x="534" y="316" text-anchor="middle">UDP</text>
+        <text class="m" x="534" y="340" text-anchor="middle">"where are you?"</text>
+
+        <!-- devices -->
+        <line class="ln-dev" x1="580" y1="200" x2="620" y2="200"/>
+        <rect class="bx-device" x="620" y="150" width="200" height="100" rx="8"/>
+        <g class="ic ic-device"><rect x="638" y="166" width="22" height="15" rx="1"/><rect x="633" y="171" width="22" height="15" rx="1"/><line x1="644" y1="186" x2="644" y2="192"/><line x1="638" y1="192" x2="650" y2="192"/></g>
+        <text class="b" x="670" y="176">Student app</text>
+        <text class="m" x="670" y="193">Lab PCs, up to 60</text>
+        <text class="m" x="636" y="220">Tauri + React · Windows</text>
+        <text class="m" x="636" y="237">locked down during lessons</text>
+
+        <line class="ln-dev" x1="580" y1="330" x2="620" y2="330"/>
+        <rect class="bx-device" x="620" y="280" width="200" height="100" rx="8"/>
+        <g class="ic ic-device"><rect x="633" y="296" width="28" height="18" rx="1"/><path d="M640,309 l6,-5 l5,3 l6,-6"/></g>
+        <text class="b" x="670" y="306">Board app</text>
+        <text class="m" x="670" y="323">Smart boards, front of class</text>
+        <text class="m" x="636" y="350">Tauri · Android APK</text>
+        <text class="m" x="636" y="367">or a Windows PC as a board</text>
+
+        <line class="ln-dev" x1="580" y1="450" x2="620" y2="450"/>
+        <rect class="bx-device" x="620" y="410" width="200" height="80" rx="8"/>
+        <g class="ic ic-device"><rect x="638" y="424" width="16" height="24" rx="3"/></g>
+        <text class="b" x="670" y="438">Teacher remote</text>
+        <text class="m" x="670" y="455">P1 · laptop or tablet</text>
+        <text class="m" x="636" y="476">drives the board from the room</text>
+
+        <!-- stays-inside strip -->
+        <rect class="bx-plain" x="40" y="640" width="780" height="80" rx="8"/>
+        <text class="b c-school" x="58" y="666">What never leaves the school</text>
+        <text x="58" y="686">Student names, marks, attendance, answers, AI prompts. They live only in the SQLite file on the server PC.</text>
+        <text class="m" x="58" y="705">Only counts go out (for example "38 minutes, 32 PCs joined"), and only through the server.</text>
+
+        <!-- cloud -->
+        <rect class="z-cloud" x="870" y="40" width="310" height="370" rx="14"/>
+        <text class="zl c-cloud" x="888" y="64">OUR CLOUD · GCP</text>
+        <text class="m" x="888" y="80">added later; not needed to teach</text>
+        <rect class="bx-cloud" x="890" y="100" width="270" height="150" rx="8"/>
+        <text class="b" x="905" y="122">Cloud Run · Node + Fastify</text>
+        <text x="905" y="146">• Check-in API</text>
+        <text x="905" y="166">• Licence service (signs licences)</text>
+        <text x="905" y="186">• Update + content store</text>
+        <text x="905" y="206">• Kit builder</text>
+        <text x="905" y="226">• Analytics intake (counts only)</text>
+        <line class="ln" x1="955" y1="250" x2="955" y2="288" marker-end="url(#a)"/>
+        <line class="ln" x1="1095" y1="250" x2="1095" y2="288" marker-end="url(#a)"/>
+        <rect class="bx-cloud" x="890" y="290" width="130" height="96" rx="8"/>
+        <text class="b" x="955" y="314" text-anchor="middle">Cloud SQL</text>
+        <text class="m" x="955" y="332" text-anchor="middle">PostgreSQL</text>
+        <text class="m" x="955" y="352" text-anchor="middle">school list,</text>
+        <text class="m" x="955" y="368" text-anchor="middle">licences, analytics</text>
+        <rect class="bx-cloud" x="1030" y="290" width="130" height="96" rx="8"/>
+        <text class="b" x="1095" y="314" text-anchor="middle">Cloud Storage</text>
+        <text class="m" x="1095" y="332" text-anchor="middle">+ CDN</text>
+        <text class="m" x="1095" y="352" text-anchor="middle">content, app builds,</text>
+        <text class="m" x="1095" y="368" text-anchor="middle">AI models</text>
+
+        <!-- server -> cloud -->
+        <path class="ln-cloud" d="M470,84 V24 H1140 V98" marker-end="url(#ac)"/>
+        <text class="mono c-cloud" x="805" y="16" text-anchor="middle">outbound HTTPS only · every 15 min · cloud replies with licence + downloads · cloud never calls in</text>
+
+        <!-- USB kit -->
+        <rect class="bx-kit" x="870" y="450" width="310" height="200" rx="10"/>
+        <text class="zl c-kit" x="888" y="474">USB KIT</text>
+        <text class="m" x="888" y="490">for schools with no internet</text>
+        <text class="mono" x="888" y="518">installer/     Windows setup + APK</text>
+        <text class="mono" x="888" y="538">activation.lic signed licence</text>
+        <text class="mono" x="888" y="558">content/       lesson packs</text>
+        <text class="mono" x="888" y="578">models/        AI models</text>
+        <text class="mono" x="888" y="598">returns/       analytics going back</text>
+        <text class="m" x="888" y="628">every file is signed + checksummed</text>
+        <line class="ln-kit" x1="1025" y1="410" x2="1025" y2="448" marker-end="url(#ak)"/>
+        <text class="m" x="1033" y="433">kit builder makes it</text>
+        <path class="ln-kit" d="M870,612 H275 V572" marker-end="url(#ak)"/>
+        <text class="mono c-kit" x="575" y="604" text-anchor="middle">carried in on a USB stick by the field person</text>
+      </svg>
+      </div>
+      <figcaption>One server PC is the meeting point for the whole lab. Devices find it by a UDP broadcast, then use HTTPS for data and a WebSocket (WSS) for live lessons. The cloud and USB kit only bring in licences, content and updates.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 2. Apps -->
+  <section>
+    <div class="prose">
+      <p class="eyebrow">2 · The apps</p>
+      <h2>One codebase, two installers</h2>
+      <p>All screens come from one Tauri + React codebase. The role is picked at install time.</p>
+    </div>
+    <div class="twocol">
+      <div class="card">
+        <h3>Windows installer · <span class="mono">ICT-Setup.exe</span></h3>
+        <p>The first screen asks what this PC is:</p>
+        <ul>
+          <li><b>Server</b>: server service, Console app, Present window, local AI.</li>
+          <li><b>Student PC</b>: Student app in a locked-down window. Sign in, join lesson, quizzes, books, my work, AI tutor.</li>
+          <li><b>Board</b>: a Windows PC used as the classroom board.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Android board app · <span class="mono">ict-board.apk</span></h3>
+        <p>For Android smart panels at the front of the class. The teacher uses it to:</p>
+        <ul>
+          <li>open lessons (PDF, Office, video, slides)</li>
+          <li>draw and write on the whiteboard over any content</li>
+          <li>run live quizzes and show the tally</li>
+          <li>show a student's screen, lock student PCs</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Build from Mac -->
+  <section>
+    <div class="prose">
+      <p class="eyebrow">3 · How we build it</p>
+      <h2>From a MacBook to a Windows .exe and an Android .apk</h2>
+      <p>We write and run everything on the Mac. A Windows build machine on GitHub Actions makes the <code>.exe</code>. The Android app builds on the Mac with Android Studio's tools.</p>
+    </div>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 1200 400" role="img" aria-label="Build flow: code is written on the MacBook. A git push makes GitHub Actions build the Windows installer on a Windows machine. The Android board app is built on the Mac. Both are tested in a Windows virtual machine and the Android emulator before real school hardware.">
+        <defs>
+          <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <rect class="bx-plain" x="20" y="30" width="310" height="340" rx="12"/>
+        <text class="zl" x="40" y="56">YOUR MACBOOK</text>
+        <text class="m" x="40" y="72">write and run everything here</text>
+        <rect class="chip" x="40" y="92" width="270" height="48" rx="6"/>
+        <text class="mono b" x="54" y="112">server/</text><text class="m" x="54" y="129">Node + Fastify + SQLite</text>
+        <rect class="chip" x="40" y="152" width="270" height="48" rx="6"/>
+        <text class="mono b" x="54" y="172">apps/</text><text class="m" x="54" y="189">Tauri + React: console, student, board</text>
+        <rect class="chip" x="40" y="212" width="270" height="48" rx="6"/>
+        <text class="mono b" x="54" y="232">contracts/</text><text class="m" x="54" y="249">zod schemas shared by server and apps</text>
+        <rect class="bx-device" x="40" y="292" width="270" height="56" rx="6"/>
+        <text class="b" x="54" y="315">Android Studio</text><text class="m" x="54" y="333">SDK + NDK + tablet emulator</text>
+
+        <path class="ln" d="M310,176 H360 V125 H418" marker-end="url(#b)"/>
+        <text class="mono" x="368" y="116">git push</text>
+        <line class="ln" x1="310" y1="320" x2="418" y2="320" marker-end="url(#b)"/>
+        <text class="mono" x="320" y="310">tauri android build</text>
+
+        <rect class="bx-plain" x="420" y="70" width="300" height="110" rx="10"/>
+        <text class="b" x="438" y="96">GitHub Actions</text>
+        <text class="m" x="438" y="114">a free Windows build machine</text>
+        <text x="438" y="138">builds server + Tauri apps</text>
+        <text x="438" y="158">packs node.exe, WinSW, Inno Setup</text>
+
+        <rect class="bx-plain" x="420" y="270" width="300" height="100" rx="10"/>
+        <text class="b" x="438" y="296">Android build on the Mac</text>
+        <text class="m" x="438" y="314">same React code, Android shell</text>
+        <text x="438" y="340">signed with our release key</text>
+
+        <line class="ln" x1="720" y1="112" x2="788" y2="92" marker-end="url(#b)"/>
+        <line class="ln" x1="720" y1="310" x2="788" y2="290" marker-end="url(#b)"/>
+
+        <rect class="bx-server" x="790" y="40" width="390" height="100" rx="10"/>
+        <text class="b mono" x="808" y="66">ICT-Setup.exe</text>
+        <text x="808" y="90">first screen: Server · Student PC · Board</text>
+        <text class="m" x="808" y="110">code-signed Windows installer</text>
+        <rect class="bx-test" x="790" y="152" width="390" height="56" rx="8"/>
+        <text class="m" x="808" y="175">test: Windows 11 ARM in Parallels or VMware Fusion</text>
+        <text class="m" x="808" y="194">later: real 4 GB / 8 GB lab PCs</text>
+
+        <rect class="bx-device" x="790" y="240" width="390" height="80" rx="10"/>
+        <text class="b mono" x="808" y="266">ict-board.apk</text>
+        <text x="808" y="290">for Android smart panels (Android 9+)</text>
+        <rect class="bx-test" x="790" y="330" width="390" height="56" rx="8"/>
+        <text class="m" x="808" y="353">test: Android emulator, Pixel Tablet, landscape</text>
+        <text class="m" x="808" y="372">later: 2-3 real smart panel models</text>
+      </svg>
+      </div>
+      <figcaption>Tauri can't reliably build Windows apps on a Mac, so the Windows build machine on GitHub Actions does it. Set this up on day one so every push produces an installer.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 4. Finding the server -->
+  <section>
+    <div class="prose">
+      <p class="eyebrow">4 · Finding the server</p>
+      <h2>No typed IP addresses</h2>
+      <p>School routers change IP addresses often. So each device saves the server's ID, not its IP, and asks the network where that server is.</p>
+    </div>
+    <figure>
+      <div class="scroll"><svg id="seq-find" role="img" aria-label="Discovery: the device broadcasts on UDP 7701, the server answers with its ID and addresses, the device checks each address with GET /health and keeps the one whose server ID matches."></svg></div>
+      <figcaption>The certificate fingerprint in the reply lets the device trust only this server's own TLS certificate ("pinning"). If nothing answers in 10 seconds, the device offers manual IP, a connection file from USB, or mDNS.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 5. Live lesson -->
+  <section>
+    <div class="prose">
+      <p class="eyebrow">5 · A live lesson</p>
+      <h2>How 40 screens follow the teacher</h2>
+      <p>The board sends each action to the server relay, and the relay copies it to every student PC in the room. Answers are kept on the student PC until the server confirms them, so a dropped network loses nothing.</p>
+    </div>
+    <figure>
+      <div class="scroll"><svg id="seq-lesson" role="img" aria-label="Live lesson: teacher starts a lesson and gets a join code, students join and get a full snapshot, teacher actions are relayed to students, quiz answers are acknowledged, and the lesson ends."></svg></div>
+      <figcaption>Speed targets: page and control changes reach 60 PCs in under 300 ms, ink in under 200 ms. Late joiners get the full current state at once.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 6. Licence -->
+  <section>
+    <div class="prose">
+      <p class="eyebrow">6 · Licence</p>
+      <h2>A dead internet line never locks a school</h2>
+      <p>The licence is a small file signed by us. It names the school, the server PC's network card, how many PCs and boards are allowed, and an end date. The server checks it offline.</p>
+    </div>
+    <figure>
+      <div class="scroll">
+      <svg viewBox="0 0 1100 280" role="img" aria-label="Licence states: not activated, active, grace, locked. Only a signed revoke from the cloud or 30 used-up grace days lock the school. Renewing returns to active.">
+        <defs>
+          <marker id="l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <rect class="st-idle" x="20" y="110" width="170" height="60" rx="10"/>
+        <text class="b" x="105" y="136" text-anchor="middle">Not activated</text>
+        <text class="m" x="105" y="154" text-anchor="middle">fresh install</text>
+
+        <rect class="st-ok" x="300" y="110" width="170" height="60" rx="10"/>
+        <text class="b c-school" x="385" y="136" text-anchor="middle">Active</text>
+        <text class="m" x="385" y="154" text-anchor="middle">internet down? still active</text>
+
+        <rect class="st-warn" x="600" y="110" width="170" height="60" rx="10"/>
+        <text class="b c-kit" x="685" y="136" text-anchor="middle">Grace</text>
+        <text class="m" x="685" y="154" text-anchor="middle">works, console warns</text>
+
+        <rect class="st-bad" x="880" y="110" width="200" height="60" rx="10"/>
+        <text class="b c-server" x="980" y="136" text-anchor="middle">Locked</text>
+        <text class="m" x="980" y="154" text-anchor="middle">lessons stop; renew still works</text>
+
+        <line class="ln" x1="190" y1="140" x2="298" y2="140" marker-end="url(#l)"/>
+        <text class="m" x="244" y="122" text-anchor="middle">activate online</text>
+        <text class="m" x="244" y="160" text-anchor="middle">or by USB file</text>
+
+        <line class="ln" x1="470" y1="128" x2="598" y2="128" marker-end="url(#l)"/>
+        <text class="m" x="534" y="120" text-anchor="middle">end date passed</text>
+        <line class="ln" x1="598" y1="154" x2="472" y2="154" marker-end="url(#l)"/>
+        <text class="m" x="534" y="170" text-anchor="middle">renewed</text>
+
+        <line class="ln" x1="770" y1="140" x2="878" y2="140" marker-end="url(#l)"/>
+        <text class="m" x="824" y="122" text-anchor="middle">30 grace days</text>
+        <text class="m" x="824" y="160" text-anchor="middle">used up</text>
+
+        <path class="ln" d="M385,110 C385,40 980,40 980,108" marker-end="url(#l)"/>
+        <text class="mono c-server" x="682" y="50" text-anchor="middle">cloud sends a signed "revoked"</text>
+
+        <path class="ln" d="M980,170 C980,250 385,250 385,172" marker-end="url(#l)"/>
+        <text class="m" x="682" y="242" text-anchor="middle">renewed online or by USB file</text>
+      </svg>
+      </div>
+      <figcaption>Only two things lock a school: a signed "revoked" message from our cloud, or 30 grace days used up after the end date. When locked, the console, sign-in, licence and health pages still work so staff can renew.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 7. Stack -->
+  <section>
+    <div class="prose">
+      <p class="eyebrow">7 · Tech stack</p>
+      <h2>Our stack next to PRAXIS</h2>
+      <p>The server side is the same idea as PRAXIS. The app screens are where we differ: lighter, and all TypeScript.</p>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Part</th><th>Our app</th><th>PRAXIS</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>Server</td><td>Node 22 + TypeScript + Fastify, as a real Windows service</td><td class="same">Node + Fastify inside an Electron tray app</td><td><span class="tag diff">better</span></td></tr>
+          <tr><td>Database</td><td>SQLite (<code>better-sqlite3</code>), numbered migrations</td><td class="same">SQLite as WebAssembly, adds columns at startup</td><td><span class="tag diff">better</span></td></tr>
+          <tr><td>Input checks</td><td>zod</td><td class="same">zod</td><td><span class="tag">same</span></td></tr>
+          <tr><td>Live lessons</td><td>WebSocket over TLS (WSS)</td><td class="same">plain WebSocket, no encryption</td><td><span class="tag diff">safer</span></td></tr>
+          <tr><td>Finding the server</td><td>UDP broadcast on 7701 (small Rust piece)</td><td class="same">UDP broadcast on 7701</td><td><span class="tag">same</span></td></tr>
+          <tr><td>App screens (Windows)</td><td>Tauri 2 + React + TypeScript</td><td class="same">Flutter web build inside Electron</td><td><span class="tag diff">lighter</span></td></tr>
+          <tr><td>Board app (Android)</td><td>Tauri 2 + React (same code)</td><td class="same">Flutter</td><td><span class="tag diff">one codebase</span></td></tr>
+          <tr><td>PDF / video / whiteboard</td><td>PDF.js · HTML5 video · Konva + Excalidraw</td><td class="same">pdfium · Flutter players · custom ink</td><td><span class="tag diff">different</span></td></tr>
+          <tr><td>AI</td><td>llama.cpp + Gemma, on the school PC</td><td class="same">remote AI service</td><td><span class="tag diff">offline</span></td></tr>
+          <tr><td>Cloud</td><td>GCP: Cloud Run, Cloud SQL, Cloud Storage; HTTPS + pinning</td><td class="same">plain HTTP to a bare IP</td><td><span class="tag diff">safer</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 8. Build order -->
+  <section>
+    <div class="prose">
+      <p class="eyebrow">8 · Build order</p>
+      <h2>Milestones</h2>
+      <p>Each milestone ends with something we can show working.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><span class="n">M1</span><div><b>Foundation</b><span>Windows service, SQLite, sign-in and roles, server finder, TLS pinning, device enrolment, installer. Done when a lab PC and a board find the server and sign in with no typed IP.</span></div></div>
+      <div class="step"><span class="n">M2</span><div><b>Live lesson</b><span>Relay rooms, join codes, PDF/video/Office, ink and whiteboard, lock/blank, outbox + ack. Done when a 40-PC lesson runs from a board and pulling the network loses nothing.</span></div></div>
+      <div class="step"><span class="n">M3</span><div><b>Quizzes and work</b><span>Live quizzes and polls, assignments, marks, attendance, results export.</span></div></div>
+      <div class="step"><span class="n">M4</span><div><b>Cloud and licence</b><span>Check-in, signed licence + grace + lock, downloads, updates over the LAN, USB kit, analytics with privacy test.</span></div></div>
+      <div class="step"><span class="n">M5</span><div><b>Offline AI</b><span>llama.cpp + Gemma, AI queue, lesson-plan and quiz generators. Done when both give valid output on an 8 GB PC.</span></div></div>
+      <div class="step"><span class="n">M6</span><div><b>Pilot</b><span>Present mode, console overview, backups, audit log. First pilot school.</span></div></div>
+      <div class="step"><span class="n">M7</span><div><b>General release (P1)</b><span>Timetable, playlists, recordings, Together rooms, screen casting, pen sharing, report cards, AI tutor and translate, Teacher remote.</span></div></div>
+      <div class="step"><span class="n">M8</span><div><b>Later (P2)</b><span>Family mode and guardian messages.</span></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="callout prose">
+      <b>Notes for developers</b>
+      <ul>
+        <li>The spec <code>ict-app-final-spec.md</code> is the source of truth. Where Sections 1, 12 and 12.1 still say Flutter, read Tauri 2 + React (Section 17.4 is final).</li>
+        <li>For the first offline Windows version we can skip the cloud. Licences, content and updates arrive on the USB kit.</li>
+        <li>Check Gemma's licence terms for the exact version we ship. The spec requires models allowed for government and commercial use.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, text) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  // Draws a sequence diagram: actors across the top, one row per step.
+  function seq(id, actors, steps) {
+    var svg = document.getElementById(id);
+    var W = 1100, left = 150, right = W - 150, rowH = 40, top = 90;
+    var x = actors.map(function (_, i) { return left + i * (right - left) / (actors.length - 1); });
+    var H = top + steps.length * rowH + 30;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    var defs = el('defs', {});
+    var mk = el('marker', { id: id + '-a', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto' });
+    mk.appendChild(el('path', { class: 'ah', d: 'M0,0 L10,5 L0,10 z' }));
+    defs.appendChild(mk); svg.appendChild(defs);
+    actors.forEach(function (a, i) {
+      svg.appendChild(el('line', { class: 'life', x1: x[i], y1: 66, x2: x[i], y2: H - 10 }));
+      svg.appendChild(el('rect', { class: a.cls, x: x[i] - 110, y: 14, width: 220, height: 52, rx: 8 }));
+      svg.appendChild(el('text', { class: 'b', x: x[i], y: 36, 'text-anchor': 'middle' }, a.name));
+      svg.appendChild(el('text', { class: 'm', x: x[i], y: 54, 'text-anchor': 'middle' }, a.sub));
+    });
+    steps.forEach(function (s, n) {
+      var y = top + n * rowH + 14;
+      if (s.note) {
+        var nx = x[s.over[0]] - 100, nw = x[s.over[1]] - x[s.over[0]] + 200;
+        svg.appendChild(el('rect', { class: 'note', x: nx, y: y - 18, width: nw, height: 28, rx: 6 }));
+        svg.appendChild(el('text', { x: nx + nw / 2, y: y, 'text-anchor': 'middle' }, s.note));
+        return;
+      }
+      var x1 = x[s.from], x2 = x[s.to], dir = x2 > x1 ? 1 : -1;
+      svg.appendChild(el('line', { class: s.reply ? 'ln-dash' : 'ln', x1: x1, y1: y, x2: x2 - dir * 2, y2: y, 'marker-end': 'url(#' + id + '-a)' }));
+      svg.appendChild(el('text', { class: 'mono', x: (x1 + x2) / 2, y: y - 7, 'text-anchor': 'middle' }, s.label));
+    });
+  }
+  seq('seq-find',
+    [{ name: 'Lab PC or board', sub: 'saved: serverId', cls: 'bx-device' },
+     { name: 'Server beacon', sub: 'UDP 7701', cls: 'bx-server' },
+     { name: 'Server API', sub: 'HTTPS 7700', cls: 'bx-server' }],
+    [{ from: 0, to: 1, label: 'broadcast: where is the server?' },
+     { from: 1, to: 0, reply: 1, label: 'here: serverId, addresses, port, cert fingerprint' },
+     { from: 0, to: 2, label: 'GET /health on each address (2 s timeout)' },
+     { from: 2, to: 0, reply: 1, label: 'serverId, schoolId, activated' },
+     { note: 'keep the first address whose serverId matches the saved one', over: [0, 2] }]);
+  seq('seq-lesson',
+    [{ name: 'Teacher', sub: 'board app or console', cls: 'bx-device' },
+     { name: 'Server relay', sub: 'WSS /relay', cls: 'bx-server' },
+     { name: 'Student app', sub: 'each lab PC', cls: 'bx-device' }],
+    [{ from: 0, to: 1, label: 'POST /lessons' },
+     { from: 1, to: 0, reply: 1, label: 'room + 6-digit join code' },
+     { from: 2, to: 1, label: 'POST /lessons/join (code)' },
+     { from: 2, to: 1, label: 'open WSS /relay, join room' },
+     { from: 1, to: 2, reply: 1, label: 'state: full snapshot of the lesson' },
+     { from: 0, to: 1, label: 'nav.page / ink.stroke' },
+     { from: 1, to: 2, label: 'same messages (recorder saves them)' },
+     { from: 0, to: 1, label: 'quiz.start' },
+     { from: 1, to: 2, label: 'quiz.question + timer' },
+     { from: 2, to: 1, label: 'quiz.answer (kept in outbox until acked)' },
+     { from: 1, to: 2, reply: 1, label: 'quiz.ack' },
+     { from: 1, to: 0, reply: 1, label: 'live tally' },
+     { from: 0, to: 1, label: 'lesson.end' },
+     { from: 1, to: 2, label: 'lesson.end' }]);
+})();
+</script>

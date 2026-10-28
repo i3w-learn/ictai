@@ -1,0 +1,21 @@
+<!-- WinSW service definition (spec 7.1): starts at boot, restarts on crash. -->
+<service>
+  <id>ICTServer</id>
+  <name>ICT App Server</name>
+  <description>ICT App school server: lessons, sign-in and data for the lab.</description>
+  <executable>%BASE%\node.exe</executable>
+  <arguments>"%BASE%\server.cjs"</arguments>
+  <workingdirectory>%BASE%</workingdirectory>
+  <env name="ICT_DATA_DIR" value="%ProgramData%\ICT App\server" />
+  <env name="NODE_ENV" value="production" />
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>false</delayedAutoStart>
+  <onfailure action="restart" delay="5 sec" />
+  <onfailure action="restart" delay="10 sec" />
+  <onfailure action="restart" delay="30 sec" />
+  <resetfailure>1 hour</resetfailure>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>5</keepFiles>
+  </log>
+</service>

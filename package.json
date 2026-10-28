@@ -1,0 +1,13 @@
+{
+  "name": "ict-app",
+  "private": true,
+  "packageManager": "pnpm@10.12.4",
+  "scripts": {
+    "dev": "pnpm --filter @ict/server dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "node-gyp": "^13.1.0"
+  }
+}
