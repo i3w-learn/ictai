@@ -61,3 +61,10 @@
   body { @apply bg-background text-foreground font-sans antialiased; }
   :focus-visible { @apply outline-2 outline-offset-2 outline-ring; }
 }
+
+/* Printing a class sheet: only the sheet prints, flowing across pages. */
+@media print {
+  body > *:not(.print-sheet) { display: none !important; }
+  .print-sheet { position: static !important; overflow: visible !important; padding: 0 !important; }
+  .no-print { display: none !important; }
+}

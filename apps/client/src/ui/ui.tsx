@@ -90,6 +90,19 @@ export function ErrorNote({ message }: { message: string | null }) {
   return message ? <p className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">{message}</p> : null;
 }
 
+// A button that asks "Sure?" inline before acting. No browser confirm(): it blocks the webview.
+export function ConfirmButton({ children, question, onConfirm }: { children: ReactNode; question: string; onConfirm: () => void }) {
+  const [asking, setAsking] = useState(false);
+  if (!asking) return <Button variant="quiet" onClick={() => setAsking(true)}>{children}</Button>;
+  return (
+    <span className="flex items-center gap-2 text-sm">
+      {question}
+      <Button className="bg-destructive text-white shadow-none hover:bg-destructive/90" onClick={() => { setAsking(false); onConfirm(); }}>Yes</Button>
+      <Button variant="quiet" onClick={() => setAsking(false)}>No</Button>
+    </span>
+  );
+}
+
 // Runs an async action with a busy flag and a readable error; the shared pattern for every form.
 export function useAction<A extends unknown[]>(fn: (...args: A) => Promise<void>) {
   const [busy, setBusy] = useState(false);
