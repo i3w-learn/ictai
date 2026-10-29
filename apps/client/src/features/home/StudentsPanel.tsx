@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { SchoolClass, Student } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, ErrorNote, Field, Panel, useAction } from '../../ui/ui';
+import { Button, ErrorNote, Field, Note, Panel, Select, useAction } from '../../ui/ui';
 
 // Just enough student setup to sign students in (M1). Full management comes later.
 export function StudentsPanel() {
@@ -41,29 +41,32 @@ export function StudentsPanel() {
 
   return (
     <Panel title="Students">
-      <div className="row">
-        <select aria-label="Class" value={classId} onChange={(e) => setClassId(e.target.value)}>
+      <div className="flex flex-wrap items-end gap-3">
+        <Select aria-label="Class" value={classId} onChange={(e) => setClassId(e.target.value)}>
           <option value="">Choose a class</option>
           {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
-        </select>
-        <form className="row" onSubmit={(e) => { e.preventDefault(); void addClass.run(); }}>
-          <Field id="new-class" label="New class" placeholder="7" value={newClass} onChange={(e) => setNewClass(e.target.value)} />
+        </Select>
+        <form className="flex items-end gap-3" onSubmit={(e) => { e.preventDefault(); void addClass.run(); }}>
+          <Field id="new-class" className="w-40" label="New class" placeholder="7" value={newClass} onChange={(e) => setNewClass(e.target.value)} />
           <Button type="submit" variant="quiet" disabled={!newClass.trim()}>Add class</Button>
         </form>
       </div>
 
       {classId && (
         <>
-          <form className="row" onSubmit={(e) => { e.preventDefault(); void addStudent.run(); }}>
-            <Field id="student-name" label="Student name" value={name} onChange={(e) => setName(e.target.value)} />
-            <Field id="student-pin" label="PIN (optional)" inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
+          <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); void addStudent.run(); }}>
+            <Field id="student-name" className="w-64" label="Student name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Field id="student-pin" className="w-40" label="PIN (optional)" inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
             <Button type="submit" disabled={!name.trim() || (pin.length > 0 && pin.length !== 4)}>Add student</Button>
           </form>
-          {issued && <p className="note">First sign-in code for {issued.name}: <b className="mono">{issued.code}</b></p>}
-          <ul className="list">
+          {issued && <Note>First sign-in code for {issued.name}: <b className="font-mono text-base text-primary">{issued.code}</b></Note>}
+          <ul className="grid gap-2">
             {students.map((s) => (
-              <li key={s.id}>
-                <span>{s.name} {!s.hasPin && <span className="muted">(no PIN yet)</span>}</span>
+              <li key={s.id} className="flex items-center gap-3 rounded-xl border border-border px-3 py-2">
+                <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">{s.name.charAt(0).toUpperCase()}</span>
+                <span className="flex-1 font-medium">
+                  {s.name} {!s.hasPin && <span className="ml-1 text-xs font-normal text-muted-foreground">No PIN yet</span>}
+                </span>
                 <Button variant="quiet" onClick={() => issueCode.run(s)}>First sign-in code</Button>
               </li>
             ))}

@@ -60,7 +60,7 @@ export class ApiClient {
     } catch (e) {
       if (!(e instanceof PlatformError) || e.kind !== 'network') throw e;
       const moved = await this.locator.relocate(target);
-      if (!moved) throw new ApiCallError(0, 'SERVER_UNREACHABLE', 'Cannot reach the school server. Check the network cable or Wi-Fi.');
+      if (!moved) throw new ApiCallError(0, 'SERVER_UNREACHABLE', 'Cannot reach the school server. Check the network cable or Wi-Fi. If the server PC was reinstalled, click Change server.');
       this.target.set(moved);
       return this.platform.request({ ...r, baseUrl: baseUrl(moved), certFp: moved.certFp });
     }

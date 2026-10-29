@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../app/app-context';
-import { Button, ErrorNote, Field, useAction } from '../../ui/ui';
+import { Button, Card, Centered, ErrorNote, Field, PageTitle, useAction } from '../../ui/ui';
 
 // Spec 4.2: a lab PC or board joins with the 6-digit code shown on the console.
 export function EnrolDevice() {
@@ -24,15 +24,18 @@ export function EnrolDevice() {
   });
 
   return (
-    <div className="center narrow">
-      <h1>Add this {role === 'board' ? 'board' : 'PC'} to the lab</h1>
-      <p className="muted">On the server PC, open <b>Devices → Add devices</b> and type the code shown there.</p>
-      <form className="stack" onSubmit={(e) => { e.preventDefault(); void enrol.run(); }}>
-        <Field id="enrol-code" label="Code" inputMode="numeric" maxLength={6} autoFocus value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
-        <Field id="device-name" label="Name for this device" value={name} onChange={(e) => setName(e.target.value)} />
-        <ErrorNote message={enrol.error} />
-        <Button type="submit" disabled={enrol.busy || code.length !== 6 || !name.trim()}>Add to lab</Button>
-      </form>
-    </div>
+    <Centered narrow>
+      <PageTitle eyebrow="Setup" sub={<>On the server PC, open <b className="text-foreground">Devices → Add devices</b> and type the code shown there.</>}>
+        Add this {role === 'board' ? 'board' : 'PC'} to the lab
+      </PageTitle>
+      <Card className="p-6">
+        <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); void enrol.run(); }}>
+          <Field id="enrol-code" label="Code" inputMode="numeric" maxLength={6} autoFocus value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
+          <Field id="device-name" label="Name for this device" value={name} onChange={(e) => setName(e.target.value)} />
+          <ErrorNote message={enrol.error} />
+          <Button type="submit" className="h-12" disabled={enrol.busy || code.length !== 6 || !name.trim()}>Add to lab</Button>
+        </form>
+      </Card>
+    </Centered>
   );
 }
