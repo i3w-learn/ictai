@@ -51,6 +51,9 @@ export function checkAccess(access: Access, p: Principal | null) {
   switch (access.kind) {
     case 'signed-in':
       return;
+    case 'student':
+      if (p.kind !== 'student') throw forbidden('Students only.');
+      return;
     case 'staff':
       if (p.kind !== 'staff') throw forbidden('Staff only.');
       if (access.permission && !p.permissions.includes(access.permission)) {
@@ -67,6 +70,10 @@ export function checkAccess(access: Access, p: Principal | null) {
 // Narrowing helpers for handlers whose contract already guaranteed the principal kind.
 export function asStaff(p: Principal | null) {
   if (p?.kind !== 'staff') throw forbidden('Staff only.');
+  return p;
+}
+export function asStudent(p: Principal | null) {
+  if (p?.kind !== 'student') throw forbidden('Students only.');
   return p;
 }
 export function asDevice(p: Principal | null) {

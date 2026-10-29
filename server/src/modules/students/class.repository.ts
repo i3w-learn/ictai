@@ -27,6 +27,10 @@ export class ClassRepository {
       .all(classId) as Section[];
   }
 
+  name(id: string): string | undefined {
+    return (this.db.prepare('SELECT name FROM classes WHERE id = ?').get(id) as { name: string } | undefined)?.name;
+  }
+
   classExists(id: string): boolean {
     return !!this.db.prepare('SELECT 1 FROM classes WHERE id = ?').get(id);
   }

@@ -1,10 +1,11 @@
-//! Native side of the ICT App client. Kept thin: discovery, pinned HTTPS and a settings file.
+//! Native side of the ICT App client. Kept thin: discovery, pinned HTTPS, the relay socket and a settings file.
 //! All screens and app logic live in the React code.
 
 mod discovery;
 mod error;
 mod http;
 mod pinning;
+mod relay;
 mod storage;
 
 use std::time::Duration;
@@ -15,6 +16,7 @@ use tauri::{AppHandle, Manager, State};
 use crate::discovery::Found;
 use crate::error::AppError;
 use crate::http::{ApiRequest, ApiResponse, HttpClients, ProbeResult};
+use crate::relay::RelayState;
 
 fn config_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
     app.path().app_config_dir().map_err(|e| AppError::Storage(e.to_string()))
@@ -33,6 +35,22 @@ async fn api_request(clients: State<'_, HttpClients>, request: ApiRequest) -> Re
 #[tauri::command]
 async fn probe_server(base_url: String) -> Result<ProbeResult, AppError> {
     http::probe(&base_url).await
+}
+
+#[tauri::command]
+async fn relay_open(app: AppHandle, state: State<'_, RelayState>, base_url: String, cert_fp: String, token: String) -> Result<u64, AppError> {
+    relay::open(app, &state, &base_url, &cert_fp, &token).await
+}
+
+#[tauri::command]
+async fn relay_send(state: State<'_, RelayState>, text: String) -> Result<(), AppError> {
+    relay::send(&state, text).await
+}
+
+#[tauri::command]
+async fn relay_close(state: State<'_, RelayState>) -> Result<(), AppError> {
+    relay::close(&state).await;
+    Ok(())
 }
 
 #[tauri::command]
@@ -64,10 +82,14 @@ fn install_role() -> Option<String> {
 pub fn run() {
     tauri::Builder::default()
         .manage(HttpClients::default())
+        .manage(RelayState::default())
         .invoke_handler(tauri::generate_handler![
             discover_servers,
             api_request,
             probe_server,
+            relay_open,
+            relay_send,
+            relay_close,
             load_settings,
             save_settings,
             clear_settings,

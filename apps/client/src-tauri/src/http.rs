@@ -37,17 +37,22 @@ pub struct ProbeResult {
     pub health: Value,
 }
 
-fn provider() -> Arc<rustls::crypto::CryptoProvider> {
+pub(crate) fn provider() -> Arc<rustls::crypto::CryptoProvider> {
     Arc::new(rustls::crypto::ring::default_provider())
 }
 
-fn build_client(verifier: Arc<FingerprintVerifier>) -> Result<reqwest::Client, AppError> {
-    let tls = rustls::ClientConfig::builder_with_provider(provider())
+/// TLS that trusts exactly the certificate the verifier pins. Shared with the relay socket.
+pub(crate) fn tls_config(verifier: Arc<FingerprintVerifier>) -> Result<rustls::ClientConfig, AppError> {
+    Ok(rustls::ClientConfig::builder_with_provider(provider())
         .with_safe_default_protocol_versions()
         .map_err(|e| AppError::Internal(e.to_string()))?
         .dangerous()
         .with_custom_certificate_verifier(verifier)
-        .with_no_client_auth();
+        .with_no_client_auth())
+}
+
+fn build_client(verifier: Arc<FingerprintVerifier>) -> Result<reqwest::Client, AppError> {
+    let tls = tls_config(verifier)?;
     reqwest::Client::builder()
         .use_preconfigured_tls(tls)
         .connect_timeout(Duration::from_secs(3))

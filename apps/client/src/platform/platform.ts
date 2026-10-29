@@ -27,6 +27,11 @@ export interface RawResponse {
   body: unknown;
 }
 
+// Events from the relay socket. `conn` says which socket; events from a replaced one are stale.
+export type RelayEvent =
+  | { kind: 'message'; conn: number; text: string }
+  | { kind: 'closed'; conn: number; code: number | null; reason: string };
+
 export interface Platform {
   readonly appVersion: string;
   discover(app: AppKind): Promise<FoundServer[]>;
@@ -35,6 +40,11 @@ export interface Platform {
   loadSettings(): Promise<unknown | null>;
   saveSettings(settings: unknown): Promise<void>;
   clearSettings(): Promise<void>;
+  /** Opens the live relay socket (closing any earlier one); resolves to its number. */
+  relayOpen(baseUrl: string, certFp: string, token: string): Promise<number>;
+  relaySend(text: string): Promise<void>;
+  relayClose(): Promise<void>;
+  onRelay(listener: (e: RelayEvent) => void): () => void;
   /** The role chosen in the Windows installer, if any. */
   installRole(): Promise<AppKind | null>;
 }

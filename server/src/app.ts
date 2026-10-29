@@ -5,6 +5,8 @@ import { authRoutes, bearerToken } from './modules/auth/auth.routes.js';
 import { deviceRoutes } from './modules/devices/devices.routes.js';
 import { staffRoutes } from './modules/staff/staff.routes.js';
 import { studentRoutes } from './modules/students/students.routes.js';
+import { quizRoutes } from './modules/quizzes/quizzes.routes.js';
+import { relayRoutes } from './relay/relay.routes.js';
 import { systemRoutes } from './modules/system/system.routes.js';
 
 declare module 'fastify' {
@@ -30,10 +32,12 @@ export function buildApp(c: Container, opts: AppOptions = {}) {
     req.principal = c.resolver.resolve(bearerToken(req));
   });
 
+  relayRoutes(app, { relay: c.relay });
   systemRoutes(app, { identity: c.identity, audit: c.audit });
   authRoutes(app, { staffAuth: c.staffAuth, sessions: c.sessions });
   deviceRoutes(app, { enrolment: c.enrolment });
   staffRoutes(app, { admin: c.staffAdmin });
+  quizRoutes(app, { quizzes: c.quizzes, runs: c.runs });
   studentRoutes(app, { admin: c.studentAdmin, auth: c.studentAuth });
   return app;
 }
