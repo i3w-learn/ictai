@@ -2,6 +2,7 @@ packages:
   - server
   - contracts
   - apps/*
+# better-sqlite3 ships prebuilt binaries (prebuilds/*.node), so it must NOT be built:
+# building needs Visual Studio on Windows, and the CI runner's node-gyp cannot find it.
 onlyBuiltDependencies:
-  - better-sqlite3
   - esbuild
