@@ -6,6 +6,10 @@ import {
   ClassCode, ClassQuery, CreatedStudent, PromoteClass, PromoteResult, SignInCard, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
   SchoolClass, Section, SetPin, Student, StudentEnrolmentCode, UpdateStudent,
 } from './students.js';
+import {
+  AnswerResult, JoinRun, OpenRun, Quiz, QuizInput, QuizQuery, QuizSummary, RunQuery, RunSummary,
+  StudentRunState, SubmitAnswer, TeacherRunState,
+} from './quizzes.js';
 import { NewTeacher, SetPassword, StaffMember, UpdateTeacher } from './staff.js';
 import type { Permission } from './permissions.js';
 
@@ -13,6 +17,7 @@ import type { Permission } from './permissions.js';
 export type Access =
   | { kind: 'public' }
   | { kind: 'signed-in' }
+  | { kind: 'student' }
   | { kind: 'staff'; permission?: Permission }
   | { kind: 'device'; deviceKind?: 'lab_pc' | 'board' };
 
@@ -28,6 +33,7 @@ export interface Endpoint {
 
 const pub: Access = { kind: 'public' };
 const staff = (permission?: Permission): Access => ({ kind: 'staff', permission });
+const student: Access = { kind: 'student' };
 const labPc: Access = { kind: 'device', deviceKind: 'lab_pc' };
 
 // The single list of REST endpoints. A contract test checks the server serves exactly these.
@@ -68,6 +74,22 @@ export const API = {
   'DELETE /api/v1/students/:id': { summary: 'Delete a student; ends their session', access: staff('students.manage'), params: IdParams, status: 204 },
   'PUT /api/v1/students/:id/pin': { summary: 'Reset a student PIN', access: staff('students.manage'), params: IdParams, body: SetPin, status: 204 },
   'POST /api/v1/students/:id/enrolment-code': { summary: 'One-time first sign-in code', access: staff('students.manage'), params: IdParams, status: 201, response: StudentEnrolmentCode },
+
+  'GET /api/v1/quizzes': { summary: 'List quizzes, optionally for one class', access: staff(), query: QuizQuery, status: 200, response: z.array(QuizSummary) },
+  'POST /api/v1/quizzes': { summary: 'Write a new quiz', access: staff('teaching.manage'), body: QuizInput, status: 201, response: Quiz },
+  'GET /api/v1/quizzes/:id': { summary: 'A quiz with its questions and answers', access: staff(), params: IdParams, status: 200, response: Quiz },
+  'PUT /api/v1/quizzes/:id': { summary: 'Replace a quiz; refused while it is running', access: staff('teaching.manage'), params: IdParams, body: QuizInput, status: 200, response: Quiz },
+  'DELETE /api/v1/quizzes/:id': { summary: 'Delete a quiz', access: staff('teaching.manage'), params: IdParams, status: 204 },
+
+  'POST /api/v1/quiz-runs': { summary: 'Open a Lab Mode run with a 6-digit join code', access: staff('lesson.start'), body: OpenRun, status: 201, response: TeacherRunState },
+  'GET /api/v1/quiz-runs': { summary: 'Runs of a quiz, newest first', access: staff(), query: RunQuery, status: 200, response: z.array(RunSummary) },
+  'GET /api/v1/quiz-runs/:id': { summary: 'Live view of a run for the teacher', access: staff(), params: IdParams, status: 200, response: TeacherRunState },
+  'POST /api/v1/quiz-runs/:id/start': { summary: 'Let joined students start answering', access: staff('lesson.control'), params: IdParams, status: 200, response: TeacherRunState },
+  'POST /api/v1/quiz-runs/:id/end': { summary: 'End the run; the join code stops working', access: staff('lesson.control'), params: IdParams, status: 200, response: TeacherRunState },
+  'POST /api/v1/quiz-runs/join': { summary: 'Student joins a run by its code', access: student, body: JoinRun, status: 200, response: StudentRunState },
+  'GET /api/v1/quiz-runs/:id/play': { summary: "The student's view of a run", access: student, params: IdParams, status: 200, response: StudentRunState },
+  'POST /api/v1/quiz-runs/:id/answers': { summary: 'Answer one question; the first answer counts', access: student, params: IdParams, body: SubmitAnswer, status: 200, response: AnswerResult },
+  'POST /api/v1/quiz-runs/:id/finish': { summary: 'Student is done; returns their score', access: student, params: IdParams, status: 200, response: StudentRunState },
 
   'GET /api/v1/audit': { summary: 'Activity log, newest first, 100 at a time', access: staff('server.manage'), query: AuditQuery, status: 200, response: z.array(AuditEntry) },
 } as const satisfies Record<string, Endpoint>;

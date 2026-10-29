@@ -10,12 +10,13 @@ server/             School server: Node 22 + Fastify + SQLite. HTTPS :7700, UDP 
   src/core/         Errors, clock, audit, contract-driven route helper
   src/infra/        Database + migrations, TLS, discovery beacon, network, single-instance lock
   src/modules/      One folder per feature: *.repository (SQL) → *.service (rules) → *.routes (HTTP)
+  src/relay/        Live WebSocket at /relay: rooms, pushes fresh state on join and on every change
   src/container.ts  The only place objects are built and wired
 apps/client/        Tauri 2 + React app: Console, Student PC and Board in one codebase
   src/platform/     Interface to native features (Tauri implementation behind it)
   src/core/         Typed API client, server finder, saved settings
   src/features/     Screens: setup (role, find server, enrol), sign-in, home
-  src-tauri/        Rust: UDP discovery, pinned HTTPS, settings file
+  src-tauri/        Rust: UDP discovery, pinned HTTPS, pinned relay WebSocket, settings file
 installer/          Inno Setup script + WinSW service definition
 .github/workflows/  Windows build: tests, Tauri app, server bundle, installer
 docs/               Spec, PRD, PRAXIS notes, system design

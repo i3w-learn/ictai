@@ -121,4 +121,58 @@ export const migrations: Migration[] = [
       CREATE INDEX students_class ON students(class_id, status);
     `,
   },
+  {
+    version: 3,
+    name: 'quizzes_and_lab_mode',
+    sql: `
+      CREATE TABLE quizzes (
+        id                   TEXT PRIMARY KEY,
+        title                TEXT NOT NULL,
+        class_id             TEXT NOT NULL REFERENCES classes(id),
+        subject              TEXT,
+        topic                TEXT,
+        seconds_per_question INTEGER NOT NULL,
+        questions_json       TEXT NOT NULL,
+        created_by           TEXT NOT NULL REFERENCES users(id),
+        status               TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','deleted')),
+        created_at           INTEGER NOT NULL,
+        updated_at           INTEGER NOT NULL
+      );
+      CREATE INDEX quizzes_class ON quizzes(class_id, status);
+
+      CREATE TABLE quiz_runs (
+        id         TEXT PRIMARY KEY,
+        quiz_id    TEXT NOT NULL REFERENCES quizzes(id),
+        class_id   TEXT NOT NULL REFERENCES classes(id),
+        join_code  TEXT NOT NULL,
+        status     TEXT NOT NULL CHECK (status IN ('lobby','active','ended')),
+        opened_by  TEXT NOT NULL REFERENCES users(id),
+        created_at INTEGER NOT NULL,
+        started_at INTEGER,
+        ended_at   INTEGER
+      );
+      CREATE INDEX quiz_runs_quiz ON quiz_runs(quiz_id, created_at);
+      CREATE INDEX quiz_runs_open_code ON quiz_runs(join_code) WHERE status != 'ended';
+
+      CREATE TABLE quiz_participants (
+        run_id      TEXT NOT NULL REFERENCES quiz_runs(id),
+        student_id  TEXT NOT NULL REFERENCES students(id),
+        device_id   TEXT NOT NULL,
+        joined_at   INTEGER NOT NULL,
+        finished_at INTEGER,
+        PRIMARY KEY (run_id, student_id)
+      );
+
+      -- First answer to a question wins, so a resent answer changes nothing.
+      CREATE TABLE quiz_answers (
+        run_id         TEXT NOT NULL REFERENCES quiz_runs(id),
+        student_id     TEXT NOT NULL REFERENCES students(id),
+        question_index INTEGER NOT NULL,
+        choice         INTEGER NOT NULL,
+        points         INTEGER NOT NULL,
+        answered_at    INTEGER NOT NULL,
+        PRIMARY KEY (run_id, student_id, question_index)
+      );
+    `,
+  },
 ];

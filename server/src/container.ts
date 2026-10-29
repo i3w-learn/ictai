@@ -15,6 +15,11 @@ import { StudentAdminService } from './modules/students/student-admin.service.js
 import { StudentAuthService } from './modules/students/student-auth.service.js';
 import { StudentRepository } from './modules/students/student.repository.js';
 import { StaffAdminService } from './modules/staff/staff-admin.service.js';
+import { QuizRepository } from './modules/quizzes/quiz.repository.js';
+import { QuizService } from './modules/quizzes/quiz.service.js';
+import { RunRepository } from './modules/quizzes/run.repository.js';
+import { RunService } from './modules/quizzes/run.service.js';
+import { Relay } from './relay/relay.js';
 import { SchoolIdentity } from './modules/system/school-identity.js';
 
 // The one place that builds and wires every object. Everything else receives what it needs.
@@ -28,9 +33,12 @@ export function createContainer(opts: { db: Db; now: Clock; version: string }) {
     enrolWindows: new EnrolWindowRepository(db),
     classes: new ClassRepository(db),
     students: new StudentRepository(db),
+    quizzes: new QuizRepository(db),
+    runs: new RunRepository(db),
   };
 
   const audit = new AuditLog(db, now);
+  const relay = new Relay(now, (err) => console.error('[relay]', err));
   const identity = new SchoolIdentity(db, opts.version);
   identity.ensure(now());
 
@@ -39,6 +47,7 @@ export function createContainer(opts: { db: Db; now: Clock; version: string }) {
 
   return {
     audit,
+    relay,
     identity,
     resolver,
     sessions,
@@ -46,6 +55,8 @@ export function createContainer(opts: { db: Db; now: Clock; version: string }) {
     staffAdmin: new StaffAdminService(now, repos.staff, repos.sessions, audit),
     enrolment: new DeviceEnrolmentService(now, repos.enrolWindows, repos.devices, identity, new FailureLimiter(now), audit),
     studentAdmin: new StudentAdminService(now, repos.classes, repos.students, repos.sessions, audit),
+    quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes),
+    runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, new FailureLimiter(now), audit),
     studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, new FailureLimiter(now), audit),
   };
 }

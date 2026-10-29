@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
-import { PlatformError, type AppKind, type FoundServer, type Platform, type RawRequest, type RawResponse } from './platform';
+import { listen } from '@tauri-apps/api/event';
+import { PlatformError, type AppKind, type FoundServer, type Platform, type RawRequest, type RawResponse, type RelayEvent } from './platform';
 
 // Rust commands reject with { kind, message }; turn that into a PlatformError.
 async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -36,6 +37,26 @@ export class TauriPlatform implements Platform {
 
   clearSettings() {
     return call<void>('clear_settings');
+  }
+
+  relayOpen(baseUrl: string, certFp: string, token: string) {
+    return call<number>('relay_open', { baseUrl, certFp, token });
+  }
+
+  relaySend(text: string) {
+    return call<void>('relay_send', { text });
+  }
+
+  relayClose() {
+    return call<void>('relay_close');
+  }
+
+  onRelay(listener: (e: RelayEvent) => void) {
+    const stops = [
+      listen<{ conn: number; text: string }>('relay://message', (e) => listener({ kind: 'message', ...e.payload })),
+      listen<{ conn: number; code: number | null; reason: string }>('relay://closed', (e) => listener({ kind: 'closed', ...e.payload })),
+    ];
+    return () => stops.forEach((p) => void p.then((stop) => stop()));
   }
 
   installRole() {

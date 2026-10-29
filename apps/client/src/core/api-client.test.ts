@@ -24,6 +24,10 @@ function fakePlatform(opts: { up: Record<string, (r: RawRequest) => RawResponse>
     saveSettings: async () => undefined,
     clearSettings: async () => undefined,
     installRole: async () => null,
+    relayOpen: async () => 1,
+    relaySend: async () => undefined,
+    relayClose: async () => undefined,
+    onRelay: () => () => {},
   };
   return { platform, calls };
 }
