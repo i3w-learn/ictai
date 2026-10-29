@@ -13,6 +13,7 @@ export type Action =
   | { type: 'loaded'; settings: DeviceSettings }
   | { type: 'role'; role: Role }
   | { type: 'server'; server: ServerTarget }
+  | { type: 'forget-server' }
   | { type: 'device'; device: NonNullable<DeviceSettings['device']> }
   | { type: 'session'; session: SessionResult | null }
   | { type: 'reset' };
@@ -27,6 +28,9 @@ export function reducer(state: AppState, a: Action): AppState {
       return { ...state, settings: { ...EMPTY_SETTINGS, role: a.role } };
     case 'server':
       return { ...state, settings: { ...state.settings, server: a.server } };
+    case 'forget-server':
+      // A new server means a new enrolment too: the old device token belongs to the old server.
+      return { ...state, session: null, settings: { ...state.settings, server: null, device: null } };
     case 'device':
       return { ...state, settings: { ...state.settings, device: a.device } };
     case 'session':

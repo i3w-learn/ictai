@@ -1,6 +1,12 @@
 import { useApp } from '../../app/app-context';
+import { Centered, PageTitle } from '../../ui/ui';
 import { DevicesPanel } from './DevicesPanel';
 import { StudentsPanel } from './StudentsPanel';
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
 
 export function Home() {
   const { state } = useApp();
@@ -8,17 +14,19 @@ export function Home() {
 
   if (p.kind === 'student') {
     return (
-      <div className="center">
-        <h1>Hello, {p.name}</h1>
-        <p className="muted">When your teacher starts a lesson, it will open here.</p>
-      </div>
+      <Centered>
+        <PageTitle eyebrow={greeting()} sub="When your teacher starts a lesson, it will open here.">Hello, {p.name}</PageTitle>
+      </Centered>
     );
   }
 
   if (p.kind === 'staff' && state.settings.role === 'console') {
+    const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
     return (
-      <div className="dash">
-        <h1>Welcome, {p.displayName}</h1>
+      <div className="mx-auto grid max-w-6xl gap-8">
+        <header className="border-b border-border pb-7">
+          <PageTitle eyebrow={`${today} · ${greeting()}, ${p.displayName}`}>Your lab today</PageTitle>
+        </header>
         {p.permissions.includes('setup.devices') && <DevicesPanel />}
         {p.permissions.includes('students.manage') && <StudentsPanel />}
       </div>
@@ -26,9 +34,8 @@ export function Home() {
   }
 
   return (
-    <div className="center">
-      <h1>Ready, {p.kind === 'staff' ? p.displayName : 'device'}</h1>
-      <p className="muted">Live lessons arrive in the next milestone (M2).</p>
-    </div>
+    <Centered>
+      <PageTitle sub="Live lessons arrive in the next milestone (M2).">Ready, {p.kind === 'staff' ? p.displayName : 'device'}</PageTitle>
+    </Centered>
   );
 }

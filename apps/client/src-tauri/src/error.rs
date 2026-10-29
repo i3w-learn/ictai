@@ -6,7 +6,7 @@ use serde::Serialize;
 pub enum AppError {
     #[error("{0}")]
     Network(String),
-    #[error("The server's certificate does not match the one this device trusts.")]
+    #[error("This is not the server this device was set up with. If the server PC was reinstalled, click Change server.")]
     PinMismatch,
     #[error("{0}")]
     BadInput(String),

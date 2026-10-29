@@ -23,14 +23,12 @@ docs/               Spec, PRD, PRAXIS notes, system design
 
 ## Develop on a Mac
 
+Shortcuts live in the `justfile` (`brew install just`). Run `just` to list them.
+
 ```bash
-pnpm install
-
-# 1. Server
-cd server && ICT_DEV_ADMIN_USER=admin ICT_DEV_ADMIN_PASSWORD=admin123 pnpm dev
-
-# 2. App (new terminal). First run compiles Rust for a few minutes.
-cd apps/client && pnpm tauri dev
+just install
+just server   # terminal 1: school server (dev admin: admin / admin123)
+just app      # terminal 2: the app. First run compiles Rust for a few minutes.
 ```
 
 Pick **Server PC** to use the console, or **Student PC** / **Smart board** to test enrolment. Use **Reset device** in the top bar to switch roles.
@@ -38,10 +36,10 @@ Pick **Server PC** to use the console, or **Student PC** / **Smart board** to te
 ## Test
 
 ```bash
-pnpm test          # server + client (TypeScript)
-pnpm typecheck
-cd apps/client/src-tauri && cargo test   # Rust
-pnpm --filter @ict/contracts openapi     # regenerate contracts/openapi.json
+just test      # server + app + Rust
+just check     # type-check
+just e2e       # live check against a running server
+just openapi   # regenerate contracts/openapi.json
 ```
 
 ## Windows installer
