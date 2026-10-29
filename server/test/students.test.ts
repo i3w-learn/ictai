@@ -31,6 +31,47 @@ describe('student management', () => {
   });
 });
 
+describe('student edit and delete', () => {
+  it('lists sections for a class', async () => {
+    const { app, staff, cls } = await withStudent();
+    const res = await app.inject({ method: 'GET', url: `/api/v1/sections?classId=${cls.id}`, headers: staff });
+    expect(res.json()).toEqual([{ id: expect.any(String), classId: cls.id, name: 'A' }]);
+  });
+
+  it('edits a student', async () => {
+    const { app, staff, cls, student, device } = await withStudent();
+    const res = await app.inject({ method: 'PATCH', url: `/api/v1/students/${student.id}`, headers: staff, payload: { name: 'Asha V', rollNo: '13' } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ name: 'Asha V', rollNo: '13', hasPin: true });
+    const roster = await app.inject({ method: 'GET', url: `/api/v1/auth/student/roster?classId=${cls.id}`, headers: device });
+    expect(roster.json()).toEqual([{ id: student.id, name: 'Asha V', rollNo: '13' }]);
+  });
+
+  it('rejects a section from another class', async () => {
+    const { app, staff, student } = await withStudent();
+    const other = (await app.inject({ method: 'POST', url: '/api/v1/classes', headers: staff, payload: { name: '8' } })).json();
+    const sec = (await app.inject({ method: 'POST', url: '/api/v1/sections', headers: staff, payload: { classId: other.id, name: 'B' } })).json();
+    const res = await app.inject({ method: 'PATCH', url: `/api/v1/students/${student.id}`, headers: staff, payload: { sectionId: sec.id } });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('deleting a student ends their session and hides them', async () => {
+    const { app, db, staff, cls, student, device, auth } = await withStudent();
+    const { token } = (await app.inject({ method: 'POST', url: '/api/v1/auth/student/pin', headers: device, payload: { studentId: student.id, pin: '4321' } })).json();
+    const { code } = (await app.inject({ method: 'POST', url: `/api/v1/students/${student.id}/enrolment-code`, headers: staff })).json();
+
+    expect((await app.inject({ method: 'DELETE', url: `/api/v1/students/${student.id}`, headers: staff })).statusCode).toBe(204);
+
+    expect((await app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: auth(token) })).statusCode).toBe(401);
+    const roster = await app.inject({ method: 'GET', url: `/api/v1/auth/student/roster?classId=${cls.id}`, headers: device });
+    expect(roster.json()).toEqual([]);
+    const enrol = await app.inject({ method: 'POST', url: '/api/v1/auth/student/enrol', headers: device, payload: { code, pin: '1111' } });
+    expect(enrol.statusCode).toBe(401);
+    const logged = db.prepare(`SELECT target FROM audit_log WHERE action = 'student.delete'`).get();
+    expect(logged).toEqual({ target: student.id });
+  });
+});
+
 describe('student sign-in on a lab PC', () => {
   it('shows classes and names to an enrolled lab PC only', async () => {
     const { app, cls, device, enrolDevice, auth } = await withStudent();

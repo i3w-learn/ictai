@@ -1,11 +1,12 @@
 import { z, type ZodType } from 'zod';
-import { Health } from './common.js';
+import { AuditEntry, AuditQuery, Health } from './common.js';
 import { Principal, SessionResult, StaffLogin, StudentFirstLogin, StudentPinLogin, StudentQrLogin } from './auth.js';
 import { Device, DeviceEnrol, DeviceEnrolResult, EnrolWindow, OpenEnrolWindow } from './devices.js';
 import {
-  ClassQuery, CreatedStudent, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
-  SchoolClass, Section, SetPin, Student, StudentEnrolmentCode,
+  ClassCode, ClassQuery, CreatedStudent, PromoteClass, PromoteResult, SignInCard, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
+  SchoolClass, Section, SetPin, Student, StudentEnrolmentCode, UpdateStudent,
 } from './students.js';
+import { NewTeacher, SetPassword, StaffMember, UpdateTeacher } from './staff.js';
 import type { Permission } from './permissions.js';
 
 // Who may call a route. The server enforces it; the OpenAPI file documents it.
@@ -48,13 +49,27 @@ export const API = {
   'DELETE /api/v1/devices/enrol-window': { summary: 'Close the enrol window', access: staff('setup.devices'), status: 204 },
   'GET /api/v1/devices': { summary: 'List devices', access: staff('setup.devices'), status: 200, response: z.array(Device) },
 
+  'GET /api/v1/staff': { summary: 'List staff accounts', access: staff('staff.manage'), status: 200, response: z.array(StaffMember) },
+  'POST /api/v1/staff': { summary: 'Add a teacher', access: staff('staff.manage'), body: NewTeacher, status: 201, response: StaffMember },
+  'PATCH /api/v1/staff/:id': { summary: 'Edit a teacher, switch permissions, disable or enable', access: staff('staff.manage'), params: IdParams, body: UpdateTeacher, status: 200, response: StaffMember },
+  'PUT /api/v1/staff/:id/password': { summary: 'Reset a teacher password; ends their sessions', access: staff('staff.manage'), params: IdParams, body: SetPassword, status: 204 },
+  'DELETE /api/v1/staff/:id': { summary: 'Delete a teacher', access: staff('staff.manage'), params: IdParams, status: 204 },
+
   'GET /api/v1/classes': { summary: 'List classes', access: staff(), status: 200, response: z.array(SchoolClass) },
   'POST /api/v1/classes': { summary: 'Add a class', access: staff('setup.master'), body: NewClass, status: 201, response: SchoolClass },
+  'POST /api/v1/classes/:id/promote': { summary: 'Move every student to another class', access: staff('students.manage'), params: IdParams, body: PromoteClass, status: 200, response: PromoteResult },
+  'POST /api/v1/classes/:id/enrolment-codes': { summary: 'First sign-in codes for every student in a class', access: staff('students.manage'), params: IdParams, status: 201, response: z.array(ClassCode) },
+  'POST /api/v1/classes/:id/cards': { summary: 'Printable sign-in cards (new QR + first sign-in code) for a class', access: staff('students.manage'), params: IdParams, status: 201, response: z.array(SignInCard) },
   'POST /api/v1/sections': { summary: 'Add a section', access: staff('setup.master'), body: NewSection, status: 201, response: Section },
+  'GET /api/v1/sections': { summary: 'Sections in a class', access: staff(), query: ClassQuery, status: 200, response: z.array(Section) },
   'GET /api/v1/students': { summary: 'Students in a class', access: staff('students.manage'), query: ClassQuery, status: 200, response: z.array(Student) },
   'POST /api/v1/students': { summary: 'Add a student', access: staff('students.manage'), body: NewStudent, status: 201, response: CreatedStudent },
+  'PATCH /api/v1/students/:id': { summary: 'Edit a student', access: staff('students.manage'), params: IdParams, body: UpdateStudent, status: 200, response: Student },
+  'DELETE /api/v1/students/:id': { summary: 'Delete a student; ends their session', access: staff('students.manage'), params: IdParams, status: 204 },
   'PUT /api/v1/students/:id/pin': { summary: 'Reset a student PIN', access: staff('students.manage'), params: IdParams, body: SetPin, status: 204 },
   'POST /api/v1/students/:id/enrolment-code': { summary: 'One-time first sign-in code', access: staff('students.manage'), params: IdParams, status: 201, response: StudentEnrolmentCode },
+
+  'GET /api/v1/audit': { summary: 'Activity log, newest first, 100 at a time', access: staff('server.manage'), query: AuditQuery, status: 200, response: z.array(AuditEntry) },
 } as const satisfies Record<string, Endpoint>;
 
 export type RouteKey = keyof typeof API;

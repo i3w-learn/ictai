@@ -21,6 +21,12 @@ export class ClassRepository {
     return { id, classId, name };
   }
 
+  listSections(classId: string): Section[] {
+    return this.db
+      .prepare('SELECT id, class_id AS classId, name FROM sections WHERE class_id = ? ORDER BY name')
+      .all(classId) as Section[];
+  }
+
   classExists(id: string): boolean {
     return !!this.db.prepare('SELECT 1 FROM classes WHERE id = ?').get(id);
   }

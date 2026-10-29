@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { asDevice, route } from '../../core/route.js';
+import { asDevice, asStaff, route } from '../../core/route.js';
 import type { StudentAdminService } from './student-admin.service.js';
 import type { StudentAuthService } from './student-auth.service.js';
 
@@ -9,9 +9,15 @@ export function studentRoutes(app: FastifyInstance, deps: { admin: StudentAdminS
   // Staff: classes, sections, students
   route(app, 'GET /api/v1/classes', () => admin.listClasses());
   route(app, 'POST /api/v1/classes', ({ body }) => admin.addClass(body.name));
+  route(app, 'POST /api/v1/classes/:id/promote', ({ params, body, principal }) => admin.promote(asStaff(principal), params.id, body.toClassId));
+  route(app, 'POST /api/v1/classes/:id/enrolment-codes', ({ params, principal }) => admin.classCodes(asStaff(principal), params.id));
+  route(app, 'POST /api/v1/classes/:id/cards', ({ params, principal }) => admin.cards(asStaff(principal), params.id));
   route(app, 'POST /api/v1/sections', ({ body }) => admin.addSection(body.classId, body.name));
+  route(app, 'GET /api/v1/sections', ({ query }) => admin.listSections(query.classId));
   route(app, 'GET /api/v1/students', ({ query }) => admin.listStudents(query.classId));
   route(app, 'POST /api/v1/students', ({ body }) => admin.addStudent(body));
+  route(app, 'PATCH /api/v1/students/:id', ({ params, body }) => admin.updateStudent(params.id, body));
+  route(app, 'DELETE /api/v1/students/:id', ({ params, principal }) => admin.removeStudent(asStaff(principal), params.id));
   route(app, 'PUT /api/v1/students/:id/pin', ({ params, body }) => admin.resetPin(params.id, body.pin));
   route(app, 'POST /api/v1/students/:id/enrolment-code', ({ params }) => admin.issueEnrolmentCode(params.id));
 

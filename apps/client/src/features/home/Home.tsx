@@ -1,6 +1,8 @@
 import { useApp } from '../../app/app-context';
 import { Centered, PageTitle } from '../../ui/ui';
+import { AuditPanel } from './AuditPanel';
 import { DevicesPanel } from './DevicesPanel';
+import { StaffPanel } from './StaffPanel';
 import { StudentsPanel } from './StudentsPanel';
 
 function greeting() {
@@ -27,8 +29,10 @@ export function Home() {
         <header className="border-b border-border pb-7">
           <PageTitle eyebrow={`${today} · ${greeting()}, ${p.displayName}`}>Your lab today</PageTitle>
         </header>
+        {p.permissions.includes('staff.manage') && <StaffPanel />}
         {p.permissions.includes('setup.devices') && <DevicesPanel />}
         {p.permissions.includes('students.manage') && <StudentsPanel />}
+        {p.permissions.includes('server.manage') && <AuditPanel />}
       </div>
     );
   }

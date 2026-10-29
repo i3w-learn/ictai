@@ -39,6 +39,10 @@ export class SessionRepository {
     this.db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
   }
 
+  deleteForUser(kind: SessionKind, userId: string) {
+    this.db.prepare('DELETE FROM sessions WHERE kind = ? AND user_id = ?').run(kind, userId);
+  }
+
   deleteByTokenHash(hash: string) {
     this.db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(hash);
   }

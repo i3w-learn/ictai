@@ -17,3 +17,18 @@ export const Health = z.object({
   version: z.string(),
 });
 export type Health = z.infer<typeof Health>;
+
+// Spec 4.1: one line of the audit log, with names filled in where known.
+export const AuditEntry = z.object({
+  id: z.number(),
+  at: z.number(),
+  actorKind: z.enum(['staff', 'student', 'device', 'system']),
+  actorName: z.string().nullable(),
+  action: z.string(),
+  target: z.string().nullable(),
+  targetName: z.string().nullable(),
+  detail: z.unknown().nullable(),
+});
+export type AuditEntry = z.infer<typeof AuditEntry>;
+
+export const AuditQuery = z.object({ before: z.coerce.number().int().positive().optional() });

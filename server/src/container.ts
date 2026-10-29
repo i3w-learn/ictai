@@ -14,6 +14,7 @@ import { ClassRepository } from './modules/students/class.repository.js';
 import { StudentAdminService } from './modules/students/student-admin.service.js';
 import { StudentAuthService } from './modules/students/student-auth.service.js';
 import { StudentRepository } from './modules/students/student.repository.js';
+import { StaffAdminService } from './modules/staff/staff-admin.service.js';
 import { SchoolIdentity } from './modules/system/school-identity.js';
 
 // The one place that builds and wires every object. Everything else receives what it needs.
@@ -37,12 +38,14 @@ export function createContainer(opts: { db: Db; now: Clock; version: string }) {
   const sessions = new SessionService(now, repos.sessions, resolver);
 
   return {
+    audit,
     identity,
     resolver,
     sessions,
     staffAuth: new StaffAuthService(now, repos.staff, sessions, new FailureLimiter(now), audit),
+    staffAdmin: new StaffAdminService(now, repos.staff, repos.sessions, audit),
     enrolment: new DeviceEnrolmentService(now, repos.enrolWindows, repos.devices, identity, new FailureLimiter(now), audit),
-    studentAdmin: new StudentAdminService(now, repos.classes, repos.students),
+    studentAdmin: new StudentAdminService(now, repos.classes, repos.students, repos.sessions, audit),
     studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, new FailureLimiter(now), audit),
   };
 }

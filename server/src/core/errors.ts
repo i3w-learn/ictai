@@ -17,6 +17,16 @@ export const notFound = (what: string) => new AppError(404, 'NOT_FOUND', `${what
 export const lockedOut = (waitMs: number) =>
   new AppError(429, 'LOCKED_OUT', `Too many wrong tries. Try again in ${Math.ceil(waitMs / 60_000)} min.`);
 
+// Turns a UNIQUE constraint clash into 409 ALREADY_EXISTS.
+export function unique<T>(insert: () => T, message: string): T {
+  try {
+    return insert();
+  } catch (err) {
+    if ((err as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE') throw new AppError(409, 'ALREADY_EXISTS', message);
+    throw err;
+  }
+}
+
 // Every error leaves the server as { code, message } (spec 14).
 export function registerErrorHandler(app: FastifyInstance) {
   app.setErrorHandler((err, req, reply) => {
