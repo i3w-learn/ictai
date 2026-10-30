@@ -6,7 +6,7 @@ import { Button, ConfirmButton, ErrorNote, Field, Note, Select, useAction } from
 type Mode = 'view' | 'edit' | 'pin';
 
 // One student's line in the console, with its own edit, PIN, code and delete actions.
-export function StudentRow({ student: s, sections, onChanged }: { student: Student; sections: Section[]; onChanged: () => Promise<void> }) {
+export function StudentRow({ student: s, className, sections, onChanged }: { student: Student; className: string; sections: Section[]; onChanged: () => Promise<void> }) {
   const { call } = useApp();
   const [mode, setMode] = useState<Mode>('view');
   const [edit, setEdit] = useState({ name: s.name, rollNo: s.rollNo ?? '', sectionId: s.sectionId ?? '' });
@@ -47,7 +47,7 @@ export function StudentRow({ student: s, sections, onChanged }: { student: Stude
         <span className="flex-1 font-medium">
           {s.name}
           <span className="ml-2 text-xs font-normal text-muted-foreground">
-            {[s.rollNo && `Roll ${s.rollNo}`, section && `Section ${section}`, !s.hasPin && 'No PIN yet'].filter(Boolean).join(' · ')}
+            {[`Class ${className}${section ? section : ''}`, s.rollNo && `Roll ${s.rollNo}`, !s.hasPin && 'No PIN yet'].filter(Boolean).join(' · ')}
           </span>
         </span>
         <Button variant="quiet" onClick={() => setMode(mode === 'edit' ? 'view' : 'edit')}>Edit</Button>

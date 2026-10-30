@@ -17,6 +17,10 @@
   --success: hsl(152 61% 36%);
   --border: hsl(220 22% 91%);
   --ring: hsl(243 75% 59%);
+  /* Who is signed in, shown in the top bar so a shared PC never leaves you guessing. */
+  --role-admin: hsl(271 68% 50%);
+  --role-teacher: hsl(199 89% 38%);
+  --role-student: hsl(25 92% 45%);
 }
 
 /* Follows the Windows light/dark setting. */
@@ -35,6 +39,9 @@
     --success: hsl(152 50% 52%);
     --border: hsl(215 20% 20%);
     --ring: hsl(243 75% 66%);
+    --role-admin: hsl(271 80% 72%);
+    --role-teacher: hsl(199 85% 62%);
+    --role-student: hsl(30 95% 62%);
   }
 }
 
@@ -52,6 +59,9 @@
   --color-success: var(--success);
   --color-border: var(--border);
   --color-ring: var(--ring);
+  --color-role-admin: var(--role-admin);
+  --color-role-teacher: var(--role-teacher);
+  --color-role-student: var(--role-student);
   --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
 }

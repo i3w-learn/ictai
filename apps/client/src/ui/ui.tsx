@@ -70,7 +70,7 @@ export function SectionLabel({ children }: { children: ReactNode }) {
 export function PageTitle({ eyebrow, children, sub }: { eyebrow?: ReactNode; children: ReactNode; sub?: ReactNode }) {
   return (
     <div className="grid gap-2">
-      {eyebrow && <p className="text-[11px] tracking-[0.22em] text-muted-foreground uppercase">{eyebrow}</p>}
+      {eyebrow && <p className="text-[15px] font-medium text-secondary-foreground">{eyebrow}</p>}
       <h1 className="font-display text-3xl font-semibold tracking-tight text-balance">{children}</h1>
       {sub && <p className="text-muted-foreground">{sub}</p>}
     </div>

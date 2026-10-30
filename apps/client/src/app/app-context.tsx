@@ -62,7 +62,10 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
     () => new RelayClient(platform, () => stateRef.current.settings.server, () => dispatch({ type: 'session', session: null })),
     [platform],
   );
-  useEffect(() => () => relay.dispose(), [relay]);
+  useEffect(() => {
+    relay.attach();
+    return () => relay.detach();
+  }, [relay]);
   const sessionToken = state.session?.token ?? null;
   useEffect(() => {
     if (sessionToken) relay.connect(sessionToken);

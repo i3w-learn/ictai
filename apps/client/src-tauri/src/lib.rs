@@ -18,8 +18,14 @@ use crate::error::AppError;
 use crate::http::{ApiRequest, ApiResponse, HttpClients, ProbeResult};
 use crate::relay::RelayState;
 
+/// `ICT_PROFILE=student` gives a second copy of the app its own saved settings, so one Mac
+/// can run a Server PC window and a Student PC window side by side (dev only; see `just student`).
 fn config_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
-    app.path().app_config_dir().map_err(|e| AppError::Storage(e.to_string()))
+    let dir = app.path().app_config_dir().map_err(|e| AppError::Storage(e.to_string()))?;
+    Ok(match std::env::var("ICT_PROFILE") {
+        Ok(p) if !p.is_empty() && p.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') => dir.join(format!("profile-{p}")),
+        _ => dir,
+    })
 }
 
 #[tauri::command]

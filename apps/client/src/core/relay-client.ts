@@ -27,14 +27,24 @@ export class RelayClient {
   private rooms = new Map<string, Set<StateListener>>();
   private latest = new Map<string, unknown>();
   private statusListeners = new Set<(s: RelayStatus) => void>();
-  private stopListening: () => void;
+  private stopListening: (() => void) | null = null;
 
   constructor(
     private readonly platform: Platform,
     private readonly target: () => ServerTarget | null,
     private readonly onSignedOut: () => void = () => {},
-  ) {
-    this.stopListening = platform.onRelay((e) => this.onEvent(e));
+  ) {}
+
+  // Start and stop hearing the relay. Call from a React effect: in development StrictMode
+  // mounts, unmounts and mounts again, so this must work after a detach.
+  attach() {
+    this.stopListening ??= this.platform.onRelay((e) => this.onEvent(e));
+  }
+
+  detach() {
+    this.disconnect();
+    this.stopListening?.();
+    this.stopListening = null;
   }
 
   connect(token: string) {
@@ -49,11 +59,6 @@ export class RelayClient {
     this.drop();
     void this.platform.relayClose().catch(() => undefined);
     this.setStatus('off');
-  }
-
-  dispose() {
-    this.disconnect();
-    this.stopListening();
   }
 
   getStatus() {

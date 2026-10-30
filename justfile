@@ -18,6 +18,10 @@ server:
 app:
     cd apps/client && pnpm tauri dev
 
+# Second app window with its own settings, e.g. a Student PC (run `just app` first)
+student profile="student":
+    ICT_PROFILE={{profile}} apps/client/src-tauri/target/debug/ict-client
+
 # Run all tests (server + app + Rust)
 test:
     pnpm test

@@ -71,7 +71,7 @@ function StaffRow({ member: s, onUpdate, onRemove }: { member: StaffMember; onUp
         <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">{s.displayName.charAt(0).toUpperCase()}</span>
         <span className={disabled ? 'flex-1 text-muted-foreground line-through' : 'flex-1 font-medium'}>
           {s.displayName} <span className="ml-1 text-xs font-normal text-muted-foreground">@{s.username}</span>
-          {s.role === 'super_admin' && <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Super Admin</span>}
+          {s.role === 'super_admin' && <span className="ml-2 text-xs font-semibold text-role-admin">Super Admin</span>}
           {done && <span className="ml-2 text-xs font-normal text-success">Password changed</span>}
         </span>
         {s.role === 'teacher' && (
