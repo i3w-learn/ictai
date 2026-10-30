@@ -32,7 +32,7 @@ function fakeSpawner() {
 
 const health = (...codes: number[]) => {
   const queue = [...codes];
-  return vi.fn(async () => new Response('', { status: queue.length > 1 ? queue.shift()! : queue[0]! }));
+  return vi.fn(async (_url: string | URL | Request) => new Response('', { status: queue.length > 1 ? queue.shift()! : queue[0]! }));
 };
 
 function runtime(dir: string, fetchFn: typeof fetch, spawner: Spawner, setPriority = vi.fn()) {
