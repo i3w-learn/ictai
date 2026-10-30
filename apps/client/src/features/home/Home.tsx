@@ -11,9 +11,10 @@ import { LabSession } from '../quizzes/LabSession';
 import { PlayQuiz } from '../quizzes/PlayQuiz';
 import { QuizEditor } from '../quizzes/QuizEditor';
 import { QuizzesPanel } from '../quizzes/QuizzesPanel';
+import { AiQuizMaker, type AiDraft } from '../quizzes/AiQuizMaker';
 
 // The console's pages besides the dashboard.
-type View = { kind: 'dash' } | { kind: 'edit-quiz'; quizId: string | null } | { kind: 'lab'; runId: string };
+type View = { kind: 'dash' } | { kind: 'edit-quiz'; quizId: string | null; draft?: AiDraft } | { kind: 'lab'; runId: string } | { kind: 'ai-quiz' };
 
 function greeting() {
   const h = new Date().getHours();
@@ -37,7 +38,8 @@ export function Home() {
   }
 
   if (p.kind === 'staff' && state.settings.role === 'console') {
-    if (view.kind === 'edit-quiz') return <QuizEditor quizId={view.quizId} onDone={() => setView({ kind: 'dash' })} />;
+    if (view.kind === 'edit-quiz') return <QuizEditor quizId={view.quizId} draft={view.draft} onDone={() => setView({ kind: 'dash' })} />;
+    if (view.kind === 'ai-quiz') return <AiQuizMaker onDraft={(draft) => setView({ kind: 'edit-quiz', quizId: null, draft })} onBack={() => setView({ kind: 'dash' })} />;
     if (view.kind === 'lab') return <LabSession runId={view.runId} onExit={() => setView({ kind: 'dash' })} />;
     const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
     return (
@@ -46,7 +48,7 @@ export function Home() {
           <PageTitle eyebrow={`${today} · ${greeting()}, ${p.displayName}`}>Your lab today</PageTitle>
         </header>
         {p.permissions.includes('teaching.manage') && (
-          <QuizzesPanel onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} />
+          <QuizzesPanel onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} />
         )}
         {p.permissions.includes('staff.manage') && <StaffPanel />}
         {p.permissions.includes('setup.devices') && <DevicesPanel />}

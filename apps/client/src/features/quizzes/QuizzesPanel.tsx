@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Play, Plus } from 'lucide-react';
+import { Play, Plus, Sparkles } from 'lucide-react';
 import type { QuizSummary, SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
 import { Button, ConfirmButton, ErrorNote, Panel, Select, useAction } from '../../ui/ui';
 
 // The teacher's quizzes, filtered by class, with Lab Mode one click away.
-export function QuizzesPanel({ onEdit, onLab }: { onEdit: (quizId: string | null) => void; onLab: (runId: string) => void }) {
+export function QuizzesPanel({ onEdit, onLab, onAi }: { onEdit: (quizId: string | null) => void; onLab: (runId: string) => void; onAi: () => void }) {
   const { call, state } = useApp();
-  const canHost = state.session?.principal.kind === 'staff' && state.session.principal.permissions.includes('lesson.start');
+  const can = (p: 'lesson.start' | 'ai.teacher') => state.session?.principal.kind === 'staff' && state.session.principal.permissions.includes(p);
+  const canHost = can('lesson.start');
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [classId, setClassId] = useState('');
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
@@ -43,7 +44,12 @@ export function QuizzesPanel({ onEdit, onLab }: { onEdit: (quizId: string | null
   const className = (id: string) => classes.find((c) => c.id === id)?.name ?? '?';
 
   return (
-    <Panel title="Quizzes" actions={<Button onClick={() => onEdit(null)}><Plus className="size-4" strokeWidth={2.25} /> New quiz</Button>}>
+    <Panel title="Quizzes" actions={
+      <div className="flex gap-2">
+        {can('ai.teacher') && <Button variant="quiet" onClick={onAi}><Sparkles className="size-4" /> Make quiz with AI</Button>}
+        <Button onClick={() => onEdit(null)}><Plus className="size-4" strokeWidth={2.25} /> New quiz</Button>
+      </div>
+    }>
       <Select aria-label="Class" value={classId} onChange={(e) => setClassId(e.target.value)}>
         <option value="">All classes</option>
         {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
