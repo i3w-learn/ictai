@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { AiQuizRequest } from '@ict/contracts';
 import type { Llm, LlmRequest } from '../src/modules/ai/llm-client.js';
-import { checkQuestion, QuizGenerator } from '../src/modules/ai/quiz-generator.js';
+import { checkQuestion, cleanText, QuizGenerator } from '../src/modules/ai/quiz-generator.js';
 
 type Raw = { text: string; options: string[]; correct: number };
 
@@ -44,7 +44,20 @@ describe('checkQuestion', () => {
   });
 });
 
+describe('cleanText', () => {
+  it('turns LaTeX fractions into plain ones', () => expect(cleanText('Half is $\\frac{1}{2}$ and $1\\frac{1}{2}$')).toBe('Half is 1/2 and 1 1/2'));
+  it('removes stray marker symbols', () => expect(cleanText('†3/4‡ of a †5†metre rope')).toBe('3/4 of a 5 metre rope'));
+  it('leaves Hindi alone', () => expect(cleanText('4 का आधा क्या है?')).toBe('4 का आधा क्या है?'));
+});
+
 describe('QuizGenerator', () => {
+  it('cleans the text of what it keeps', async () => {
+    const odd: Raw = { text: 'Which is $\\frac{1}{2}$?', options: ['†1/2‡', '1/3', '1/4', '1/5'], correct: 0 };
+    const { llm } = scripted([{ questions: [odd] }, { answers: [rightPick(0, 0)] }]);
+    const out = await gen(llm).generate(req({ count: 1 }), signal());
+    expect(out.questions[0]).toMatchObject({ text: 'Which is 1/2?', options: ['1/2', '1/3', '1/4', '1/5'] });
+  });
+
   it('returns checked questions with ok flags', async () => {
     const { llm } = scripted([
       { questions: [q(0), q(1), q(2)] },

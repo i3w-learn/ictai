@@ -6,8 +6,15 @@ import { z } from 'zod';
 import type { AiConfig } from '../../config.js';
 import { aiNotInstalled } from '../../core/errors.js';
 
-// What the USB kit puts next to the model file.
-const Manifest = z.object({ name: z.string(), file: z.string(), sha256: z.string(), ctx: z.number().int().positive() });
+// What the USB kit puts next to the model file. Thinking before answering makes Gemma 4 more
+// accurate but slower; it is on unless the kit says otherwise.
+const Manifest = z.object({
+  name: z.string(),
+  file: z.string(),
+  sha256: z.string(),
+  ctx: z.number().int().positive(),
+  reasoning: z.enum(['on', 'off']).default('on'),
+});
 export type Manifest = z.infer<typeof Manifest>;
 
 export interface ChildLike {
@@ -80,7 +87,7 @@ export class AiRuntime {
     const m = this.manifest();
     if (!m) throw aiNotInstalled();
     if (!this.child) {
-      const args = ['-m', join(this.cfg.dir, m.file), '--host', '127.0.0.1', '--port', String(this.cfg.port), '-c', String(m.ctx), '--jinja'];
+      const args = ['-m', join(this.cfg.dir, m.file), '--host', '127.0.0.1', '--port', String(this.cfg.port), '-c', String(m.ctx), '--jinja', '--reasoning', m.reasoning];
       if (this.cfg.threads) args.push('-t', String(this.cfg.threads));
       const child = this.spawner.spawn(this.bin(), args);
       child.on('exit', () => {

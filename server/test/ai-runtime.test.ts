@@ -60,6 +60,18 @@ describe('AI runtime', () => {
     expect(rt.isReady()).toBe(true);
   });
 
+  it('thinks by default and can be told not to', async () => {
+    const on = fakeSpawner();
+    await runtime(aiDir(), health(200), on.spawner).rt.ensureReady();
+    expect(on.children[0]!.args.join(' ')).toContain('--reasoning on');
+
+    const dir = aiDir();
+    writeFileSync(join(dir, 'manifest.json'), JSON.stringify({ name: 'm', file: 'model.gguf', sha256: 'x', ctx: 8192, reasoning: 'off' }));
+    const off = fakeSpawner();
+    await runtime(dir, health(200), off.spawner).rt.ensureReady();
+    expect(off.children[0]!.args.join(' ')).toContain('--reasoning off');
+  });
+
   it('waits for /health and starts only once', async () => {
     const { spawner, children } = fakeSpawner();
     const fetchFn = health(503, 503, 200);

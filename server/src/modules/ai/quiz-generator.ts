@@ -19,6 +19,18 @@ const LETTER = /\p{L}/u;
 const EXTRA_ROUNDS = 2;
 const PLEASE_CHECK = 'Please check: the AI gave a different answer when asked again.';
 
+// Small models write maths as LaTeX ($\frac{1}{2}$) or wrap numbers in odd marks (†3/4‡).
+// Students see plain text, so turn those into 1/2 and 3/4.
+export function cleanText(s: string): string {
+  return s
+    .replace(/(\d)\s*\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1 $2/$3')
+    .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2')
+    .replace(/[$†‡]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\s+([?.,!:;])/g, '$1')
+    .trim();
+}
+
 // Code checks on one question. Returns why it fails, or null when it passes.
 export function checkQuestion(q: Raw, language: AiLanguage): string | null {
   const options = q.options.map((o) => o.trim());
@@ -36,6 +48,9 @@ export function checkQuestion(q: Raw, language: AiLanguage): string | null {
   }
   return null;
 }
+
+// Room for the model to think before it answers (thinking counts against max_tokens).
+const THINKING_ROOM = 4000;
 
 // Question i is shown with its options rotated, so the right answer moves before the model is asked again.
 const shiftOf = (i: number) => (i % 3) + 1;
@@ -55,10 +70,11 @@ export class QuizGenerator {
     const kept: Raw[] = [];
     for (let round = 0; round <= EXTRA_ROUNDS && kept.length < req.count; round++) {
       signal.throwIfAborted();
-      for (const q of await this.write(req, className, req.count - kept.length, kept, signal)) {
+      for (const raw of await this.write(req, className, req.count - kept.length, kept, signal)) {
+        const q = { text: cleanText(raw.text), options: raw.options.map(cleanText), correct: raw.correct };
         const seen = kept.some((k) => k.text.trim().toLowerCase() === q.text.trim().toLowerCase());
         if (!seen && !checkQuestion(q, req.language) && kept.length < req.count) {
-          kept.push({ text: q.text.trim(), options: q.options.map((o) => o.trim()), correct: q.correct });
+          kept.push(q);
         }
       }
     }
@@ -82,7 +98,7 @@ export class QuizGenerator {
         system: WRITE_SYSTEM,
         user: writeQuizPrompt({ className, subject: req.subject, topic: req.topic, count, language: req.language, avoid: kept.map((k) => k.text) }),
         schema: Written,
-        maxTokens: 300 * count + 200,
+        maxTokens: 300 * count + THINKING_ROOM,
         signal,
       });
       return out.questions;
@@ -98,7 +114,7 @@ export class QuizGenerator {
     const Answers = z.object({ answers: z.array(z.number().int().min(-1).max(3)).length(kept.length) });
     let answers: number[];
     try {
-      answers = (await this.llm.json({ system: ANSWER_SYSTEM, user: answerPrompt(shown), schema: Answers, maxTokens: 20 * kept.length + 50, signal })).answers;
+      answers = (await this.llm.json({ system: ANSWER_SYSTEM, user: answerPrompt(shown), schema: Answers, maxTokens: 20 * kept.length + THINKING_ROOM, signal })).answers;
     } catch (err) {
       if (!(err instanceof ZodError || err instanceof SyntaxError)) throw err;
       answers = kept.map(() => -1);

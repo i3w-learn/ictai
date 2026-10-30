@@ -16,6 +16,8 @@ export function writeQuizPrompt(p: { className: string; subject: string; topic: 
     '- Each question has exactly 4 options. Exactly one is right; the other three are believable but clearly wrong.',
     '- Keep the words simple enough for this class.',
     '- Do not use "all of the above", "none of the above" or trick questions.',
+    '- Write maths as plain text, e.g. 3/4 or 1 1/2. No LaTeX, no special symbols.',
+    '- Do not refer to a picture or figure; students only see the text.',
     '- "correct" is the position (0, 1, 2 or 3) of the right option.',
     ...(p.avoid.length ? ['Do not repeat these questions:', ...p.avoid.map((t) => `- ${t}`)] : []),
   ].join('\n');
