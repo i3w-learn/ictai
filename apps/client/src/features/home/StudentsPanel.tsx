@@ -139,7 +139,7 @@ export function StudentsPanel() {
           {promoted && <Note>{promoted} Promote the top class first (8 → 9 before 7 → 8) so classes don't mix.</Note>}
           <ul className="grid gap-2">
             {students.map((s) => (
-              <StudentRow key={s.id} student={s} sections={sections} onChanged={() => loadClass.run(classId)} />
+              <StudentRow key={s.id} student={s} className={className} sections={sections} onChanged={() => loadClass.run(classId)} />
             ))}
           </ul>
         </>

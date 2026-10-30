@@ -26,7 +26,7 @@ export class AuditLog {
       .prepare(
         `SELECT a.id, a.at, a.actor_kind AS actorKind, a.action, a.target, a.detail,
            CASE a.actor_kind WHEN 'staff' THEN au.display_name WHEN 'student' THEN ast.name WHEN 'device' THEN ad.name END AS actorName,
-           COALESCE(tu.display_name, tst.name, td.name, tc.name) AS targetName
+           COALESCE(tu.display_name, tst.name, td.name, tc.name, tq.title) AS targetName
          FROM audit_log a
          LEFT JOIN users au ON a.actor_kind = 'staff' AND au.id = a.actor_id
          LEFT JOIN students ast ON a.actor_kind = 'student' AND ast.id = a.actor_id
@@ -35,6 +35,8 @@ export class AuditLog {
          LEFT JOIN students tst ON tst.id = a.target
          LEFT JOIN devices td ON td.id = a.target
          LEFT JOIN classes tc ON tc.id = a.target
+         LEFT JOIN quiz_runs tr ON tr.id = a.target
+         LEFT JOIN quizzes tq ON tq.id = tr.quiz_id
          WHERE a.id < ?
          ORDER BY a.id DESC
          LIMIT ?`,

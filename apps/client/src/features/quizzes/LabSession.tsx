@@ -75,7 +75,7 @@ export function LabSession({ runId, onExit }: { runId: string; onExit: () => voi
             <tbody>
               {run.participants.map((p, i) => (
                 <tr key={p.studentId} className="border-b border-border last:border-0">
-                  <td className="py-3 pr-3 tabular-nums text-muted-foreground">{run.status === 'ended' && i < 3 ? <Trophy className="size-4 text-primary" /> : i + 1}</td>
+                  <td className="py-3 pr-3 tabular-nums text-muted-foreground">{run.status === 'ended' && p.score > 0 && p.score === run.participants[0]!.score ? <Trophy className="size-4 text-primary" /> : i + 1}</td>
                   <td className="py-3 pr-3 font-medium">{p.name}</td>
                   <td className="py-3 pr-3 tabular-nums">{p.answered} / {run.questionCount}</td>
                   <td className="py-3 pr-3 tabular-nums">{p.correct}</td>

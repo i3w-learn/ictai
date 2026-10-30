@@ -88,7 +88,7 @@ describe('Lab Mode', () => {
   });
 
   it('runs a whole quiz: lobby, answers, score, leaderboard, end', async () => {
-    const { inject, teacher, open, asha, studentOn } = await withQuiz();
+    const { inject, teacher, open, asha, studentOn, login } = await withQuiz();
     const run = await open();
     const me = await studentOn(asha.id, '1111');
     await inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode });
@@ -111,6 +111,10 @@ describe('Lab Mode', () => {
     const ended = (await inject('POST', `/api/v1/quiz-runs/${run.runId}/end`, teacher)).json();
     expect(ended).toMatchObject({ status: 'ended', joinCode: null });
     expect(ended.participants[0]).toMatchObject({ score: 2, finished: true });
+
+    const admin = { authorization: `Bearer ${await login('admin', 'admin-pass')}` };
+    const log = (await inject('GET', '/api/v1/audit', admin)).json();
+    expect(log.find((e: { action: string }) => e.action === 'quiz.end')).toMatchObject({ actorName: 'teacher', targetName: 'Maths warm-up' });
   });
 
   it('resending an answer is harmless: the first one counts', async () => {

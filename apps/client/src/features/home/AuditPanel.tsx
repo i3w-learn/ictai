@@ -17,6 +17,9 @@ const ACTION: Record<string, string> = {
   'class.cards': 'printed sign-in cards for class',
   'enrol_window.open': 'opened device joining',
   'device.enrol': 'joined the lab',
+  'quiz.open': 'opened Lab Mode for',
+  'quiz.start': 'started the quiz',
+  'quiz.end': 'ended the quiz',
 };
 
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
