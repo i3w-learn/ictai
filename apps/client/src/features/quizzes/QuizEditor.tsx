@@ -82,7 +82,8 @@ export function QuizEditor({ quizId, draft, onDone }: { quizId: string | null; d
       {draft && (
         <Note>
           The AI wrote this draft. Read every question before saving.
-          {flags.some(Boolean) && ` ${flags.filter(Boolean).length} marked in red need a closer look.`}
+          {flags.filter(Boolean).length === 1 && ' 1 question marked in red needs a closer look.'}
+          {flags.filter(Boolean).length > 1 && ` ${flags.filter(Boolean).length} questions marked in red need a closer look.`}
           {draft.result.note && ` ${draft.result.note}`}
         </Note>
       )}
