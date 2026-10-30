@@ -20,6 +20,7 @@ const ACTION: Record<string, string> = {
   'quiz.open': 'opened Lab Mode for',
   'quiz.start': 'started the quiz',
   'quiz.end': 'ended the quiz',
+  'ai.quiz.request': 'asked the AI for a quiz on',
 };
 
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -47,6 +48,7 @@ export function AuditPanel() {
               <b className="font-semibold">{e.actorName ?? (e.action === 'signin.failed' ? 'Someone' : e.actorKind)}</b>{' '}
               {ACTION[e.action] ?? e.action}
               {e.targetName && e.actorName !== e.targetName && <>{e.action === 'signin' ? ' on' : ''} <b className="font-semibold">{e.targetName}</b></>}
+              {e.action === 'ai.quiz.request' && <> <b className="font-semibold">{(e.detail as { topic?: string } | null)?.topic}</b></>}
               {e.action === 'signin.failed' && e.target && <span className="text-muted-foreground"> as “{e.target}”</span>}
             </span>
           </li>

@@ -1,11 +1,18 @@
 import { buildApp } from '../src/app.js';
 import { createContainer } from '../src/container.js';
 import { openDb } from '../src/infra/db/index.js';
+import type { Llm } from '../src/modules/ai/llm-client.js';
 
-export async function testServer() {
+// With `ai`, a fake model stands in for llama-server; without it the server has no AI kit.
+export async function testServer(opts: { ai?: { llm: Llm; installed: boolean } } = {}) {
   const clock = { t: 1_800_000_000_000 };
   const db = openDb(':memory:');
-  const c = createContainer({ db, now: () => clock.t, version: 'test' });
+  const ai = opts.ai && {
+    llm: opts.ai.llm,
+    runtime: { installed: () => (opts.ai!.installed ? { name: 'Test model' } : null), isReady: () => opts.ai!.installed },
+  };
+  const c = createContainer({ db, now: () => clock.t, version: 'test', ai });
+  c.aiQueue.start();
   c.identity.setCertFingerprint('AA:BB');
   await c.staffAuth.upsertAccount({ username: 'admin', password: 'admin-pass', role: 'super_admin' });
   await c.staffAuth.upsertAccount({ username: 'teacher', password: 'teacher-pass', role: 'teacher' });

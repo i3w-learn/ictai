@@ -10,6 +10,9 @@ import { startBeacon } from './infra/net/beacon.js';
 import { acceptPrivateOnly } from './infra/net/private-only.js';
 import { loadOrCreateTls } from './infra/net/tls.js';
 import { consumeBootstrapAdmin } from './modules/auth/bootstrap-admin.js';
+import { LlamaServerLlm } from './modules/ai/llm-client.js';
+import { AiRuntime, nodeSpawner } from './modules/ai/runtime.js';
+import { join } from 'node:path';
 
 const config = loadConfig();
 
@@ -19,7 +22,10 @@ async function main() {
   const release = acquireSingleInstance(config.lockFile);
 
   const db = openDb(config.dbFile);
-  const c = createContainer({ db, now: systemClock, version: config.version });
+  // Spec 9: the AI runtime starts on the first request, not at boot, so a missing kit never blocks the server.
+  const runtime = new AiRuntime(config.ai, nodeSpawner(join(config.dataDir, 'ai.log')));
+  const c = createContainer({ db, now: systemClock, version: config.version, ai: { runtime, llm: new LlamaServerLlm(runtime) } });
+  c.aiQueue.start();
   if (config.devAdmin) await c.staffAuth.upsertAccount({ ...config.devAdmin, role: 'super_admin' });
   await consumeBootstrapAdmin(config.bootstrapAdminFile, c.staffAuth);
 
@@ -48,6 +54,7 @@ async function main() {
   app.log.info({ serverId, certFp: tls.fingerprint, addrs: lanAddresses(), beacon: beacon.port }, 'ICT server ready');
 
   const stop = async () => {
+    runtime.stop();
     await beacon.close();
     await app.close();
     db.close();

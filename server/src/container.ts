@@ -20,10 +20,22 @@ import { QuizService } from './modules/quizzes/quiz.service.js';
 import { RunRepository } from './modules/quizzes/run.repository.js';
 import { RunService } from './modules/quizzes/run.service.js';
 import { Relay } from './relay/relay.js';
+import { aiNotInstalled } from './core/errors.js';
+import { AiService, type AiRuntimeInfo } from './modules/ai/ai.service.js';
+import { JobQueue } from './modules/ai/job-queue.js';
+import { JobRepository } from './modules/ai/job.repository.js';
+import type { Llm } from './modules/ai/llm-client.js';
+import { QuizGenerator } from './modules/ai/quiz-generator.js';
 import { SchoolIdentity } from './modules/system/school-identity.js';
 
+// Without an AI kit the server still runs; every AI request answers AI_NOT_INSTALLED.
+const noAi: { runtime: AiRuntimeInfo; llm: Llm } = {
+  runtime: { installed: () => null, isReady: () => false },
+  llm: { json: () => Promise.reject(aiNotInstalled()) },
+};
+
 // The one place that builds and wires every object. Everything else receives what it needs.
-export function createContainer(opts: { db: Db; now: Clock; version: string }) {
+export function createContainer(opts: { db: Db; now: Clock; version: string; ai?: { runtime: AiRuntimeInfo; llm: Llm } }) {
   const { db, now } = opts;
 
   const repos = {
@@ -35,6 +47,7 @@ export function createContainer(opts: { db: Db; now: Clock; version: string }) {
     students: new StudentRepository(db),
     quizzes: new QuizRepository(db),
     runs: new RunRepository(db),
+    aiJobs: new JobRepository(db),
   };
 
   const audit = new AuditLog(db, now);
@@ -45,12 +58,18 @@ export function createContainer(opts: { db: Db; now: Clock; version: string }) {
   const resolver = new PrincipalResolver(now, repos.sessions, repos.staff, repos.students, repos.devices);
   const sessions = new SessionService(now, repos.sessions, resolver);
 
+  const ai = opts.ai ?? noAi;
+  const generator = new QuizGenerator(ai.llm, (id) => repos.classes.name(id) ?? null);
+  const aiQueue = new JobQueue(now, repos.aiJobs, (req, signal) => generator.generate(req, signal));
+
   return {
     audit,
     relay,
     identity,
     resolver,
     sessions,
+    aiQueue,
+    ai: new AiService(ai.runtime, aiQueue, repos.classes, audit),
     staffAuth: new StaffAuthService(now, repos.staff, sessions, new FailureLimiter(now), audit),
     staffAdmin: new StaffAdminService(now, repos.staff, repos.sessions, audit),
     enrolment: new DeviceEnrolmentService(now, repos.enrolWindows, repos.devices, identity, new FailureLimiter(now), audit),

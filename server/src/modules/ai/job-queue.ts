@@ -42,6 +42,10 @@ export class JobQueue {
     return this.repo.get(id);
   }
 
+  ownerOf(id: string) {
+    return this.repo.ownerOf(id);
+  }
+
   listFor(userId: string, limit = 10) {
     return this.repo.listFor(userId, limit);
   }
