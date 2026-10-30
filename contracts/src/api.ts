@@ -10,6 +10,7 @@ import {
   AnswerResult, JoinRun, OpenRun, Quiz, QuizInput, QuizQuery, QuizSummary, RunQuery, RunSummary,
   StudentRunState, SubmitAnswer, TeacherRunState,
 } from './quizzes.js';
+import { AiJob, AiQuizRequest, AiStatus } from './ai.js';
 import { NewTeacher, SetPassword, StaffMember, UpdateTeacher } from './staff.js';
 import type { Permission } from './permissions.js';
 
@@ -90,6 +91,11 @@ export const API = {
   'GET /api/v1/quiz-runs/:id/play': { summary: "The student's view of a run", access: student, params: IdParams, status: 200, response: StudentRunState },
   'POST /api/v1/quiz-runs/:id/answers': { summary: 'Answer one question; the first answer counts', access: student, params: IdParams, body: SubmitAnswer, status: 200, response: AnswerResult },
   'POST /api/v1/quiz-runs/:id/finish': { summary: 'Student is done; returns their score', access: student, params: IdParams, status: 200, response: StudentRunState },
+
+  'GET /api/v1/ai/status': { summary: 'Is the AI installed and ready, and how many requests wait', access: staff('ai.teacher'), status: 200, response: AiStatus },
+  'POST /api/v1/ai/quiz': { summary: 'Ask the AI for a draft quiz; returns the queued job', access: staff('ai.teacher'), body: AiQuizRequest, status: 202, response: AiJob },
+  'GET /api/v1/ai/jobs': { summary: 'Your last 10 AI requests, newest first', access: staff('ai.teacher'), status: 200, response: z.array(AiJob) },
+  'GET /api/v1/ai/jobs/:id': { summary: 'One of your AI requests, with the draft when done', access: staff('ai.teacher'), params: IdParams, status: 200, response: AiJob },
 
   'GET /api/v1/audit': { summary: 'Activity log, newest first, 100 at a time', access: staff('server.manage'), query: AuditQuery, status: 200, response: z.array(AuditEntry) },
 } as const satisfies Record<string, Endpoint>;
