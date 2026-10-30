@@ -35,7 +35,12 @@ const noAi: { runtime: AiRuntimeInfo; llm: Llm } = {
 };
 
 // The one place that builds and wires every object. Everything else receives what it needs.
-export function createContainer(opts: { db: Db; now: Clock; version: string; ai?: { runtime: AiRuntimeInfo; llm: Llm } }) {
+export function createContainer(opts: {
+  db: Db;
+  now: Clock;
+  version: string;
+  ai?: { runtime: AiRuntimeInfo & { ensureReady?(): Promise<void> }; llm: Llm };
+}) {
   const { db, now } = opts;
 
   const repos = {
@@ -58,9 +63,10 @@ export function createContainer(opts: { db: Db; now: Clock; version: string; ai?
   const resolver = new PrincipalResolver(now, repos.sessions, repos.staff, repos.students, repos.devices);
   const sessions = new SessionService(now, repos.sessions, resolver);
 
-  const ai = opts.ai ?? noAi;
+  const ai: { runtime: AiRuntimeInfo & { ensureReady?(): Promise<void> }; llm: Llm } = opts.ai ?? noAi;
   const generator = new QuizGenerator(ai.llm, (id) => repos.classes.name(id) ?? null);
-  const aiQueue = new JobQueue(now, repos.aiJobs, (req, signal) => generator.generate(req, signal));
+  const load = ai.runtime.ensureReady?.bind(ai.runtime);
+  const aiQueue = new JobQueue(now, repos.aiJobs, (req, signal) => generator.generate(req, signal), undefined, load);
 
   return {
     audit,

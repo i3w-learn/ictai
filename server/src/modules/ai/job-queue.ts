@@ -8,21 +8,25 @@ export type JobRunner = (request: AiQuizRequest, signal: AbortSignal) => Promise
 
 const TIMED_OUT = 'Making the quiz took too long. Try fewer questions.';
 const CRASHED = 'The AI stopped unexpectedly. Try again.';
+const RESTARTED = 'The server restarted. Try again.';
 
 // Spec 9: one AI job at a time across the server, one open request per user, kept 90 days.
 // Accuracy over speed, so a job may take up to 15 minutes (spec's 120 s changed with the user).
 export class JobQueue {
   private loop: Promise<void> | null = null;
+  private stopping = false;
 
   constructor(
     private readonly now: Clock,
     private readonly repo: JobRepository,
     private readonly run: JobRunner,
     private readonly timeoutMs = 15 * 60_000,
+    // Loads the model; runs before the time limit starts, since a 33 GB model can take minutes to load.
+    private readonly prepare: () => Promise<void> = async () => {},
   ) {}
 
   start() {
-    this.repo.failRunning('The server restarted. Try again.', this.now());
+    this.repo.failRunning(RESTARTED, this.now());
     this.repo.purgeBefore(this.now() - 90 * DAY);
     this.kick();
   }
@@ -54,6 +58,11 @@ export class JobQueue {
     return this.repo.queuedCount();
   }
 
+  // Shutdown: the running job ends as "restarted" and nothing new starts; queued jobs wait for the next boot.
+  stop() {
+    this.stopping = true;
+  }
+
   // Resolves once nothing is running (used by tests and shutdown).
   async idle() {
     while (this.loop) await this.loop;
@@ -63,14 +72,15 @@ export class JobQueue {
   private kick() {
     this.loop ??= this.drain().finally(() => {
       this.loop = null;
-      if (this.repo.nextQueued()) this.kick();
+      if (!this.stopping && this.repo.nextQueued()) this.kick();
     });
   }
 
   private async drain() {
-    for (let job = this.repo.nextQueued(); job; job = this.repo.nextQueued()) {
+    for (let job = this.repo.nextQueued(); job && !this.stopping; job = this.repo.nextQueued()) {
       this.repo.markRunning(job.id, this.now());
       try {
+        await this.prepare();
         this.repo.markDone(job.id, await this.withTimeout(job.request), this.now());
       } catch (err) {
         this.repo.markFailed(job.id, this.reason(err), this.now());
@@ -92,6 +102,7 @@ export class JobQueue {
   }
 
   private reason(err: unknown) {
+    if (this.stopping) return RESTARTED;
     if (err instanceof AppError) return err.message;
     if (err instanceof Error && err.message === TIMED_OUT) return TIMED_OUT;
     return CRASHED;

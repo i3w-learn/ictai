@@ -38,6 +38,12 @@ describe('checkQuestion', () => {
   it('needs no empty option', () => expect(checkQuestion({ ...q(1), options: ['a', ' ', 'c', 'd'] }, 'en')).not.toBeNull());
   it('needs a valid answer', () => expect(checkQuestion({ ...q(1), correct: 5 }, 'en')).not.toBeNull());
   it('English has no Hindi script', () => expect(checkQuestion({ ...q(1), text: 'आधा क्या है?' }, 'en')).not.toBeNull());
+  it('Hindi allows units and short terms like cm, CO2, DNA', () => {
+    expect(checkQuestion({ text: 'इस रेखा की लंबाई क्या है?', options: ['5 cm', '10 cm', 'CO2', 'DNA'], correct: 0 }, 'hi')).toBeNull();
+  });
+  it('Hindi drops options that are English words', () => {
+    expect(checkQuestion({ text: 'पौधे कौन सी गैस छोड़ते हैं?', options: ['Oxygen', 'नाइट्रोजन', 'मीथेन', 'हीलियम'], correct: 0 }, 'hi')).not.toBeNull();
+  });
   it('Hindi needs Devanagari', () => {
     expect(checkQuestion(q(1), 'hi')).not.toBeNull();
     expect(checkQuestion({ text: '4 का आधा क्या है?', options: ['1', '2', '3', 'चार'], correct: 1 }, 'hi')).toBeNull();

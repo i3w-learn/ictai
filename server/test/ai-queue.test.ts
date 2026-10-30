@@ -13,7 +13,7 @@ const result: AiQuizResult = {
   note: null,
 };
 
-function setup(run: (r: AiQuizRequest, s: AbortSignal) => Promise<AiQuizResult>, timeoutMs = 60_000) {
+function setup(run: (r: AiQuizRequest, s: AbortSignal) => Promise<AiQuizResult>, timeoutMs = 60_000, prepare?: () => Promise<void>) {
   const db = openDb(':memory:');
   const clock = { t: 1_800_000_000_000 };
   const user = (name: string) => {
@@ -23,7 +23,7 @@ function setup(run: (r: AiQuizRequest, s: AbortSignal) => Promise<AiQuizResult>,
     return id;
   };
   const repo = new JobRepository(db);
-  const queue = new JobQueue(() => clock.t, repo, run, timeoutMs);
+  const queue = new JobQueue(() => clock.t, repo, run, timeoutMs, prepare);
   return { db, clock, repo, queue, user };
 }
 
@@ -92,6 +92,30 @@ describe('AI job queue', () => {
     const a = queue.enqueue(user('a'), request);
     await queue.idle();
     expect(queue.get(a.id)).toMatchObject({ status: 'failed', error: 'Making the quiz took too long. Try fewer questions.' });
+  });
+
+  it('stop fails the running job as a restart and takes no more jobs', async () => {
+    let reject: (e: Error) => void = () => {};
+    const { queue, user } = setup(() => new Promise((_, r) => { reject = r; }));
+    queue.start();
+    const a = queue.enqueue(user('a'), request);
+    const b = queue.enqueue(user('b'), request);
+    await new Promise((r) => setTimeout(r, 5));
+    queue.stop();
+    reject(new Error('socket hang up'));
+    await queue.idle();
+    expect(queue.get(a.id)).toMatchObject({ status: 'failed', error: 'The server restarted. Try again.' });
+    expect(queue.get(b.id)!.status).toBe('queued');
+  });
+
+  it('loading the model does not count against the time limit', async () => {
+    let loaded = false;
+    const { queue, user } = setup(async () => result, 30, () => new Promise((r) => setTimeout(() => { loaded = true; r(); }, 60)));
+    queue.start();
+    const a = queue.enqueue(user('a'), request);
+    await queue.idle();
+    expect(loaded).toBe(true);
+    expect(queue.get(a.id)!.status).toBe('done');
   });
 
   it('marks running jobs failed on start', () => {

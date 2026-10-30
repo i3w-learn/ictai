@@ -19,7 +19,8 @@ export type Manifest = z.infer<typeof Manifest>;
 
 export interface ChildLike {
   pid?: number;
-  on(event: 'exit', fn: (code: number | null) => void): void;
+  on(event: 'exit', fn: (code: number | null) => void): unknown;
+  on(event: 'error', fn: (err: Error) => void): unknown;
   kill(): void;
 }
 export interface Spawner {
@@ -42,6 +43,7 @@ export class AiRuntime {
   private child: ChildLike | null = null;
   private starting: Promise<void> | null = null;
   private ready = false;
+  private stopped = false;
 
   constructor(
     private readonly cfg: AiConfig,
@@ -77,6 +79,11 @@ export class AiRuntime {
     return this.ready;
   }
 
+  // The model client calls this when a request finds nobody listening, so the next one checks again.
+  markDown() {
+    this.ready = false;
+  }
+
   ensureReady(): Promise<void> {
     if (this.ready) return Promise.resolve();
     this.starting ??= this.start().finally(() => { this.starting = null; });
@@ -84,16 +91,25 @@ export class AiRuntime {
   }
 
   private async start() {
+    if (this.stopped) throw new Error('The server is shutting down.');
     const m = this.manifest();
     if (!m) throw aiNotInstalled();
+    // A llama-server left over from a crash still holds the port; use it rather than start one that cannot bind.
+    if (!this.child && (await this.healthy())) {
+      this.ready = true;
+      return;
+    }
     if (!this.child) {
       const args = ['-m', join(this.cfg.dir, m.file), '--host', '127.0.0.1', '--port', String(this.cfg.port), '-c', String(m.ctx), '--jinja', '--reasoning', m.reasoning];
       if (this.cfg.threads) args.push('-t', String(this.cfg.threads));
       const child = this.spawner.spawn(this.bin(), args);
-      child.on('exit', () => {
+      // A spawn failure (e.g. the file is not allowed to run) arrives as 'error'; unheard, it would crash the server.
+      const gone = () => {
         if (this.child === child) this.child = null;
         this.ready = false;
-      });
+      };
+      child.on('exit', gone);
+      child.on('error', gone);
       this.child = child;
       if (child.pid) this.setPriority(child.pid, constants.priority.PRIORITY_LOW);
     }
@@ -101,20 +117,25 @@ export class AiRuntime {
     const deadline = Date.now() + this.timing.maxWaitMs;
     while (Date.now() < deadline) {
       if (!this.child) throw new Error('llama-server exited while starting');
-      try {
-        if ((await this.fetchFn(`${this.baseUrl}/health`)).ok) {
-          this.ready = true;
-          return;
-        }
-      } catch {
-        // not listening yet
+      if (await this.healthy()) {
+        this.ready = true;
+        return;
       }
       await new Promise((r) => setTimeout(r, this.timing.pollMs));
     }
     throw new Error('llama-server did not become ready in time');
   }
 
+  private async healthy() {
+    try {
+      return (await this.fetchFn(`${this.baseUrl}/health`)).ok;
+    } catch {
+      return false; // not listening yet
+    }
+  }
+
   stop() {
+    this.stopped = true;
     this.child?.kill();
     this.child = null;
     this.ready = false;

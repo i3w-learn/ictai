@@ -15,7 +15,7 @@ const Written = z.object({
 });
 
 const DEVANAGARI = /[ऀ-ॿ]/;
-const LETTER = /\p{L}/u;
+const ENGLISH_WORD = /[A-Za-z]{5,}/;
 const EXTRA_ROUNDS = 2;
 const PLEASE_CHECK = 'Please check: the AI gave a different answer when asked again.';
 
@@ -43,8 +43,8 @@ export function checkQuestion(q: Raw, language: AiLanguage): string | null {
   if (language === 'en' && all.some((s) => DEVANAGARI.test(s))) return 'is not in English';
   if (language === 'hi') {
     if (!DEVANAGARI.test(q.text)) return 'is not in Hindi';
-    // Numbers like "25" are fine in Hindi; words must be in Devanagari.
-    if (options.some((o) => LETTER.test(o) && !DEVANAGARI.test(o))) return 'has an option not in Hindi';
+    // Numbers, units and short terms (25, 5 cm, CO2, DNA) are fine in Hindi; English words are not.
+    if (options.some((o) => !DEVANAGARI.test(o) && ENGLISH_WORD.test(o))) return 'has an option not in Hindi';
   }
   return null;
 }

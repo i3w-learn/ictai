@@ -26,6 +26,8 @@ async function main() {
   const runtime = new AiRuntime(config.ai, nodeSpawner(join(config.dataDir, 'ai.log')));
   const c = createContainer({ db, now: systemClock, version: config.version, ai: { runtime, llm: new LlamaServerLlm(runtime) } });
   c.aiQueue.start();
+  // However Node ends (crash included), take llama-server and its memory with it.
+  process.on('exit', () => runtime.stop());
   if (config.devAdmin) await c.staffAuth.upsertAccount({ ...config.devAdmin, role: 'super_admin' });
   await consumeBootstrapAdmin(config.bootstrapAdminFile, c.staffAuth);
 
@@ -54,7 +56,9 @@ async function main() {
   app.log.info({ serverId, certFp: tls.fingerprint, addrs: lanAddresses(), beacon: beacon.port }, 'ICT server ready');
 
   const stop = async () => {
+    c.aiQueue.stop();
     runtime.stop();
+    await c.aiQueue.idle();
     await beacon.close();
     await app.close();
     db.close();

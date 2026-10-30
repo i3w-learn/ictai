@@ -19,7 +19,7 @@ const Completion = z.object({ choices: z.array(z.object({ message: z.object({ co
 // reply always parses; it is still checked with zod because the grammar ignores some rules.
 export class LlamaServerLlm implements Llm {
   constructor(
-    private readonly runtime: { ensureReady(): Promise<void>; baseUrl: string },
+    private readonly runtime: { ensureReady(): Promise<void>; markDown(): void; baseUrl: string },
     private readonly fetchFn: typeof fetch = fetch,
   ) {}
 
@@ -35,6 +35,10 @@ export class LlamaServerLlm implements Llm {
         temperature: 0.3,
         response_format: { type: 'json_schema', json_schema: { name: 'out', schema: z.toJSONSchema(req.schema) } },
       }),
+    }).catch((err: unknown) => {
+      // Not our own timeout: llama-server went away, so the next request should start it again.
+      if (!req.signal.aborted) this.runtime.markDown();
+      throw err;
     });
     if (!res.ok) throw new Error(`llama-server answered ${res.status}`);
     const content = Completion.parse(await res.json()).choices[0]!.message.content;
