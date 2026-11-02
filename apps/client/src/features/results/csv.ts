@@ -24,5 +24,6 @@ export function downloadCsv(fileName: string, text: string) {
   a.href = url;
   a.download = fileName;
   a.click();
-  URL.revokeObjectURL(url);
+  // Freed a moment later: freeing it at once can cancel the download in the desktop app's web view.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

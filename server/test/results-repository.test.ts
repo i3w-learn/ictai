@@ -24,10 +24,10 @@ function setup() {
   const quiz = id();
   db.prepare(`INSERT INTO quizzes (id, title, class_id, subject, seconds_per_question, questions_json, created_by, created_at, updated_at)
               VALUES (?, 'Fractions', ?, 'Maths', 60, ?, ?, 0, 0)`).run(quiz, classId, QUESTIONS, teacher);
-  const run = (status: 'lobby' | 'active' | 'ended', endedAt: number | null = null) => {
+  const run = (status: 'lobby' | 'active' | 'ended', endedAt: number | null = null, startedAt: number | null = status === 'lobby' ? null : 0) => {
     const r = id();
-    db.prepare(`INSERT INTO quiz_runs (id, quiz_id, class_id, join_code, status, opened_by, created_at, ended_at) VALUES (?, ?, ?, '123456', ?, ?, 0, ?)`)
-      .run(r, quiz, classId, status, teacher, endedAt);
+    db.prepare(`INSERT INTO quiz_runs (id, quiz_id, class_id, join_code, status, opened_by, created_at, started_at, ended_at) VALUES (?, ?, ?, '123456', ?, ?, 0, ?, ?)`)
+      .run(r, quiz, classId, status, teacher, startedAt, endedAt);
     return r;
   };
   const join = (r: string, s: string, finishedAt: number | null = null) =>
@@ -57,6 +57,13 @@ describe('results repository', () => {
     join(r, b);
     expect(repo.attempts({}).map((x) => x.studentId)).toEqual([a]);
     expect(repo.attempts({})[0]!.at).toBe(300);
+  });
+
+  it('does not count a run that was ended before it started', () => {
+    const { repo, student, run, join } = setup();
+    const s = student('Asha');
+    join(run('ended', 5, null), s);
+    expect(repo.attempts({ studentId: s })).toEqual([]);
   });
 
   it('sums points per attempt and reports the quiz total', () => {

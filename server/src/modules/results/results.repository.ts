@@ -25,7 +25,7 @@ const STUDENT_COLUMNS = `s.id, s.name, s.roll_no AS rollNo, s.class_id AS classI
   FROM students s JOIN classes c ON c.id = s.class_id LEFT JOIN sections sec ON sec.id = s.section_id`;
 
 // Reads quiz results straight from the Lab Mode tables. An attempt counts once the run has ended
-// or the student pressed Finish, so half-done scores never show.
+// or the student pressed Finish, so half-done scores never show. A run ended in the lobby never counts.
 export class ResultsRepository {
   constructor(private readonly db: Db) {}
 
@@ -39,7 +39,7 @@ export class ResultsRepository {
          JOIN quiz_runs r ON r.id = p.run_id
          JOIN quizzes q ON q.id = r.quiz_id
          JOIN students s ON s.id = p.student_id
-         WHERE s.status = 'active' AND (r.status = 'ended' OR p.finished_at IS NOT NULL)
+         WHERE s.status = 'active' AND r.started_at IS NOT NULL AND (r.status = 'ended' OR p.finished_at IS NOT NULL)
            AND (@classId IS NULL OR s.class_id = @classId) AND (@studentId IS NULL OR s.id = @studentId)
          ORDER BY at DESC`,
       )
