@@ -80,3 +80,27 @@ docker-server:
     docker build -f docker/server.Dockerfile -t ict-server-test .
     rm -rf .docker-data && mkdir .docker-data && sqlite3 server/.data/ict.db ".backup .docker-data/ict.db"
     docker run --rm --name ict-test -p 7800:7700 -v "$PWD/.docker-data:/data" -e ICT_DEV_ADMIN_USER=admin -e ICT_DEV_ADMIN_PASSWORD=admin123 ict-server-test
+
+# Pretend there is no Wi-Fi: tests with no network, then server + a "lab PC" on a network with no internet
+docker-offline:
+    docker build -f docker/server.Dockerfile -t ict-server-test .
+    docker run --rm --network none ict-server-test pnpm test
+    docker network create --internal ict-offline 2>/dev/null || true
+    rm -rf .docker-data && mkdir .docker-data && sqlite3 server/.data/ict.db ".backup .docker-data/ict.db"
+    docker rm -f ict-test 2>/dev/null || true
+    docker run -d --name ict-test --network ict-offline -v "$PWD/.docker-data:/data" -e ICT_DEV_ADMIN_USER=admin -e ICT_DEV_ADMIN_PASSWORD=admin123 ict-server-test
+    until docker logs ict-test 2>&1 | grep -q ready; do sleep 1; done
+    docker run --rm --network ict-offline -v "$PWD/docker:/check:ro" -e NODE_TLS_REJECT_UNAUTHORIZED=0 node:22-slim node --no-warnings /check/offline-check.mjs
+    docker rm -f ict-test
+
+# Pretend there is no Wi-Fi and test the AI: server + dev model (run `just ai-dev` once first) + a "teacher PC" asking for a quiz
+docker-ai-offline:
+    docker build -f docker/server.Dockerfile -t ict-server-test .
+    docker build -f docker/server-ai.Dockerfile -t ict-server-ai .
+    docker network create --internal ict-offline 2>/dev/null || true
+    rm -rf .docker-data && mkdir .docker-data && sqlite3 server/.data/ict.db ".backup .docker-data/ict.db"
+    docker rm -f ict-test 2>/dev/null || true
+    docker run -d --name ict-test --network ict-offline -v "$PWD/.docker-data:/data" -v "$PWD/server/.data/ai:/ai:ro" -e ICT_DEV_ADMIN_USER=admin -e ICT_DEV_ADMIN_PASSWORD=admin123 ict-server-ai
+    until docker logs ict-test 2>&1 | grep -q ready; do sleep 1; done
+    docker run --rm --network ict-offline -v "$PWD/docker:/check:ro" -e NODE_TLS_REJECT_UNAUTHORIZED=0 node:22-slim node --no-warnings /check/ai-check.mjs
+    docker rm -f ict-test
