@@ -1,0 +1,26 @@
+import type { Band, StudentResultRow } from '@ict/contracts';
+
+export const BAND_LABEL: Record<Band, string> = { great: 'Doing great', growing: 'Growing', needs: 'Needs you', none: 'Not started' };
+
+const cell = (v: string | number | null) => {
+  const s = v == null ? '' : String(v);
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+// A file Excel opens directly. The BOM makes Excel read Hindi names correctly.
+export function toCsv(rows: StudentResultRow[]): string {
+  const lines = [
+    ['Name', 'Roll no', 'Class', 'Section', 'Quizzes taken', 'Average %', 'Group'],
+    ...rows.map((r) => [r.name, r.rollNo, r.className, r.sectionName, r.attempts, r.average, BAND_LABEL[r.band]]),
+  ];
+  return '﻿' + lines.map((l) => l.map(cell).join(',')).join('\r\n');
+}
+
+export function downloadCsv(fileName: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
