@@ -9,7 +9,7 @@ export const BAND_DOT: Record<Band, string> = {
   great: 'bg-success',
   growing: 'bg-amber-500',
   needs: 'bg-destructive',
-  none: 'bg-border',
+  none: 'bg-muted-foreground',
 };
 const BANDS: Band[] = ['great', 'growing', 'needs', 'none'];
 

@@ -14,7 +14,7 @@ export function TeachersPanel() {
   useEffect(() => { void load.run(); }, []);
 
   return (
-    <Panel title="Teachers" actions={<Button variant="quiet" onClick={() => load.run()}>Refresh</Button>}>
+    <Panel title="What teachers have done" actions={<Button variant="quiet" onClick={() => load.run()}>Refresh</Button>}>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-muted-foreground">
