@@ -1,0 +1,8 @@
+**/node_modules
+**/.data
+**/dist
+apps
+installer
+docs
+.git
+.superpowers
