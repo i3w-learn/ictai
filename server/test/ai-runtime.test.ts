@@ -3,7 +3,7 @@ import { constants, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { AiRuntime, type ChildLike, type Spawner } from '../src/modules/ai/runtime.js';
+import { AiRuntime, serverBinName, type ChildLike, type Spawner } from '../src/modules/ai/runtime.js';
 import { LlamaServerLlm } from '../src/modules/ai/llm-client.js';
 
 function aiDir(withModel = true) {
@@ -11,7 +11,7 @@ function aiDir(withModel = true) {
   if (withModel) {
     writeFileSync(join(dir, 'manifest.json'), JSON.stringify({ name: 'Gemma 4 31B', file: 'model.gguf', sha256: 'x', ctx: 8192 }));
     writeFileSync(join(dir, 'model.gguf'), 'weights');
-    writeFileSync(join(dir, 'llama-server'), 'bin');
+    writeFileSync(join(dir, serverBinName), 'bin');
   }
   return dir;
 }
