@@ -11,4 +11,5 @@ COPY server server
 WORKDIR /app/server
 ENV ICT_DATA_DIR=/data
 EXPOSE 7700
-CMD ["pnpm", "start"]
+# Start with tsx directly: "pnpm start" makes corepack fetch pnpm, which fails offline.
+CMD ["./node_modules/.bin/tsx", "src/main.ts"]

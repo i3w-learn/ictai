@@ -14,6 +14,7 @@ export class AppError extends Error {
 export const unauthenticated = () => new AppError(401, 'UNAUTHENTICATED', 'Sign in first.');
 export const forbidden = (why: string) => new AppError(403, 'FORBIDDEN', why);
 export const notFound = (what: string) => new AppError(404, 'NOT_FOUND', `${what} not found.`);
+export const aiNotInstalled = () => new AppError(503, 'AI_NOT_INSTALLED', 'AI is not installed on this server.');
 export const lockedOut = (waitMs: number) =>
   new AppError(429, 'LOCKED_OUT', `Too many wrong tries. Try again in ${Math.ceil(waitMs / 60_000)} min.`);
 

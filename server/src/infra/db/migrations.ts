@@ -176,7 +176,27 @@ export const migrations: Migration[] = [
     `,
   },
   {
-    // 5, not 4: the AI quiz branch already uses 4. Migrations apply by number, so the gap is fine.
+    version: 4,
+    name: 'ai_jobs',
+    sql: `
+      -- Spec 9: AI requests wait here and run one at a time. Deleted after 90 days.
+      CREATE TABLE ai_jobs (
+        id           TEXT PRIMARY KEY,
+        kind         TEXT NOT NULL CHECK (kind IN ('quiz')),
+        requested_by TEXT NOT NULL REFERENCES users(id),
+        request_json TEXT NOT NULL,
+        status       TEXT NOT NULL CHECK (status IN ('queued','running','done','failed')),
+        result_json  TEXT,
+        error        TEXT,
+        created_at   INTEGER NOT NULL,
+        started_at   INTEGER,
+        finished_at  INTEGER
+      );
+      CREATE INDEX ai_jobs_queue ON ai_jobs(status, created_at);
+      CREATE INDEX ai_jobs_user ON ai_jobs(requested_by, created_at);
+    `,
+  },
+  {
     version: 5,
     name: 'quiz_run_total_marks',
     sql: `

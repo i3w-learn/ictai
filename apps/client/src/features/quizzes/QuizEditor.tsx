@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import type { SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, ErrorNote, Field, Panel, Select, useAction } from '../../ui/ui';
+import { Button, ErrorNote, Field, Note, Panel, Select, useAction } from '../../ui/ui';
+import type { AiDraft } from './AiQuizMaker';
 
 interface Draft {
   text: string;
@@ -14,14 +15,22 @@ interface Draft {
 const blank = (): Draft => ({ text: '', options: ['', '', '', ''], correct: null, marks: 1 });
 
 // Write or change a quiz by hand (v2's ManualQuizDialog). Single-choice questions, 2–6 options.
-export function QuizEditor({ quizId, onDone }: { quizId: string | null; onDone: () => void }) {
+// With an AI draft, questions the AI was unsure of carry a note until the teacher edits them.
+export function QuizEditor({ quizId, draft, onDone }: { quizId: string | null; draft?: AiDraft; onDone: () => void }) {
   const { call } = useApp();
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [meta, setMeta] = useState({ title: '', classId: '', subject: '', topic: '', minutes: '5' });
   const [questions, setQuestions] = useState<Draft[]>([blank()]);
+  const [flags, setFlags] = useState<(string | null)[]>([]);
 
   const load = useAction(async () => {
     setClasses(await call('GET /api/v1/classes'));
+    if (draft) {
+      const { request: r, result } = draft;
+      setMeta({ title: `${r.topic} quiz`, classId: r.classId, subject: r.subject, topic: r.topic, minutes: '1' });
+      setQuestions(result.questions.map((x) => ({ ...x })));
+      setFlags(result.flags.map((f) => (f.ok ? null : f.note)));
+    }
     if (!quizId) return;
     const q = await call('GET /api/v1/quizzes/:id', { params: { id: quizId } });
     setMeta({ title: q.title, classId: q.classId, subject: q.subject ?? '', topic: q.topic ?? '', minutes: String(q.secondsPerQuestion / 60) });
@@ -29,7 +38,15 @@ export function QuizEditor({ quizId, onDone }: { quizId: string | null; onDone: 
   });
   useEffect(() => { void load.run(); }, [quizId]);
 
-  const update = (i: number, d: Partial<Draft>) => setQuestions(questions.map((q, j) => (j === i ? { ...q, ...d } : q)));
+  // Editing a question counts as checking it, so its AI note goes away.
+  const update = (i: number, d: Partial<Draft>) => {
+    setQuestions(questions.map((q, j) => (j === i ? { ...q, ...d } : q)));
+    setFlags(flags.map((f, j) => (j === i ? null : f)));
+  };
+  const removeQuestion = (i: number) => {
+    setQuestions(questions.filter((_, j) => j !== i));
+    setFlags(flags.filter((_, j) => j !== i));
+  };
   const seconds = Math.round(Number(meta.minutes) * 60);
 
   // Empty option boxes are left out; the correct answer must be one that is filled in.
@@ -59,8 +76,17 @@ export function QuizEditor({ quizId, onDone }: { quizId: string | null; onDone: 
     <div className="mx-auto grid max-w-4xl gap-6">
       <div className="flex items-center gap-3">
         <Button variant="quiet" onClick={onDone}><ArrowLeft className="size-4" /> Back</Button>
-        <h1 className="font-display text-2xl font-semibold">{quizId ? 'Edit quiz' : 'New quiz'}</h1>
+        <h1 className="font-display text-2xl font-semibold">{quizId ? 'Edit quiz' : draft ? 'Check the AI quiz' : 'New quiz'}</h1>
       </div>
+
+      {draft && (
+        <Note>
+          The AI wrote this draft. Read every question before saving.
+          {flags.filter(Boolean).length === 1 && ' 1 question marked in red needs a closer look.'}
+          {flags.filter(Boolean).length > 1 && ` ${flags.filter(Boolean).length} questions marked in red need a closer look.`}
+          {draft.result.note && ` ${draft.result.note}`}
+        </Note>
+      )}
 
       <Panel title="About this quiz">
         <div className="flex flex-wrap items-end gap-3">
@@ -83,11 +109,12 @@ export function QuizEditor({ quizId, onDone }: { quizId: string | null; onDone: 
           key={i}
           title={`Question ${i + 1}`}
           actions={questions.length > 1 && (
-            <Button variant="quiet" aria-label={`Remove question ${i + 1}`} onClick={() => setQuestions(questions.filter((_, j) => j !== i))}>
+            <Button variant="quiet" aria-label={`Remove question ${i + 1}`} onClick={() => removeQuestion(i)}>
               <Trash2 className="size-4" />
             </Button>
           )}
         >
+          {flags[i] && <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">{flags[i]}</p>}
           <Field id={`q-${i}-text`} label="Question" value={q.text} onChange={(e) => update(i, { text: e.target.value })} />
           <div className="grid gap-2 sm:grid-cols-2">
             {q.options.map((o, oi) => (

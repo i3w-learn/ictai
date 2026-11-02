@@ -415,7 +415,7 @@ flowchart LR
 - Models: open models whose licences allow government and commercial use, picked by benchmarking (see Section 12).
 - Model packages are signed (name, version, checksum, recommended settings) and delivered by USB kit or cloud.
 - Install checks CPU, RAM and GPU and tunes the runtime.
-- Limits: one request per user at a time, a daily cap for students, 120 s timeout. Users see their place in the queue.
+- Limits: one request per user at a time, a daily cap for students, 15 min per request (accuracy over speed, agreed 2026-10-30). Users see their place in the queue.
 - No model installed: `/ai/*` returns `AI_NOT_INSTALLED` and the UI shows an empty state.
 - Prompts and outputs are deleted after 90 days.
 
@@ -557,7 +557,7 @@ Each pick is explained in plain words. They're chosen so the whole system instal
 | Local app storage (cache, outbox) | **SQLite** (`sqflite_common_ffi` on Windows, `sqflite` on Android) | The outbox survives crashes and power cuts |
 | Student PC lock-down | Flutter app in kiosk mode + a small Windows helper for lock/blank and launching quick apps | Blocks other apps during lessons |
 | Local AI runtime | **llama.cpp** (`llama-server`) on localhost | Runs small models on plain CPUs, uses a GPU if there is one |
-| Models to benchmark | LLM: **Gemma** (Google; main pick) small instruct model, 4-bit GGUF, with **Qwen** (Apache-2.0) as the backup. Embeddings: **multilingual-e5-small** or **bge-m3** (MIT). Translation: **IndicTrans2** (MIT). | Licences allow government and commercial use; good with Indian languages |
+| Models to benchmark | LLM: **Gemma 4 31B-it, 8-bit GGUF** (Google, Apache-2.0; main pick, on the 128 GB school server), **Gemma 4 26B-A4B** if 31B is too slow, **Qwen 3.6** (Apache-2.0) as the backup. Embeddings: **multilingual-e5-small** or **bge-m3** (MIT). Translation: **IndicTrans2** (MIT). | Licences allow government and commercial use; good with Indian languages |
 | Installer | **Inno Setup**, code-signed; Android APK signed | One Windows installer with a Server / Student PC / Board choice |
 | Cloud server | TypeScript + Fastify + **PostgreSQL** | Same language as the school server |
 | Cloud files | S3-compatible storage + CDN | Content, builds and models |
@@ -666,7 +666,7 @@ Base `https://<server>:7700/api/v1`. JSON with zod checks, errors as `{code, mes
 | **M2 Live lesson (P0 core)** | Relay rooms, join codes, navigation, PDF/video/Office viewing, ink + whiteboard, lock/blank, device commands with queue, outbox + ack, late-join state | A 40-PC lesson runs with a board driving it; network-pull test loses nothing |
 | **M3 Assessment & work (P0)** | Live quizzes and polls, self-paced quizzes, assignments and submissions, marks, attendance, results export, activities + starter pack | A teacher runs a quiz, sets work and exports marks |
 | **M4 Cloud & licence (P0)** | Check-in, signed licence + grace + lockdown, downloads, shared library, updates over the LAN, USB kit, analytics pipeline + privacy test | A school activates offline from a USB kit and updates all PCs from the server |
-| **M5 Offline AI (P0)** | llama.cpp runtime, AI gateway + queue, lesson-plan and quiz generators, indexing | Lesson plan and quiz return valid output on a 8 GB reference PC |
+| **M5 Offline AI (P0)** | llama.cpp runtime, AI gateway + queue, lesson-plan and quiz generators, indexing | Lesson plan and quiz return valid output on the school server (128 GB RAM, 1 TB SSD) |
 | **M6 Pilot** | Present mode, console Overview and Server manager, backups, audit log | First pilot school |
 | **M7 General release (P1)** | Timetable, week ahead, playlists, paths, event + video recording, notices, messages, study rooms, Together, cast + screen watching, pen sharing, team quizzes, student analytics, next steps, report cards, Ask/tutor/translate AI, Teacher remote | All P1 rows in this spec |
 | **M8 Later (P2)** | Family mode, guardian messages | All P2 rows |

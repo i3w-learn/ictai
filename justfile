@@ -54,6 +54,22 @@ enrol code name="TEST-PC-01":
       -d '{"code":"{{code}}","kind":"lab_pc","name":"{{name}}","appVersion":"0.1.0"}' \
       | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s);console.log(r.deviceId?"Joined the lab as {{name}}":"Not joined: "+r.message)})'
 
+# Dev AI: small Gemma (3.1 GB) + llama.cpp from Homebrew, into server/.data/ai (school server uses `ai-install`)
+ai-dev:
+    mkdir -p server/.data/ai
+    test -f server/.data/ai/gemma-4-E2B-it-Q4_K_M.gguf || curl -L -o server/.data/ai/gemma-4-E2B-it-Q4_K_M.gguf https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf
+    ln -sf "$(which llama-server)" server/.data/ai/llama-server
+    printf '{"name":"Gemma 4 E2B (dev)","file":"gemma-4-E2B-it-Q4_K_M.gguf","sha256":"%s","ctx":8192}\n' "$(shasum -a 256 server/.data/ai/gemma-4-E2B-it-Q4_K_M.gguf | cut -d' ' -f1)" > server/.data/ai/manifest.json
+    @echo "AI ready: Gemma 4 E2B (dev)"
+
+# Install the AI kit from a USB folder (manifest.json, the .gguf model, llama-server) and check it
+ai-install folder:
+    cd server && pnpm exec tsx scripts/ai-install.ts "{{folder}}"
+
+# Time the quiz maker on this PC and write a CSV for a teacher to mark, e.g. `just ai-bench topics.txt hi 10`
+ai-bench topics lang="en" count="10":
+    cd server && pnpm exec tsx scripts/ai-bench.ts "{{topics}}" {{lang}} {{count}}
+
 # Run the server tests inside a clean Linux container (needs Docker running)
 docker-test:
     docker build -f docker/server.Dockerfile -t ict-server-test .
@@ -64,3 +80,27 @@ docker-server:
     docker build -f docker/server.Dockerfile -t ict-server-test .
     rm -rf .docker-data && mkdir .docker-data && sqlite3 server/.data/ict.db ".backup .docker-data/ict.db"
     docker run --rm --name ict-test -p 7800:7700 -v "$PWD/.docker-data:/data" -e ICT_DEV_ADMIN_USER=admin -e ICT_DEV_ADMIN_PASSWORD=admin123 ict-server-test
+
+# Pretend there is no Wi-Fi: tests with no network, then server + a "lab PC" on a network with no internet
+docker-offline:
+    docker build -f docker/server.Dockerfile -t ict-server-test .
+    docker run --rm --network none ict-server-test pnpm test
+    docker network create --internal ict-offline 2>/dev/null || true
+    rm -rf .docker-data && mkdir .docker-data && sqlite3 server/.data/ict.db ".backup .docker-data/ict.db"
+    docker rm -f ict-test 2>/dev/null || true
+    docker run -d --name ict-test --network ict-offline -v "$PWD/.docker-data:/data" -e ICT_DEV_ADMIN_USER=admin -e ICT_DEV_ADMIN_PASSWORD=admin123 ict-server-test
+    until docker logs ict-test 2>&1 | grep -q ready; do sleep 1; done
+    docker run --rm --network ict-offline -v "$PWD/docker:/check:ro" -e NODE_TLS_REJECT_UNAUTHORIZED=0 node:22-slim node --no-warnings /check/offline-check.mjs
+    docker rm -f ict-test
+
+# Pretend there is no Wi-Fi and test the AI: server + dev model (run `just ai-dev` once first) + a "teacher PC" asking for a quiz
+docker-ai-offline:
+    docker build -f docker/server.Dockerfile -t ict-server-test .
+    docker build -f docker/server-ai.Dockerfile -t ict-server-ai .
+    docker network create --internal ict-offline 2>/dev/null || true
+    rm -rf .docker-data && mkdir .docker-data && sqlite3 server/.data/ict.db ".backup .docker-data/ict.db"
+    docker rm -f ict-test 2>/dev/null || true
+    docker run -d --name ict-test --network ict-offline -v "$PWD/.docker-data:/data" -v "$PWD/server/.data/ai:/ai:ro" -e ICT_DEV_ADMIN_USER=admin -e ICT_DEV_ADMIN_PASSWORD=admin123 ict-server-ai
+    until docker logs ict-test 2>&1 | grep -q ready; do sleep 1; done
+    docker run --rm --network ict-offline -v "$PWD/docker:/check:ro" -e NODE_TLS_REJECT_UNAUTHORIZED=0 node:22-slim node --no-warnings /check/ai-check.mjs
+    docker rm -f ict-test
