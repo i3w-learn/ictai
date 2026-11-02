@@ -2,8 +2,10 @@ import type { Band, StudentResultRow } from '@ict/contracts';
 
 export const BAND_LABEL: Record<Band, string> = { great: 'Doing great', growing: 'Growing', needs: 'Needs you', none: 'Not started' };
 
+// Text starting with = + - @ would run as a formula in Excel, so it gets a leading apostrophe.
 const cell = (v: string | number | null) => {
-  const s = v == null ? '' : String(v);
+  let s = v == null ? '' : String(v);
+  if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 

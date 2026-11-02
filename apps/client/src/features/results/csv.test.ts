@@ -23,4 +23,10 @@ describe('toCsv', () => {
     expect(lines[1]).toBe('"Sharma, ""Asha""",2,7,A,3,80,Doing great');
     expect(lines[2]).toBe('आशा,,7,,0,,Not started');
   });
+
+  it('stops a name that starts like a formula from running in Excel', () => {
+    const lines = toCsv([row({ name: '=HYPERLINK("x")' }), row({ name: '@Asha' })]).slice(1).split('\r\n');
+    expect(lines[1]!.startsWith(`"'=HYPERLINK(""x"")"`)).toBe(true);
+    expect(lines[2]!.startsWith("'@Asha,")).toBe(true);
+  });
 });
