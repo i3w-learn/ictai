@@ -76,6 +76,16 @@ describe('results repository', () => {
     expect(repo.attempts({ studentId: s })[0]).toMatchObject({ score: 2, totalMarks: 3 });
   });
 
+  it('uses the total saved when the run started, not the edited quiz', () => {
+    const { db, repo, student, run, join, answer } = setup();
+    const s = student('Asha');
+    const r = run('ended', 9);
+    db.prepare('UPDATE quiz_runs SET total_marks = 2 WHERE id = ?').run(r);
+    join(r, s);
+    answer(r, s, 0, 2);
+    expect(repo.attempts({ studentId: s })[0]).toMatchObject({ score: 2, totalMarks: 2 });
+  });
+
   it('leaves out deleted students', () => {
     const { repo, student, run, join, classId } = setup();
     const gone = student('Gone', 'deleted');

@@ -6,7 +6,7 @@ async function withResults(subject: string | null = 'Maths') {
   const t = await testServer();
   const teacher = t.auth(await t.login('teacher', 'teacher-pass'));
   const admin = t.auth(await t.login('admin', 'admin-pass'));
-  const inject = (method: 'GET' | 'POST' | 'DELETE', url: string, headers: object, payload?: object) =>
+  const inject = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, headers: object, payload?: object) =>
     t.app.inject({ method, url, headers: headers as Record<string, string>, ...(payload ? { payload } : {}) });
   const c7 = (await inject('POST', '/api/v1/classes', teacher, { name: '7' })).json();
   const c8 = (await inject('POST', '/api/v1/classes', teacher, { name: '8' })).json();
@@ -35,7 +35,7 @@ async function withResults(subject: string | null = 'Maths') {
   await inject('POST', `/api/v1/quiz-runs/${run.runId}/answers`, a, { questionIndex: 0, choice: 1 });
   await inject('POST', `/api/v1/quiz-runs/${run.runId}/answers`, a, { questionIndex: 1, choice: 1 });
   await inject('POST', `/api/v1/quiz-runs/${run.runId}/end`, teacher);
-  return { ...t, inject, teacher, admin, c7, c8, asha, rohan, meera, kabir, studentOn, a };
+  return { ...t, inject, teacher, admin, c7, c8, asha, rohan, meera, kabir, studentOn, a, quiz, questions };
 }
 
 describe('results', () => {
@@ -69,6 +69,14 @@ describe('results', () => {
     const { inject, teacher, asha } = await withResults(null);
     const res = (await inject('GET', `/api/v1/results/students/${asha.id}`, teacher)).json();
     expect(res.subjects[0].subject).toBe('No subject');
+  });
+
+  it('editing a quiz after it was taken does not change old scores', async () => {
+    const { inject, teacher, asha, quiz, questions, c7 } = await withResults();
+    const more = [...questions, { text: '3 + 3 = ?', options: ['6', '7'], correct: 0, marks: 3 }];
+    expect((await inject('PUT', `/api/v1/quizzes/${quiz.id}`, teacher, { title: 'Warm-up', classId: c7.id, subject: 'Maths', questions: more })).statusCode).toBe(200);
+    const res = (await inject('GET', `/api/v1/results/students/${asha.id}`, teacher)).json();
+    expect(res.history[0]).toMatchObject({ score: 3, totalMarks: 3, percent: 100 });
   });
 
   it('student page with no quizzes has no grade', async () => {

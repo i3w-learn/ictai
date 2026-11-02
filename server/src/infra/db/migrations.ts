@@ -175,4 +175,14 @@ export const migrations: Migration[] = [
       );
     `,
   },
+  {
+    // 5, not 4: the AI quiz branch already uses 4. Migrations apply by number, so the gap is fine.
+    version: 5,
+    name: 'quiz_run_total_marks',
+    sql: `
+      -- The quiz total when the run started, so editing the quiz later leaves old scores alone.
+      -- Older runs keep NULL and fall back to the quiz's current total.
+      ALTER TABLE quiz_runs ADD COLUMN total_marks INTEGER;
+    `,
+  },
 ];

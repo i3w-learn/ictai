@@ -26,6 +26,7 @@ const STUDENT_COLUMNS = `s.id, s.name, s.roll_no AS rollNo, s.class_id AS classI
 
 // Reads quiz results straight from the Lab Mode tables. An attempt counts once the run has ended
 // or the student pressed Finish, so half-done scores never show. A run ended in the lobby never counts.
+// The total is the one saved when the run started; runs from before that was saved use today's total.
 export class ResultsRepository {
   constructor(private readonly db: Db) {}
 
@@ -33,7 +34,7 @@ export class ResultsRepository {
     const rows = this.db
       .prepare(
         `SELECT p.student_id AS studentId, r.id AS runId, q.title AS quizTitle, q.subject, q.topic,
-           COALESCE(p.finished_at, r.ended_at) AS at, q.questions_json AS questions,
+           COALESCE(p.finished_at, r.ended_at) AS at, q.questions_json AS questions, r.total_marks AS savedTotal,
            COALESCE((SELECT SUM(a.points) FROM quiz_answers a WHERE a.run_id = p.run_id AND a.student_id = p.student_id), 0) AS score
          FROM quiz_participants p
          JOIN quiz_runs r ON r.id = p.run_id
@@ -43,10 +44,10 @@ export class ResultsRepository {
            AND (@classId IS NULL OR s.class_id = @classId) AND (@studentId IS NULL OR s.id = @studentId)
          ORDER BY at DESC`,
       )
-      .all({ classId: filter.classId ?? null, studentId: filter.studentId ?? null }) as (Omit<Attempt, 'totalMarks'> & { questions: string })[];
-    return rows.map(({ questions, ...r }) => ({
+      .all({ classId: filter.classId ?? null, studentId: filter.studentId ?? null }) as (Omit<Attempt, 'totalMarks'> & { questions: string; savedTotal: number | null })[];
+    return rows.map(({ questions, savedTotal, ...r }) => ({
       ...r,
-      totalMarks: (JSON.parse(questions) as { marks: number }[]).reduce((n, q) => n + q.marks, 0),
+      totalMarks: savedTotal ?? (JSON.parse(questions) as { marks: number }[]).reduce((n, q) => n + q.marks, 0),
     }));
   }
 
