@@ -7,6 +7,7 @@ import { staffRoutes } from './modules/staff/staff.routes.js';
 import { studentRoutes } from './modules/students/students.routes.js';
 import { quizRoutes } from './modules/quizzes/quizzes.routes.js';
 import { aiRoutes } from './modules/ai/ai.routes.js';
+import { resultRoutes } from './modules/results/results.routes.js';
 import { relayRoutes } from './relay/relay.routes.js';
 import { systemRoutes } from './modules/system/system.routes.js';
 
@@ -41,5 +42,6 @@ export function buildApp(c: Container, opts: AppOptions = {}) {
   quizRoutes(app, { quizzes: c.quizzes, runs: c.runs });
   studentRoutes(app, { admin: c.studentAdmin, auth: c.studentAuth });
   aiRoutes(app, { ai: c.ai });
+  resultRoutes(app, { results: c.results });
   return app;
 }

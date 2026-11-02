@@ -19,6 +19,8 @@ import { QuizRepository } from './modules/quizzes/quiz.repository.js';
 import { QuizService } from './modules/quizzes/quiz.service.js';
 import { RunRepository } from './modules/quizzes/run.repository.js';
 import { RunService } from './modules/quizzes/run.service.js';
+import { ResultsRepository } from './modules/results/results.repository.js';
+import { ResultsService } from './modules/results/results.service.js';
 import { Relay } from './relay/relay.js';
 import { aiNotInstalled } from './core/errors.js';
 import { AiService, type AiRuntimeInfo } from './modules/ai/ai.service.js';
@@ -53,6 +55,7 @@ export function createContainer(opts: {
     quizzes: new QuizRepository(db),
     runs: new RunRepository(db),
     aiJobs: new JobRepository(db),
+    results: new ResultsRepository(db),
   };
 
   const audit = new AuditLog(db, now);
@@ -82,6 +85,7 @@ export function createContainer(opts: {
     studentAdmin: new StudentAdminService(now, repos.classes, repos.students, repos.sessions, audit),
     quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes),
     runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, new FailureLimiter(now), audit),
+    results: new ResultsService(repos.results),
     studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, new FailureLimiter(now), audit),
   };
 }

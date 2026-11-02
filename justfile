@@ -69,3 +69,14 @@ ai-install folder:
 # Time the quiz maker on this PC and write a CSV for a teacher to mark, e.g. `just ai-bench topics.txt hi 10`
 ai-bench topics lang="en" count="10":
     cd server && pnpm exec tsx scripts/ai-bench.ts "{{topics}}" {{lang}} {{count}}
+
+# Run the server tests inside a clean Linux container (needs Docker running)
+docker-test:
+    docker build -f docker/server.Dockerfile -t ict-server-test .
+    docker run --rm ict-server-test pnpm test
+
+# Start the server in Docker on a COPY of your dev database, on port 7800. Your real data is not touched.
+docker-server:
+    docker build -f docker/server.Dockerfile -t ict-server-test .
+    rm -rf .docker-data && mkdir .docker-data && sqlite3 server/.data/ict.db ".backup .docker-data/ict.db"
+    docker run --rm --name ict-test -p 7800:7700 -v "$PWD/.docker-data:/data" -e ICT_DEV_ADMIN_USER=admin -e ICT_DEV_ADMIN_PASSWORD=admin123 ict-server-test

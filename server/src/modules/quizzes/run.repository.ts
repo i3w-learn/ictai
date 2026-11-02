@@ -33,8 +33,8 @@ export class RunRepository {
     return !!this.db.prepare(`SELECT 1 FROM quiz_runs WHERE quiz_id = ? AND status != 'ended'`).get(quizId);
   }
 
-  start(id: string, now: number) {
-    this.db.prepare(`UPDATE quiz_runs SET status = 'active', started_at = ? WHERE id = ? AND status = 'lobby'`).run(now, id);
+  start(id: string, now: number, totalMarks: number) {
+    this.db.prepare(`UPDATE quiz_runs SET status = 'active', started_at = ?, total_marks = ? WHERE id = ? AND status = 'lobby'`).run(now, totalMarks, id);
   }
 
   end(id: string, now: number) {

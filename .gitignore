@@ -9,3 +9,4 @@ target/
 apps/client/src-tauri/gen/
 stage/
 installer/Output/
+.docker-data
