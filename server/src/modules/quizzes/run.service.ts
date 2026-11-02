@@ -60,7 +60,7 @@ export class RunService {
   start(actor: StaffPrincipal, id: string): TeacherRunState {
     const run = this.run(id);
     if (run.status !== 'lobby') throw new AppError(409, 'NOT_LOBBY', run.status === 'active' ? 'The quiz has already started.' : 'The quiz has ended.');
-    this.runs.start(id, this.now());
+    this.runs.start(id, this.now(), this.quiz(run).totalMarks);
     this.audit.record({ kind: 'staff', id: actor.userId }, 'quiz.start', id);
     this.relay.notify(quizRoom(id));
     return this.teacherState(id);

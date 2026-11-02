@@ -10,6 +10,7 @@ import {
   AnswerResult, JoinRun, OpenRun, Quiz, QuizInput, QuizQuery, QuizSummary, RunQuery, RunSummary,
   StudentRunState, SubmitAnswer, TeacherRunState,
 } from './quizzes.js';
+import { ResultsOverview, ResultsQuery, StudentResults, TeacherActivity } from './results.js';
 import { NewTeacher, SetPassword, StaffMember, UpdateTeacher } from './staff.js';
 import type { Permission } from './permissions.js';
 
@@ -91,6 +92,10 @@ export const API = {
   'POST /api/v1/quiz-runs/:id/answers': { summary: 'Answer one question; the first answer counts', access: student, params: IdParams, body: SubmitAnswer, status: 200, response: AnswerResult },
   'POST /api/v1/quiz-runs/:id/finish': { summary: 'Student is done; returns their score', access: student, params: IdParams, status: 200, response: StudentRunState },
 
+  // Results (spec 4.4)
+  'GET /api/v1/results/overview': { summary: 'How each student is doing, optionally for one class', access: staff('results.view'), query: ResultsQuery, status: 200, response: ResultsOverview },
+  'GET /api/v1/results/students/:id': { summary: "One student's grade, subjects and quiz history", access: staff('results.view'), params: IdParams, status: 200, response: StudentResults },
+  'GET /api/v1/results/teachers': { summary: 'What each teacher has done', access: staff('staff.manage'), status: 200, response: z.array(TeacherActivity) },
   'GET /api/v1/audit': { summary: 'Activity log, newest first, 100 at a time', access: staff('server.manage'), query: AuditQuery, status: 200, response: z.array(AuditEntry) },
 } as const satisfies Record<string, Endpoint>;
 

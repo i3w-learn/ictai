@@ -19,6 +19,8 @@ import { QuizRepository } from './modules/quizzes/quiz.repository.js';
 import { QuizService } from './modules/quizzes/quiz.service.js';
 import { RunRepository } from './modules/quizzes/run.repository.js';
 import { RunService } from './modules/quizzes/run.service.js';
+import { ResultsRepository } from './modules/results/results.repository.js';
+import { ResultsService } from './modules/results/results.service.js';
 import { Relay } from './relay/relay.js';
 import { SchoolIdentity } from './modules/system/school-identity.js';
 
@@ -35,6 +37,7 @@ export function createContainer(opts: { db: Db; now: Clock; version: string }) {
     students: new StudentRepository(db),
     quizzes: new QuizRepository(db),
     runs: new RunRepository(db),
+    results: new ResultsRepository(db),
   };
 
   const audit = new AuditLog(db, now);
@@ -57,6 +60,7 @@ export function createContainer(opts: { db: Db; now: Clock; version: string }) {
     studentAdmin: new StudentAdminService(now, repos.classes, repos.students, repos.sessions, audit),
     quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes),
     runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, new FailureLimiter(now), audit),
+    results: new ResultsService(repos.results),
     studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, new FailureLimiter(now), audit),
   };
 }
