@@ -1,5 +1,5 @@
 import { createSocket } from 'node:dgram';
-import { existsSync, mkdtempSync, readdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -30,13 +30,23 @@ describe('migrations', () => {
 });
 
 describe('single-instance lock', () => {
-  it('refuses a second copy and allows one after release', () => {
+  it('refuses while another live process holds it and allows one after release', () => {
     const file = join(tmp(), 'server.lock');
     const release = acquireSingleInstance(file);
-    expect(() => acquireSingleInstance(file)).toThrow(/already running/);
     release();
     expect(existsSync(file)).toBe(false);
-    acquireSingleInstance(file)();
+    writeFileSync(file, String(process.ppid)); // the test runner's parent: alive, and not us
+    expect(() => acquireSingleInstance(file)).toThrow(/already running/);
+  });
+
+  // In a fresh container the server always gets the same pid, so a lock left by a killed
+  // container names our own pid. That lock is stale, not a second server.
+  it('treats a lock holding our own pid as stale', () => {
+    const file = join(tmp(), 'server.lock');
+    writeFileSync(file, String(process.pid));
+    const release = acquireSingleInstance(file);
+    expect(readFileSync(file, 'utf8')).toBe(String(process.pid));
+    release();
   });
 });
 
