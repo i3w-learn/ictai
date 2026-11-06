@@ -169,4 +169,23 @@ describe('RelayClient', () => {
     f.drop(null, 1); // a late "closed" for socket 1
     expect(relay.getStatus()).toBe('online');
   });
+  // The server kicks a member whose access was taken away mid-session. The screen must hear
+  // about it, and a later reconnect must try the room again in case access came back.
+  it('passes a room error to its subscriber and still rejoins after a reconnect', async () => {
+    const f = fakeRelay();
+    const relay = attached(new RelayClient(f.platform, () => TARGET));
+    relay.connect('tok');
+    await flush();
+    const seen: unknown[] = [];
+    const errors: string[] = [];
+    relay.subscribe('quiz:1', (s) => seen.push(s), (m) => errors.push(m));
+    f.push({ t: 'state', room: 'quiz:1', p: { n: 1 } });
+    f.push({ t: 'error', room: 'quiz:1', p: { code: 'FORBIDDEN', message: 'You can no longer see this room.' } });
+    expect(seen).toEqual([{ n: 1 }]);
+    expect(errors).toEqual(['You can no longer see this room.']);
+
+    f.drop();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(f.sent.filter((m) => m.t === 'join' && m.room === 'quiz:1')).toHaveLength(2);
+  });
 });

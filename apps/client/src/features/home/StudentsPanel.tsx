@@ -7,7 +7,10 @@ import { StudentRow } from './StudentRow';
 
 // Classes, sections and students, managed by teachers.
 export function StudentsPanel() {
-  const { call } = useApp();
+  const { call, state } = useApp();
+  // Only the Super Admin (or a teacher with no classes set) adds classes.
+  const p = state.session?.principal;
+  const limited = p?.kind === 'staff' && p.classIds != null;
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [classId, setClassId] = useState<string>('');
   const [sections, setSections] = useState<Section[]>([]);
@@ -90,10 +93,12 @@ export function StudentsPanel() {
           <option value="">Choose a class</option>
           {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
         </Select>
-        <form className="flex items-end gap-3" onSubmit={(e) => { e.preventDefault(); void addClass.run(); }}>
-          <Field id="new-class" className="w-32" label="New class" placeholder="7" value={newClass} onChange={(e) => setNewClass(e.target.value)} />
-          <Button type="submit" variant="quiet" disabled={!newClass.trim()}>Add class</Button>
-        </form>
+        {!limited && (
+          <form className="flex items-end gap-3" onSubmit={(e) => { e.preventDefault(); void addClass.run(); }}>
+            <Field id="new-class" className="w-32" label="New class" placeholder="7" value={newClass} onChange={(e) => setNewClass(e.target.value)} />
+            <Button type="submit" variant="quiet" disabled={!newClass.trim()}>Add class</Button>
+          </form>
+        )}
         {classId && (
           <form className="flex items-end gap-3" onSubmit={(e) => { e.preventDefault(); void addSection.run(); }}>
             <Field id="new-section" className="w-32" label="New section" placeholder="A" value={newSection} onChange={(e) => setNewSection(e.target.value)} />

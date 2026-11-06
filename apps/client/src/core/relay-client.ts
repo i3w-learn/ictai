@@ -13,6 +13,7 @@ const PONG_WITHIN_MS = 10_000;
 const SIGNED_OUT = 4401;
 
 type StateListener = (state: unknown) => void;
+type ErrorListener = (message: string) => void;
 
 // Keeps one live socket to the server, rejoins rooms after a drop, and hands each room's
 // latest `state` to whoever subscribed to it. Writes still go over REST.
@@ -25,6 +26,7 @@ export class RelayClient {
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private pongTimer: ReturnType<typeof setTimeout> | null = null;
   private rooms = new Map<string, Set<StateListener>>();
+  private errors = new Map<string, Set<ErrorListener>>();
   private latest = new Map<string, unknown>();
   private statusListeners = new Set<(s: RelayStatus) => void>();
   private stopListening: (() => void) | null = null;
@@ -71,7 +73,8 @@ export class RelayClient {
   }
 
   // Joins the room on the first subscriber and leaves it after the last one goes.
-  subscribe(room: string, fn: StateListener): () => void {
+  // `onError` hears the server refuse the room, now or later (e.g. the class was taken away).
+  subscribe(room: string, fn: StateListener, onError?: ErrorListener): () => void {
     let listeners = this.rooms.get(room);
     if (!listeners) {
       listeners = new Set();
@@ -81,10 +84,16 @@ export class RelayClient {
       fn(this.latest.get(room));
     }
     listeners.add(fn);
+    if (onError) {
+      if (!this.errors.has(room)) this.errors.set(room, new Set());
+      this.errors.get(room)!.add(onError);
+    }
     return () => {
       listeners.delete(fn);
+      if (onError) this.errors.get(room)?.delete(onError);
       if (listeners.size === 0) {
         this.rooms.delete(room);
+        this.errors.delete(room);
         this.latest.delete(room);
         if (this.status === 'online') this.sendMsg({ t: 'leave', room });
       }
@@ -156,6 +165,13 @@ export class RelayClient {
     if (t === 'state' && room && this.rooms.has(room)) {
       this.latest.set(room, p);
       for (const fn of this.rooms.get(room)!) fn(p);
+    }
+    // The server refused or dropped us from a room. Tell the screen, forget the stale state, and
+    // keep the room listed so a later reconnect asks for it again in case access came back.
+    if (t === 'error' && room && this.rooms.has(room)) {
+      this.latest.delete(room);
+      const message = (p as { message?: string } | undefined)?.message ?? 'You can no longer see this.';
+      for (const fn of this.errors.get(room) ?? []) fn(message);
     }
   }
 

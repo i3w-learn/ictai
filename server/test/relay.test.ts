@@ -1,42 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import type WebSocket from 'ws';
-import { testServer } from './helpers.js';
-
-// Collects every message a socket receives, and lets a test wait for the next one of a type.
-function inbox(ws: WebSocket) {
-  const got: { t: string; room?: string; seq?: number; id?: string; p?: any }[] = [];
-  const waiters: (() => void)[] = [];
-  ws.on('message', (d) => {
-    got.push(JSON.parse(d.toString()));
-    waiters.splice(0).forEach((w) => w());
-  });
-  async function next(t: string, after = 0) {
-    for (;;) {
-      const hit = got.slice(after).find((m) => m.t === t);
-      if (hit) return hit;
-      await new Promise<void>((r) => waiters.push(r));
-    }
-  }
-  return { got, next };
-}
+import { openRelay, testServer } from './helpers.js';
 
 async function withRelay() {
   const t = await testServer();
   const token = await t.login('teacher', 'teacher-pass');
   // A test room kind: only staff may join; the snapshot echoes a counter.
   let counter = 0;
+  // Stands in for a teacher losing access: only a staff member not named "Locked" may be here.
   t.c.relay.register({
     prefix: 'test',
-    canJoin: (p) => p.kind === 'staff',
+    canJoin: (p) => p.kind === 'staff' && p.displayName !== 'Locked',
     snapshot: (_p, id) => ({ id, counter }),
   });
-  // Listen from onInit, so the hello sent straight after connecting isn't missed.
-  const open = async () => {
-    let box!: ReturnType<typeof inbox>;
-    const ws = await t.app.injectWS('/relay', { headers: t.auth(token) }, { onInit: (w) => { box = inbox(w); } });
-    return { ws, ...box };
-  };
-  return { ...t, open, bump: () => { counter += 1; } };
+  const open = () => openRelay(t.app, t.auth(token));
+  return { ...t, token, open, bump: () => { counter += 1; } };
 }
 
 describe('relay', () => {
@@ -104,6 +81,58 @@ describe('relay', () => {
     ws.send(JSON.stringify({ t: 'ping', id: 'flush' }));
     await new Promise((r) => setTimeout(r, 20));
     expect(got.filter((m) => m.t === 'state').length).toBe(count);
+    ws.terminate();
+  });
+
+  // The relay looks the person up again before each update, like every REST request does,
+  // so a change the Super Admin makes reaches an open socket too.
+  it('drops a member from a room once they may no longer be in it', async () => {
+    const { open, c, bump, app, login, auth } = await withRelay();
+    const { ws, got, next } = await open();
+    ws.send(JSON.stringify({ t: 'join', room: 'test:abc' }));
+    await next('state');
+
+    const admin = auth(await login('admin', 'admin-pass'));
+    const staff = (await app.inject({ method: 'GET', url: '/api/v1/staff', headers: admin })).json();
+    const teacher = staff.find((s: { username: string }) => s.username === 'teacher');
+    await app.inject({ method: 'PATCH', url: `/api/v1/staff/${teacher.id}`, headers: admin, payload: { displayName: 'Locked' } });
+
+    const before = got.length;
+    bump();
+    c.relay.notify('test:abc');
+    expect(await next('error', before)).toMatchObject({ room: 'test:abc', p: { code: 'FORBIDDEN' } });
+    expect(got.slice(before).filter((m) => m.t === 'state')).toEqual([]);
+    ws.terminate();
+  });
+
+  it('closes the socket once the sign-in has ended', async () => {
+    const { open, c, app, token, auth } = await withRelay();
+    const { ws, next } = await open();
+    ws.send(JSON.stringify({ t: 'join', room: 'test:abc' }));
+    await next('state');
+    const closed = new Promise<number>((r) => ws.on('close', (code) => r(code)));
+    await app.inject({ method: 'POST', url: '/api/v1/auth/logout', headers: auth(token) });
+    c.relay.notify('test:abc');
+    expect(await closed).toBe(4401);
+  });
+});
+
+describe('relay and sessions', () => {
+  // Watching a room is not the same as using the app: a pushed update must not move the
+  // session's idle timer, or a teacher who leaves a lab page open never idles out.
+  it('does not count pushed state as session activity', async () => {
+    const { open, c, bump, db, clock } = await withRelay();
+    const { ws, got, next } = await open();
+    ws.send(JSON.stringify({ t: 'join', room: 'test:abc' }));
+    await next('state');
+    const lastUsed = () => db.prepare("SELECT last_used_at FROM sessions WHERE kind = 'staff'").pluck().get();
+    const before = lastUsed();
+    clock.t += 60_000;
+    const seen = got.length;
+    bump();
+    c.relay.notify('test:abc');
+    await next('state', seen);
+    expect(lastUsed()).toBe(before);
     ws.terminate();
   });
 });

@@ -91,7 +91,7 @@ describe('results repository', () => {
     const gone = student('Gone', 'deleted');
     join(run('ended', 1), gone);
     expect(repo.attempts({ classId })).toEqual([]);
-    expect(repo.students(classId)).toEqual([]);
+    expect(repo.students({ classId })).toEqual([]);
     expect(repo.student(gone)).toBeUndefined();
   });
 
@@ -104,5 +104,21 @@ describe('results repository', () => {
     expect(repo.teacherActivity()).toEqual([
       { id: teacher, displayName: 'Priya', username: 'priya', role: 'teacher', quizzesMade: 1, runsHeld: 2, studentsReached: 1, lastSignInAt: 200 },
     ]);
+  });
+  it('filters students and attempts to a list of classes', () => {
+    const { db, repo, student, run, join, classId } = setup();
+    const other = randomUUID();
+    db.prepare(`INSERT INTO classes (id, name, created_at) VALUES (?, '8', 0)`).run(other);
+    const asha = student('Asha');
+    const meera = randomUUID();
+    db.prepare(`INSERT INTO students (id, name, class_id, qr_token_hash, status, created_at, updated_at) VALUES (?, 'Meera', ?, ?, 'active', 0, 0)`).run(meera, other, randomUUID());
+    const r = run('ended', 500);
+    join(r, asha);
+    join(r, meera);
+    expect(repo.students({ classIds: [classId] }).map((s) => s.name)).toEqual(['Asha']);
+    expect(repo.attempts({ classIds: [classId] }).map((a) => a.studentId)).toEqual([asha]);
+    expect(repo.students({ classIds: [other] }).map((s) => s.name)).toEqual(['Meera']);
+    expect(repo.students({}).map((s) => s.name)).toEqual(['Asha', 'Meera']);
+    expect(repo.attempts({}).length).toBe(2);
   });
 });

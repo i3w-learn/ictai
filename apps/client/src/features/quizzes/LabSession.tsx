@@ -11,7 +11,7 @@ const STATUS = { lobby: 'Waiting to start', active: 'Live', ended: 'Ended' } as 
 export function LabSession({ runId, onExit }: { runId: string; onExit: () => void }) {
   const { call } = useApp();
   const read = () => call('GET /api/v1/quiz-runs/:id', { params: { id: runId } });
-  const [run, setFirst] = useLiveState<TeacherRunState>(quizRoom(runId), null, read);
+  const [run, setFirst, liveError] = useLiveState<TeacherRunState>(quizRoom(runId), null, read);
 
   // REST gives the first picture even before the relay is up; after that the relay keeps it fresh.
   const load = useAction(async () => setFirst(await read()));
@@ -47,7 +47,7 @@ export function LabSession({ runId, onExit }: { runId: string; onExit: () => voi
         {run.status !== 'ended' && <ConfirmButton question="End the quiz for everyone?" onConfirm={() => void end.run()}>End quiz</ConfirmButton>}
         {run.status === 'active' && <span className="self-center text-sm text-muted-foreground">{done} of {run.participants.length} finished</span>}
       </div>
-      <ErrorNote message={start.error ?? end.error} />
+      <ErrorNote message={liveError ?? start.error ?? end.error} />
 
       {run.status === 'lobby' ? (
         <Panel title={`Students joined · ${run.participants.length}`}>

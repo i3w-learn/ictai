@@ -80,12 +80,12 @@ export function createContainer(opts: {
     aiQueue,
     ai: new AiService(ai.runtime, aiQueue, repos.classes, audit),
     staffAuth: new StaffAuthService(now, repos.staff, sessions, new FailureLimiter(now), audit),
-    staffAdmin: new StaffAdminService(now, repos.staff, repos.sessions, audit),
+    staffAdmin: new StaffAdminService(now, repos.staff, repos.sessions, repos.classes, audit),
     enrolment: new DeviceEnrolmentService(now, repos.enrolWindows, repos.devices, identity, new FailureLimiter(now), audit),
     studentAdmin: new StudentAdminService(now, repos.classes, repos.students, repos.sessions, audit),
     quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes),
     runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, new FailureLimiter(now), audit),
-    results: new ResultsService(repos.results),
+    results: new ResultsService(repos.results, repos.classes),
     studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, new FailureLimiter(now), audit),
   };
 }
