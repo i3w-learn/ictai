@@ -7,6 +7,7 @@ import type { AuditLog } from '../../core/audit.js';
 import type { Clock } from '../../core/clock.js';
 import { AppError, forbidden, lockedOut, notFound } from '../../core/errors.js';
 import { asStudent } from '../../core/route.js';
+import { checkQuiz, scopeOf, seesQuiz, type Scope } from '../../core/scope.js';
 import type { Relay } from '../../relay/relay.js';
 import type { FailureLimiter } from '../auth/limiter.js';
 import { sixDigitCode } from '../auth/secrets.js';
@@ -34,7 +35,7 @@ export class RunService {
       canJoin: (p, id) => {
         const run = this.runs.get(id);
         if (!run) return false;
-        if (p.kind === 'staff') return true;
+        if (p.kind === 'staff') return seesQuiz(scopeOf(p), this.quiz(run));
         return p.kind === 'student' && !!this.runs.participant(id, p.studentId);
       },
       snapshot: (p, id) => (p.kind === 'staff' ? this.teacherState(id) : this.studentState(id, asStudent(p))),
@@ -44,6 +45,7 @@ export class RunService {
   open(actor: StaffPrincipal, quizId: string): TeacherRunState {
     const quiz = this.quizzes.get(quizId);
     if (!quiz) throw notFound('Quiz');
+    checkQuiz(scopeOf(actor), quiz);
     if (this.runs.hasOpenRun(quizId)) throw new AppError(409, 'QUIZ_RUNNING', 'This quiz is already open in Lab Mode.');
     const id = randomUUID();
     this.runs.insert({ id, quizId, classId: quiz.classId, joinCode: this.freeCode(), openedBy: actor.userId, now: this.now() });
@@ -51,14 +53,15 @@ export class RunService {
     return this.teacherState(id);
   }
 
-  list(quizId: string): RunSummary[] {
+  list(scope: Scope, quizId: string): RunSummary[] {
     const quiz = this.quizzes.get(quizId);
     if (!quiz) throw notFound('Quiz');
+    checkQuiz(scope, quiz);
     return this.runs.listByQuiz(quizId).map((r) => ({ ...r, title: quiz.title }));
   }
 
   start(actor: StaffPrincipal, id: string): TeacherRunState {
-    const run = this.run(id);
+    const run = this.mine(scopeOf(actor), id);
     if (run.status !== 'lobby') throw new AppError(409, 'NOT_LOBBY', run.status === 'active' ? 'The quiz has already started.' : 'The quiz has ended.');
     this.runs.start(id, this.now(), this.quiz(run).totalMarks);
     this.audit.record({ kind: 'staff', id: actor.userId }, 'quiz.start', id);
@@ -67,7 +70,7 @@ export class RunService {
   }
 
   end(actor: StaffPrincipal, id: string): TeacherRunState {
-    this.run(id);
+    this.mine(scopeOf(actor), id);
     this.runs.end(id, this.now());
     this.audit.record({ kind: 'staff', id: actor.userId }, 'quiz.end', id);
     this.relay.notify(quizRoom(id));
@@ -118,6 +121,12 @@ export class RunService {
     this.runs.finish(id, student.studentId, this.now());
     this.relay.notify(quizRoom(id));
     return this.studentState(id, student);
+  }
+
+  // The teacher's live view, only for runs of their own classes and subjects.
+  view(scope: Scope, id: string): TeacherRunState {
+    this.mine(scope, id);
+    return this.teacherState(id);
   }
 
   teacherState(id: string): TeacherRunState {
@@ -171,6 +180,12 @@ export class RunService {
     const quiz = this.quizzes.get(run.quiz_id, { includeDeleted: true });
     if (!quiz) throw notFound('Quiz');
     return quiz;
+  }
+
+  private mine(scope: Scope, id: string): RunRow {
+    const run = this.run(id);
+    checkQuiz(scope, this.quiz(run));
+    return run;
   }
 
   private member(student: StudentPrincipal, id: string) {

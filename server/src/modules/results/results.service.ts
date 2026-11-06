@@ -1,5 +1,7 @@
 import type { Band, ResultsOverview, StudentResults, SubjectRow, TeacherActivity } from '@ict/contracts';
 import { notFound } from '../../core/errors.js';
+import { checkClass, checkMyClass, seesSubject, type Scope } from '../../core/scope.js';
+import type { ClassRepository } from '../students/class.repository.js';
 import type { Attempt, ResultsRepository } from './results.repository.js';
 import { averageOf, bandOf, gradeOf, percentOf } from './rules.js';
 
@@ -7,16 +9,24 @@ const BAND_ORDER: Record<Band, number> = { needs: 0, growing: 1, great: 2, none:
 const pct = (a: Attempt) => percentOf(a.score, a.totalMarks);
 
 // Spec 4.4: how students are doing, from Lab Mode quiz results.
+// A teacher sees only their own classes, and only quizzes in their own subjects count.
 export class ResultsService {
-  constructor(private readonly repo: ResultsRepository) {}
+  constructor(
+    private readonly repo: ResultsRepository,
+    private readonly classes: ClassRepository,
+  ) {}
 
-  overview(classId?: string): ResultsOverview {
-    const attempts = this.repo.attempts({ classId });
+  overview(scope: Scope, classId?: string): ResultsOverview {
+    if (classId) checkMyClass(this.classes, scope, classId);
+    // The database keeps to the teacher's classes; only the subject match is done here.
+    const filter = { classId, classIds: scope.classIds };
+    const visible = this.repo.students(filter);
+    const attempts = this.repo.attempts(filter).filter((a) => seesSubject(scope, a.subject));
     const byStudent = new Map<string, number[]>();
     for (const a of attempts) byStudent.set(a.studentId, [...(byStudent.get(a.studentId) ?? []), pct(a)]);
 
     const counts = { great: 0, growing: 0, needs: 0, none: 0 };
-    const students = this.repo.students(classId).map((s) => {
+    const students = visible.map((s) => {
       const percents = byStudent.get(s.id) ?? [];
       const average = averageOf(percents);
       const band = bandOf(average);
@@ -27,10 +37,11 @@ export class ResultsService {
     return { classAverage: averageOf(attempts.map(pct)), counts, students };
   }
 
-  student(id: string): StudentResults {
+  student(scope: Scope, id: string): StudentResults {
     const s = this.repo.student(id);
     if (!s) throw notFound('Student');
-    const attempts = this.repo.attempts({ studentId: id });
+    checkClass(scope, s.classId);
+    const attempts = this.repo.attempts({ studentId: id }).filter((a) => seesSubject(scope, a.subject));
     const average = averageOf(attempts.map(pct));
 
     const bySubject = new Map<string, number[]>();

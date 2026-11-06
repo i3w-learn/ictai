@@ -3,6 +3,7 @@ import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import type { SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Field, Note, Panel, Select, useAction } from '../../ui/ui';
+import { SubjectField, useMySubjects } from './SubjectField';
 import type { AiDraft } from './AiQuizMaker';
 
 interface Draft {
@@ -18,6 +19,7 @@ const blank = (): Draft => ({ text: '', options: ['', '', '', ''], correct: null
 // With an AI draft, questions the AI was unsure of carry a note until the teacher edits them.
 export function QuizEditor({ quizId, draft, onDone }: { quizId: string | null; draft?: AiDraft; onDone: () => void }) {
   const { call } = useApp();
+  const subjects = useMySubjects();
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [meta, setMeta] = useState({ title: '', classId: '', subject: '', topic: '', minutes: '5' });
   const [questions, setQuestions] = useState<Draft[]>([blank()]);
@@ -57,6 +59,7 @@ export function QuizEditor({ quizId, draft, onDone }: { quizId: string | null; d
   const problem =
     !meta.title.trim() ? 'Give the quiz a title.'
     : !meta.classId ? 'Pick a class.'
+    : subjects && !meta.subject.trim() ? 'Choose the subject.'
     : !(seconds >= 10 && seconds <= 600) ? 'Time per question must be between 10 seconds and 10 minutes.'
     : cleaned.findIndex((q) => !q.text || q.options.length < 2 || q.correct < 0) >= 0
       ? `Question ${cleaned.findIndex((q) => !q.text || q.options.length < 2 || q.correct < 0) + 1} needs text, at least 2 options and a correct answer.`
@@ -98,7 +101,7 @@ export function QuizEditor({ quizId, draft, onDone }: { quizId: string | null; d
               {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
             </Select>
           </label>
-          <Field id="quiz-subject" className="w-44" label="Subject" value={meta.subject} onChange={(e) => setMeta({ ...meta, subject: e.target.value })} />
+          <SubjectField id="quiz-subject" value={meta.subject} onChange={(subject) => setMeta({ ...meta, subject })} />
           <Field id="quiz-topic" className="w-56" label="Topic" value={meta.topic} onChange={(e) => setMeta({ ...meta, topic: e.target.value })} />
           <Field id="quiz-minutes" className="w-40" label="Minutes per question" inputMode="decimal" value={meta.minutes} onChange={(e) => setMeta({ ...meta, minutes: e.target.value })} />
         </div>

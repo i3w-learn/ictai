@@ -5,8 +5,9 @@ import { forbidden, notFound, unique } from '../../core/errors.js';
 import { hashSecret } from '../auth/secrets.js';
 import type { SessionRepository } from '../auth/session.repository.js';
 import type { StaffRepository, StaffRow } from '../auth/staff.repository.js';
+import type { ClassRepository } from '../students/class.repository.js';
 
-const toStaffMember = (r: StaffRow): StaffMember => ({
+const toMember = (r: StaffRow, classIds: string[], subjects: string[]): StaffMember => ({
   id: r.id,
   username: r.username,
   displayName: r.display_name,
@@ -14,6 +15,8 @@ const toStaffMember = (r: StaffRow): StaffMember => ({
   canHostLessons: !!r.can_host_lessons,
   canUploadContent: !!r.can_upload_content,
   status: r.status === 'disabled' ? 'disabled' : 'active',
+  classIds,
+  subjects,
 });
 
 // Spec 4.1: the Super Admin adds, edits and deletes teachers. Super Admin accounts are
@@ -23,28 +26,32 @@ export class StaffAdminService {
     private readonly now: Clock,
     private readonly staff: StaffRepository,
     private readonly sessions: SessionRepository,
+    private readonly classes: ClassRepository,
     private readonly audit: AuditLog,
   ) {}
 
   list(): StaffMember[] {
-    return this.staff.list().map(toStaffMember);
+    const scopes = this.staff.scopesByUser();
+    return this.staff.list().map((r) => toMember(r, scopes.get(r.id)?.classIds ?? [], scopes.get(r.id)?.subjects ?? []));
   }
 
   async addTeacher(actor: StaffPrincipal, t: NewTeacher): Promise<StaffMember> {
+    this.checkClasses(t.classIds);
     const passwordHash = await hashSecret(t.password);
     const row = unique(
-      () => this.staff.insertTeacher({ username: t.username, displayName: t.displayName, passwordHash, now: this.now() }),
-      `Username "${t.username}" is already taken.`,
+      () => this.staff.insertTeacher({ username: t.username, displayName: t.displayName, passwordHash, classIds: t.classIds, subjects: t.subjects, now: this.now() }),
+      `Username "" is already taken.`,
     );
-    this.audit.record(by(actor), 'staff.add', row.id);
-    return toStaffMember(row);
+    this.audit.record(by(actor), 'staff.add', row.id, { classIds: t.classIds, subjects: t.subjects });
+    return this.member(row);
   }
 
   updateTeacher(actor: StaffPrincipal, id: string, u: UpdateTeacher): StaffMember {
     this.teacher(id);
+    if (u.classIds) this.checkClasses(u.classIds);
     this.staff.update(id, u, this.now());
     this.audit.record(by(actor), 'staff.update', id, u);
-    return toStaffMember(this.staff.findById(id)!);
+    return this.member(this.staff.findById(id)!);
   }
 
   async setPassword(actor: StaffPrincipal, id: string, password: string) {
@@ -59,6 +66,14 @@ export class StaffAdminService {
     this.staff.update(id, { status: 'deleted' }, this.now());
     this.sessions.deleteForUser('staff', id);
     this.audit.record(by(actor), 'staff.delete', id);
+  }
+
+  private member(r: StaffRow): StaffMember {
+    return toMember(r, this.staff.classIds(r.id), this.staff.subjects(r.id));
+  }
+
+  private checkClasses(classIds: string[]) {
+    if (!classIds.every((id) => this.classes.classExists(id))) throw notFound('Class');
   }
 
   private teacher(id: string): StaffRow {

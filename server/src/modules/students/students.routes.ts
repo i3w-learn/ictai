@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { asDevice, asStaff, route } from '../../core/route.js';
+import { scopeOf } from '../../core/scope.js';
 import type { StudentAdminService } from './student-admin.service.js';
 import type { StudentAuthService } from './student-auth.service.js';
 
@@ -7,19 +8,19 @@ export function studentRoutes(app: FastifyInstance, deps: { admin: StudentAdminS
   const { admin, auth } = deps;
 
   // Staff: classes, sections, students
-  route(app, 'GET /api/v1/classes', () => admin.listClasses());
-  route(app, 'POST /api/v1/classes', ({ body }) => admin.addClass(body.name));
+  route(app, 'GET /api/v1/classes', ({ principal }) => admin.listClasses(scopeOf(asStaff(principal))));
+  route(app, 'POST /api/v1/classes', ({ body, principal }) => admin.addClass(scopeOf(asStaff(principal)), body.name));
   route(app, 'POST /api/v1/classes/:id/promote', ({ params, body, principal }) => admin.promote(asStaff(principal), params.id, body.toClassId));
   route(app, 'POST /api/v1/classes/:id/enrolment-codes', ({ params, principal }) => admin.classCodes(asStaff(principal), params.id));
   route(app, 'POST /api/v1/classes/:id/cards', ({ params, principal }) => admin.cards(asStaff(principal), params.id));
-  route(app, 'POST /api/v1/sections', ({ body }) => admin.addSection(body.classId, body.name));
-  route(app, 'GET /api/v1/sections', ({ query }) => admin.listSections(query.classId));
-  route(app, 'GET /api/v1/students', ({ query }) => admin.listStudents(query.classId));
-  route(app, 'POST /api/v1/students', ({ body }) => admin.addStudent(body));
-  route(app, 'PATCH /api/v1/students/:id', ({ params, body }) => admin.updateStudent(params.id, body));
+  route(app, 'POST /api/v1/sections', ({ body, principal }) => admin.addSection(scopeOf(asStaff(principal)), body.classId, body.name));
+  route(app, 'GET /api/v1/sections', ({ query, principal }) => admin.listSections(scopeOf(asStaff(principal)), query.classId));
+  route(app, 'GET /api/v1/students', ({ query, principal }) => admin.listStudents(scopeOf(asStaff(principal)), query.classId));
+  route(app, 'POST /api/v1/students', ({ body, principal }) => admin.addStudent(scopeOf(asStaff(principal)), body));
+  route(app, 'PATCH /api/v1/students/:id', ({ params, body, principal }) => admin.updateStudent(scopeOf(asStaff(principal)), params.id, body));
   route(app, 'DELETE /api/v1/students/:id', ({ params, principal }) => admin.removeStudent(asStaff(principal), params.id));
-  route(app, 'PUT /api/v1/students/:id/pin', ({ params, body }) => admin.resetPin(params.id, body.pin));
-  route(app, 'POST /api/v1/students/:id/enrolment-code', ({ params }) => admin.issueEnrolmentCode(params.id));
+  route(app, 'PUT /api/v1/students/:id/pin', ({ params, body, principal }) => admin.resetPin(scopeOf(asStaff(principal)), params.id, body.pin));
+  route(app, 'POST /api/v1/students/:id/enrolment-code', ({ params, principal }) => admin.issueEnrolmentCode(scopeOf(asStaff(principal)), params.id));
 
   // Lab PC: student sign-in
   route(app, 'GET /api/v1/auth/student/classes', () => auth.listClasses());

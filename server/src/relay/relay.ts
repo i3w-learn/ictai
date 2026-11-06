@@ -13,9 +13,11 @@ export interface Conn {
   close(code: number, reason: string): void;
 }
 
+// `who` looks the person up again on each push (a read, never a write), so a disabled teacher
+// or a narrowed class list applies to an open socket on the next update, as on the next request.
 interface Member {
   conn: Conn;
-  principal: Principal;
+  who: () => Principal | null;
 }
 
 // Spec 8.3: live room state is in memory. Writes go over REST; the relay pushes a fresh
@@ -35,8 +37,8 @@ export class Relay {
   }
 
   // Returns the handlers for one socket's lifetime.
-  attach(conn: Conn, principal: Principal) {
-    const member: Member = { conn, principal };
+  attach(conn: Conn, who: () => Principal | null) {
+    const member: Member = { conn, who };
     const joined = new Set<string>();
     this.send(member, { t: 'hello', ts: this.now(), p: { serverTime: this.now() } });
 
@@ -66,7 +68,14 @@ export class Relay {
     const seq = this.nextSeq(room);
     for (const m of members) {
       try {
-        this.send(m, { t: 'state', room, seq, ts: this.now(), p: kind.snapshot(m.principal, idOf(room)) });
+        const p = this.current(m);
+        if (!p) continue;
+        if (!kind.canJoin(p, idOf(room))) {
+          members.delete(m);
+          this.error(m, 'FORBIDDEN', 'You can no longer see this room.', room);
+          continue;
+        }
+        this.send(m, { t: 'state', room, seq, ts: this.now(), p: kind.snapshot(p, idOf(room)) });
       } catch (err) {
         this.log(err);
       }
@@ -93,17 +102,26 @@ export class Relay {
         return;
       case 'join': {
         const kind = this.kindOf(msg.room);
-        if (!kind || !kind.canJoin(m.principal, idOf(msg.room))) {
+        const p = this.current(m);
+        if (!p) return;
+        if (!kind || !kind.canJoin(p, idOf(msg.room))) {
           return this.error(m, 'FORBIDDEN', 'You cannot join this room.', msg.room, msg.id);
         }
         if (!this.rooms.has(msg.room)) this.rooms.set(msg.room, new Set());
         this.rooms.get(msg.room)!.add(m);
         joined.add(msg.room);
         // Late joiners get the current state at once.
-        const p = kind.snapshot(m.principal, idOf(msg.room));
-        return this.send(m, { t: 'state', room: msg.room, seq: this.seqs.get(msg.room) ?? 0, ts: this.now(), id: msg.id, p });
+        const state = kind.snapshot(p, idOf(msg.room));
+        return this.send(m, { t: 'state', room: msg.room, seq: this.seqs.get(msg.room) ?? 0, ts: this.now(), id: msg.id, p: state });
       }
     }
+  }
+
+  // Who is on this socket now. Once the sign-in has ended, the socket is closed.
+  private current(m: Member): Principal | null {
+    const p = m.who();
+    if (!p) m.conn.close(4401, 'Sign in again.');
+    return p;
   }
 
   private kindOf(room: string) {

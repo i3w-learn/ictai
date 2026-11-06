@@ -205,4 +205,22 @@ export const migrations: Migration[] = [
       ALTER TABLE quiz_runs ADD COLUMN total_marks INTEGER;
     `,
   },
+  {
+    version: 6,
+    name: 'teacher_classes_and_subjects',
+    sql: `
+      -- The Super Admin decides which classes and subjects each teacher works with.
+      -- A teacher with no rows here sees everything, as before.
+      CREATE TABLE teacher_classes (
+        user_id  TEXT NOT NULL REFERENCES users(id),
+        class_id TEXT NOT NULL REFERENCES classes(id),
+        PRIMARY KEY (user_id, class_id)
+      );
+      CREATE TABLE teacher_subjects (
+        user_id TEXT NOT NULL REFERENCES users(id),
+        subject TEXT NOT NULL COLLATE NOCASE,
+        PRIMARY KEY (user_id, subject)
+      );
+    `,
+  },
 ];
