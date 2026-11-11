@@ -3,6 +3,7 @@ import { ArrowLeft, Sparkles } from 'lucide-react';
 import type { AiJob, AiQuizRequest, AiQuizResult, AiStatus, SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Field, Note, Panel, Select, useAction } from '../../ui/ui';
+import { SubjectField } from './SubjectField';
 
 export type AiDraft = { request: AiQuizRequest; result: AiQuizResult };
 
@@ -43,7 +44,7 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
   const count = Number(form.count);
   const problem =
     !form.classId ? 'Pick a class.'
-    : !form.subject.trim() ? 'Type the subject.'
+    : !form.subject.trim() ? 'Choose the subject.'
     : !form.topic.trim() ? 'Type the topic.'
     : !(Number.isInteger(count) && count >= 1 && count <= 20) ? 'Ask for 1 to 20 questions.'
     : null;
@@ -77,7 +78,7 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
                   {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
                 </Select>
               </label>
-              <Field id="ai-subject" className="w-44" label="Subject" placeholder="Maths" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
+              <SubjectField id="ai-subject" placeholder="Maths" value={form.subject} onChange={(subject) => setForm({ ...form, subject })} />
               <Field id="ai-topic" className="w-64" label="Topic" placeholder="Fractions" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} />
               <Field id="ai-count" className="w-32" label="Questions" inputMode="numeric" value={form.count} onChange={(e) => setForm({ ...form, count: e.target.value })} />
               <label className="grid gap-1.5">

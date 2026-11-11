@@ -34,7 +34,7 @@ export function buildApp(c: Container, opts: AppOptions = {}) {
     req.principal = c.resolver.resolve(bearerToken(req));
   });
 
-  relayRoutes(app, { relay: c.relay });
+  relayRoutes(app, { relay: c.relay, resolver: c.resolver });
   systemRoutes(app, { identity: c.identity, audit: c.audit });
   authRoutes(app, { staffAuth: c.staffAuth, sessions: c.sessions });
   deviceRoutes(app, { enrolment: c.enrolment });

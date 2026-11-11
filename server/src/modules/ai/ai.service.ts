@@ -1,6 +1,7 @@
 import type { AiJob, AiQuizRequest, AiStatus, StaffPrincipal } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import { aiNotInstalled, notFound } from '../../core/errors.js';
+import { checkMyClass, checkSubject, scopeOf } from '../../core/scope.js';
 import type { ClassRepository } from '../students/class.repository.js';
 import type { JobQueue } from './job-queue.js';
 
@@ -25,8 +26,10 @@ export class AiService {
   }
 
   requestQuiz(actor: StaffPrincipal, req: AiQuizRequest): AiJob {
+    const scope = scopeOf(actor);
+    checkMyClass(this.classes, scope, req.classId);
+    checkSubject(scope, req.subject);
     if (!this.runtime.installed()) throw aiNotInstalled();
-    if (!this.classes.classExists(req.classId)) throw notFound('Class');
     const job = this.queue.enqueue(actor.userId, req);
     this.audit.record({ kind: 'staff', id: actor.userId }, 'ai.quiz.request', job.id, { topic: req.topic });
     return job;

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { StaffRepository } from '../src/modules/auth/staff.repository.js';
 import { testServer } from './helpers.js';
 
 const PRIYA = { username: 'priya', displayName: 'Priya S', password: 'priya-pass' };
@@ -6,7 +7,9 @@ const PRIYA = { username: 'priya', displayName: 'Priya S', password: 'priya-pass
 async function withAdmin() {
   const t = await testServer();
   const admin = t.auth(await t.login('admin', 'admin-pass'));
-  const add = (payload: object = PRIYA) => t.app.inject({ method: 'POST', url: '/api/v1/staff', headers: admin, payload });
+  const c7 = (await t.app.inject({ method: 'POST', url: '/api/v1/classes', headers: admin, payload: { name: '7' } })).json();
+  const add = (payload: object = PRIYA) =>
+    t.app.inject({ method: 'POST', url: '/api/v1/staff', headers: admin, payload: { classIds: [c7.id], subjects: ['Maths'], ...payload } });
   const me = (token: string) => t.app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: t.auth(token) });
   return { ...t, admin, add, me };
 }
@@ -89,5 +92,17 @@ describe('staff management (Super Admin)', () => {
     expect((await app.inject({ method: 'PATCH', url, headers: admin, payload: { status: 'disabled' } })).statusCode).toBe(403);
     expect((await app.inject({ method: 'PUT', url: `${url}/password`, headers: admin, payload: { password: 'whatever-123' } })).statusCode).toBe(403);
     expect((await app.inject({ method: 'DELETE', url, headers: admin })).statusCode).toBe(403);
+  });
+});
+
+describe('teacher scope rows', () => {
+  // A half-made teacher (user row, no class rows) would see everything. So it is one write or none.
+  it('adding a teacher is all or nothing', async () => {
+    const { db } = await testServer();
+    const repo = new StaffRepository(db);
+    expect(() =>
+      repo.insertTeacher({ username: 'half', displayName: 'Half Made', passwordHash: 'x', classIds: ['no-such-class'], subjects: ['Maths'], now: 1 }),
+    ).toThrow();
+    expect(repo.findByUsername('half')).toBeUndefined();
   });
 });

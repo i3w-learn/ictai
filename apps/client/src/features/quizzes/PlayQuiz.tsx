@@ -10,7 +10,7 @@ import { RelayChip } from './RelayChip';
 export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit: () => void }) {
   const { call } = useApp();
   const read = () => call('GET /api/v1/quiz-runs/:id/play', { params: { id: initial.runId } });
-  const [state, setLocal] = useLiveState<StudentRunState>(quizRoom(initial.runId), initial, read);
+  const [state, setLocal, liveError] = useLiveState<StudentRunState>(quizRoom(initial.runId), initial, read);
   const run = state ?? initial;
   const [mine, setMine] = useState<(number | null)[]>(initial.myAnswers);
   const [skipped, setSkipped] = useState<Set<number>>(new Set());
@@ -64,7 +64,7 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
         >
           {run.score == null ? 'Handing in…' : `You scored ${run.score} out of ${run.totalMarks}`}
         </PageTitle>
-        <ErrorNote message={finish.error} />
+        <ErrorNote message={liveError ?? finish.error} />
         <div><Button variant="quiet" onClick={onExit}>Back to home</Button></div>
       </Centered>
     );
@@ -96,7 +96,7 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
           </button>
         ))}
       </div>
-      <ErrorNote message={answer.error} />
+      <ErrorNote message={liveError ?? answer.error} />
     </Centered>
   );
 }

@@ -1,3 +1,5 @@
+import type { FastifyInstance } from 'fastify';
+import type WebSocket from 'ws';
 import { buildApp } from '../src/app.js';
 import { createContainer } from '../src/container.js';
 import { openDb } from '../src/infra/db/index.js';
@@ -37,4 +39,30 @@ export async function testServer(opts: { ai?: { llm: Llm; installed: boolean } }
   }
 
   return { app, db, clock, c, login, auth, enrolDevice };
+}
+
+// Collects every message a socket receives, and lets a test wait for the next one of a type.
+export function inbox(ws: WebSocket) {
+  const got: { t: string; room?: string; seq?: number; id?: string; p?: any }[] = [];
+  const waiters: (() => void)[] = [];
+  ws.on('message', (d) => {
+    got.push(JSON.parse(d.toString()));
+    waiters.splice(0).forEach((w) => w());
+  });
+  async function next(t: string, after = 0) {
+    for (;;) {
+      const hit = got.slice(after).find((m) => m.t === t);
+      if (hit) return hit;
+      await new Promise<void>((r) => waiters.push(r));
+    }
+  }
+  return { got, next };
+}
+
+// Opens the live socket as whoever `headers` signs in. Listens from onInit, so the hello
+// sent straight after connecting isn't missed.
+export async function openRelay(app: FastifyInstance, headers: Record<string, string>) {
+  let box!: ReturnType<typeof inbox>;
+  const ws = await app.injectWS('/relay', { headers }, { onInit: (w: WebSocket) => { box = inbox(w); } });
+  return { ws, ...box };
 }

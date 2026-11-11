@@ -21,6 +21,9 @@ export const StaffPrincipal = z.object({
   username: z.string(),
   displayName: z.string(),
   permissions: z.array(Permission),
+  // What the Super Admin let this teacher see. null means everything (the Super Admin, or a teacher with nothing set).
+  classIds: z.array(z.string()).nullable(),
+  subjects: z.array(z.string()).nullable(),
 });
 
 export const StudentPrincipal = z.object({
