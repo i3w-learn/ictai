@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
-  quizRoom, type Quiz, type RunSummary, type StaffPrincipal, type StudentPrincipal,
+  quizRoom, TIMED_OUT, type Quiz, type RunSummary, type StaffPrincipal, type StudentPrincipal,
   type StudentRunState, type TeacherRunState,
 } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
@@ -20,6 +20,13 @@ const notActive = (status: RunRow['status']) =>
 
 // Lab Mode (v2 parity): open with a code, students join, teacher starts, each student answers
 // at their own pace, teacher ends. Every change pushes fresh state to the run's relay room.
+// Each student works through the questions in order, and the server keeps the clock for each one.
+
+// Where a student is in an active run: the question they are on and when its time ends.
+interface Place {
+  at: { index: number; deadline: number } | null;
+  timedOut: number; // questions that ran out of time during this look
+}
 export class RunService {
   constructor(
     private readonly now: Clock,
@@ -95,8 +102,12 @@ export class RunService {
     return this.studentState(run.id, student);
   }
 
+  // The student's PC asks this when its countdown reaches zero. If a question did run out,
+  // the teacher's screen is told too.
   play(student: StudentPrincipal, id: string): StudentRunState {
     this.member(student, id);
+    const run = this.run(id);
+    if (this.place(run, this.quiz(run), student.studentId).timedOut) this.relay.notify(quizRoom(id));
     return this.studentState(id, student);
   }
 
@@ -105,12 +116,22 @@ export class RunService {
     const me = this.member(student, id);
     if (run.status !== 'active') throw notActive(run.status);
     if (me.finished_at != null) throw new AppError(409, 'FINISHED', 'You have already finished this quiz.');
-    const q = this.quiz(run).questions[questionIndex];
+    const quiz = this.quiz(run);
+    const q = quiz.questions[questionIndex];
     if (!q || choice >= q.options.length) throw new AppError(400, 'BAD_REQUEST', 'No such question or option.');
-    const fresh = this.runs.answer({
+
+    const { at, timedOut } = this.place(run, quiz, student.studentId);
+    if (timedOut) this.relay.notify(quizRoom(id));
+    const given = this.runs.answers(id, student.studentId).find((a) => a.question_index === questionIndex);
+    if (given) {
+      if (given.choice === TIMED_OUT) throw new AppError(409, 'TIME_UP', 'Time ran out for this question.');
+      return { accepted: true }; // a resend: the first answer stands
+    }
+    if (at?.index !== questionIndex) throw new AppError(409, 'NOT_YOUR_QUESTION', 'Answer the question on your screen first.');
+    this.runs.answer({
       runId: id, studentId: student.studentId, questionIndex, choice, points: choice === q.correct ? q.marks : 0, now: this.now(),
     });
-    if (fresh) this.relay.notify(quizRoom(id));
+    this.relay.notify(quizRoom(id));
     return { accepted: true };
   }
 
@@ -132,6 +153,8 @@ export class RunService {
   teacherState(id: string): TeacherRunState {
     const run = this.run(id);
     const quiz = this.quiz(run);
+    // Bring every student's clock up to date first, so one who walked away still shows correctly.
+    if (run.status === 'active') for (const studentId of this.runs.unfinishedIds(id)) this.place(run, quiz, studentId);
     return {
       kind: 'teacher',
       runId: run.id,
@@ -151,6 +174,7 @@ export class RunService {
     const run = this.run(id);
     const quiz = this.quiz(run);
     const me = this.runs.participant(id, student.studentId);
+    const { at } = this.place(run, quiz, student.studentId);
     const mine = this.runs.answers(id, student.studentId);
     const myAnswers: (number | null)[] = quiz.questions.map(() => null);
     for (const a of mine) myAnswers[a.question_index] = a.choice;
@@ -163,10 +187,38 @@ export class RunService {
       secondsPerQuestion: quiz.secondsPerQuestion,
       questions: quiz.questions.map((q) => ({ text: q.text, options: q.options })),
       myAnswers,
+      current: at && { index: at.index, remainingMs: at.deadline - this.now() },
       finished: me?.finished_at != null,
       score: done ? mine.reduce((n, a) => n + a.points, 0) : null,
       totalMarks: quiz.totalMarks,
     };
+  }
+
+  // Works out which question a student is on. The first question's clock starts when the quiz
+  // starts (or when a late joiner joins); each later one starts when the one before was answered
+  // or ran out. Any question whose time has passed is written down as TIMED_OUT, so a reload,
+  // or coming back after walking away, never gets the time back.
+  private place(run: RunRow, quiz: Quiz, studentId: string): Place {
+    const none: Place = { at: null, timedOut: 0 };
+    if (run.status !== 'active' || run.started_at == null) return none;
+    const me = this.runs.participant(run.id, studentId);
+    if (!me || me.finished_at != null) return none;
+
+    const rows = this.runs.answers(run.id, studentId);
+    const done = new Set(rows.map((r) => r.question_index));
+    const perQuestion = quiz.secondsPerQuestion * 1000;
+    const now = this.now();
+    let start = Math.max(run.started_at, me.joined_at, ...rows.map((r) => r.answered_at));
+    let timedOut = 0;
+    for (let index = 0; index < quiz.questions.length; index++) {
+      if (done.has(index)) continue;
+      const deadline = start + perQuestion;
+      if (now < deadline) return { at: { index, deadline }, timedOut };
+      this.runs.answer({ runId: run.id, studentId, questionIndex: index, choice: TIMED_OUT, points: 0, now: deadline });
+      timedOut += 1;
+      start = deadline;
+    }
+    return { at: null, timedOut };
   }
 
   private run(id: string): RunRow {

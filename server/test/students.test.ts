@@ -114,6 +114,24 @@ describe('student sign-in on a lab PC', () => {
     expect(bad.statusCode).toBe(401);
   });
 
+  it('blocks QR guessing on a lab PC after 5 unknown cards, like wrong PINs', async () => {
+    const { app, student, device, clock } = await withStudent();
+    const scan = (qrToken: string) => app.inject({ method: 'POST', url: '/api/v1/auth/student/qr', headers: device, payload: { qrToken } });
+    for (let i = 0; i < 5; i++) expect((await scan(`${i}`.repeat(43))).statusCode).toBe(401);
+    expect((await scan(student.qrToken)).statusCode).toBe(429);
+    clock.t += 5 * 60_000 + 1;
+    expect((await scan(student.qrToken)).statusCode).toBe(201);
+  });
+
+  it('a good card clears earlier bad scans', async () => {
+    const { app, student, device } = await withStudent();
+    const scan = (qrToken: string) => app.inject({ method: 'POST', url: '/api/v1/auth/student/qr', headers: device, payload: { qrToken } });
+    for (let i = 0; i < 4; i++) await scan(`${i}`.repeat(43));
+    expect((await scan(student.qrToken)).statusCode).toBe(201);
+    for (let i = 0; i < 4; i++) await scan(`${i}`.repeat(43));
+    expect((await scan(student.qrToken)).statusCode).toBe(201);
+  });
+
   it('uses a one-time enrolment code to set the first PIN', async () => {
     const { app, staff, student, device } = await withStudent();
     const { code } = (await app.inject({ method: 'POST', url: `/api/v1/students/${student.id}/enrolment-code`, headers: staff })).json();
@@ -123,5 +141,53 @@ describe('student sign-in on a lab PC', () => {
     expect(reuse.statusCode).toBe(401);
     const withNewPin = await app.inject({ method: 'POST', url: '/api/v1/auth/student/pin', headers: device, payload: { studentId: student.id, pin: '9876' } });
     expect(withNewPin.statusCode).toBe(201);
+  });
+});
+
+describe('student import from a spreadsheet', () => {
+  it('adds the good rows and says why each other row was left out', async () => {
+    const { app, staff, cls } = await withStudent();
+    const res = await app.inject({
+      method: 'POST', url: `/api/v1/classes/${cls.id}/students/import`, headers: staff,
+      payload: { rows: [
+        { name: ' Kabir Khan ', rollNo: '1', section: 'a' },
+        { name: 'Meera', rollNo: null, section: null },
+        { name: 'Asha Verma', rollNo: '12', section: 'A' },
+        { name: '  ', rollNo: '3', section: null },
+        { name: 'Ravi', rollNo: '4', section: 'Z' },
+        { name: 'Kabir Khan', rollNo: '1', section: null },
+      ] },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().added).toBe(2);
+    expect(res.json().skipped.map((s: { row: number }) => s.row)).toEqual([3, 4, 5, 6]);
+    expect(res.json().skipped[2].reason).toMatch(/Section "Z"/);
+
+    const list = (await app.inject({ method: 'GET', url: `/api/v1/students?classId=${cls.id}`, headers: staff })).json();
+    expect(list.map((s: { name: string }) => s.name).sort()).toEqual(['Asha Verma', 'Kabir Khan', 'Meera']);
+    const kabir = list.find((s: { name: string }) => s.name === 'Kabir Khan');
+    expect(kabir).toMatchObject({ rollNo: '1', hasPin: false });
+    expect(kabir.sectionId).toBeTruthy();
+  });
+
+  it('refuses an empty list, too many rows, and a class the teacher does not have', async () => {
+    const { app, staff, cls } = await withStudent();
+    const post = (id: string, rows: unknown[]) => app.inject({ method: 'POST', url: `/api/v1/classes/${id}/students/import`, headers: staff, payload: { rows } });
+    expect((await post(cls.id, [])).statusCode).toBe(400);
+    expect((await post(cls.id, Array.from({ length: 501 }, (_, i) => ({ name: `S${i}` })))).statusCode).toBe(400);
+    expect((await post('00000000-0000-4000-8000-000000000000', [{ name: 'X' }])).statusCode).toBe(404);
+  });
+});
+
+describe('activity log for sign-in and quizzes', () => {
+  it('logs a wrong PIN against the lab PC, without the PIN', async () => {
+    const { app, db, student, device } = await withStudent();
+    await app.inject({ method: 'POST', url: '/api/v1/auth/student/pin', headers: device, payload: { studentId: student.id, pin: '0000' } });
+    await app.inject({ method: 'POST', url: '/api/v1/auth/student/qr', headers: device, payload: { qrToken: 'x'.repeat(32) } });
+    const rows = db.prepare(`SELECT actor_kind, target, detail FROM audit_log WHERE action = 'student.signin.failed' ORDER BY id`).all() as { actor_kind: string; target: string | null; detail: string }[];
+    expect(rows).toEqual([
+      { actor_kind: 'device', target: student.id, detail: '{"method":"pin"}' },
+      { actor_kind: 'device', target: null, detail: '{"method":"qr"}' },
+    ]);
   });
 });

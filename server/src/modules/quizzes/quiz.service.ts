@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Quiz, QuizInput, QuizSummary, StaffPrincipal } from '@ict/contracts';
+import type { AuditLog } from '../../core/audit.js';
 import type { Clock } from '../../core/clock.js';
 import { AppError, notFound } from '../../core/errors.js';
 import { checkMyClass, checkQuiz, checkSubject, scopeOf, seesQuiz, type Scope } from '../../core/scope.js';
@@ -16,6 +17,7 @@ export class QuizService {
     private readonly quizzes: QuizRepository,
     private readonly runs: RunRepository,
     private readonly classes: ClassRepository,
+    private readonly audit: AuditLog,
   ) {}
 
   list(scope: Scope, classId?: string): QuizSummary[] {
@@ -47,10 +49,11 @@ export class QuizService {
     return this.get(scope, id);
   }
 
-  remove(scope: Scope, id: string) {
-    this.get(scope, id);
+  remove(actor: StaffPrincipal, id: string) {
+    const quiz = this.get(scopeOf(actor), id);
     if (this.runs.hasOpenRun(id)) throw running();
     this.quizzes.markDeleted(id, this.now());
+    this.audit.record({ kind: 'staff', id: actor.userId }, 'quiz.delete', id, { title: quiz.title });
   }
 
   private checkInput(scope: Scope, q: QuizInput) {

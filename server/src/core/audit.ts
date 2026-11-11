@@ -20,13 +20,19 @@ export class AuditLog {
       .run(this.now(), actor.kind, actor.id, action, target, detail == null ? null : JSON.stringify(detail));
   }
 
+  // Spec 9 keeps what people typed to the AI for 90 days. The log holds a copy (the quiz topic,
+  // the question asked), so that copy is wiped at the same age. The line itself stays.
+  forgetAiText(before: number) {
+    this.db.prepare(`UPDATE audit_log SET detail = NULL WHERE action LIKE 'ai.%' AND at < ? AND detail IS NOT NULL`).run(before);
+  }
+
   // Newest first. Names are looked up now, so a renamed teacher shows their current name.
   list(before?: number, limit = 100): AuditEntry[] {
     const rows = this.db
       .prepare(
         `SELECT a.id, a.at, a.actor_kind AS actorKind, a.action, a.target, a.detail,
            CASE a.actor_kind WHEN 'staff' THEN au.display_name WHEN 'student' THEN ast.name WHEN 'device' THEN ad.name END AS actorName,
-           COALESCE(tu.display_name, tst.name, td.name, tc.name, tq.title) AS targetName
+           COALESCE(tu.display_name, tst.name, td.name, tc.name, tq.title, tdq.title) AS targetName
          FROM audit_log a
          LEFT JOIN users au ON a.actor_kind = 'staff' AND au.id = a.actor_id
          LEFT JOIN students ast ON a.actor_kind = 'student' AND ast.id = a.actor_id
@@ -37,6 +43,7 @@ export class AuditLog {
          LEFT JOIN classes tc ON tc.id = a.target
          LEFT JOIN quiz_runs tr ON tr.id = a.target
          LEFT JOIN quizzes tq ON tq.id = tr.quiz_id
+         LEFT JOIN quizzes tdq ON tdq.id = a.target
          WHERE a.id < ?
          ORDER BY a.id DESC
          LIMIT ?`,

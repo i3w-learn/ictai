@@ -11,7 +11,7 @@ export function quizRoutes(app: FastifyInstance, deps: { quizzes: QuizService; r
   route(app, 'POST /api/v1/quizzes', ({ body, principal }) => quizzes.create(asStaff(principal), body));
   route(app, 'GET /api/v1/quizzes/:id', ({ params, principal }) => quizzes.get(scopeOf(asStaff(principal)), params.id));
   route(app, 'PUT /api/v1/quizzes/:id', ({ params, body, principal }) => quizzes.replace(scopeOf(asStaff(principal)), params.id, body));
-  route(app, 'DELETE /api/v1/quizzes/:id', ({ params, principal }) => quizzes.remove(scopeOf(asStaff(principal)), params.id));
+  route(app, 'DELETE /api/v1/quizzes/:id', ({ params, principal }) => quizzes.remove(asStaff(principal), params.id));
 
   // Lab Mode
   route(app, 'POST /api/v1/quiz-runs', ({ body, principal }) => runs.open(asStaff(principal), body.quizId));

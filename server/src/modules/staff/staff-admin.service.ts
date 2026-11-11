@@ -40,7 +40,7 @@ export class StaffAdminService {
     const passwordHash = await hashSecret(t.password);
     const row = unique(
       () => this.staff.insertTeacher({ username: t.username, displayName: t.displayName, passwordHash, classIds: t.classIds, subjects: t.subjects, now: this.now() }),
-      `Username "" is already taken.`,
+      `Username "${t.username}" is already taken.`,
     );
     this.audit.record(by(actor), 'staff.add', row.id, { classIds: t.classIds, subjects: t.subjects });
     return this.member(row);

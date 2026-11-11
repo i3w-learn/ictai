@@ -51,6 +51,13 @@ describe('quizzes', () => {
     expect((await inject('PUT', `/api/v1/quizzes/${quiz.id}`, teacher, body)).statusCode).toBe(409);
     expect((await inject('DELETE', `/api/v1/quizzes/${quiz.id}`, teacher)).statusCode).toBe(409);
   });
+
+  it('writes a deleted quiz into the activity log, with its title', async () => {
+    const { inject, teacher, quiz, login, auth } = await withQuiz();
+    expect((await inject('DELETE', `/api/v1/quizzes/${quiz.id}`, teacher)).statusCode).toBe(204);
+    const log = (await inject('GET', '/api/v1/audit', auth(await login('admin', 'admin-pass')))).json();
+    expect(log.find((e: { action: string }) => e.action === 'quiz.delete')).toMatchObject({ targetName: 'Maths warm-up', actorKind: 'staff' });
+  });
 });
 
 describe('Lab Mode', () => {
@@ -162,6 +169,110 @@ describe('Lab Mode', () => {
     const { inject, db, quiz, teacher } = await withQuiz();
     db.prepare(`UPDATE users SET can_host_lessons = 0 WHERE username = 'teacher'`).run();
     expect((await inject('POST', '/api/v1/quiz-runs', teacher, { quizId: quiz.id })).statusCode).toBe(403);
+  });
+});
+
+// The clock for each question is kept by the server, so reloading the page cannot win time back.
+describe('Lab Mode timer', () => {
+  // Asha has joined and the teacher has started. Each question allows 60 seconds.
+  async function started() {
+    const t = await withQuiz();
+    const run = await t.open();
+    const me = await t.studentOn(t.asha.id, '1111');
+    await t.inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode });
+    await t.inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, t.teacher);
+    const play = async () => (await t.inject('GET', `/api/v1/quiz-runs/${run.runId}/play`, me)).json();
+    const answer = (questionIndex: number, choice: number) =>
+      t.inject('POST', `/api/v1/quiz-runs/${run.runId}/answers`, me, { questionIndex, choice });
+    return { ...t, run, me, play, answer };
+  }
+
+  it('tells the student which question they are on and how long is left', async () => {
+    const { play } = await started();
+    expect((await play()).current).toEqual({ index: 0, remainingMs: 60_000 });
+  });
+
+  it('has no clock before the start or after the end', async () => {
+    const { inject, teacher, open, asha, studentOn } = await withQuiz();
+    const run = await open();
+    const me = await studentOn(asha.id, '1111');
+    expect((await inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode })).json().current).toBeNull();
+    await inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, teacher);
+    await inject('POST', `/api/v1/quiz-runs/${run.runId}/end`, teacher);
+    expect((await inject('GET', `/api/v1/quiz-runs/${run.runId}/play`, me)).json().current).toBeNull();
+  });
+
+  it('does not give the time back when the page is reloaded', async () => {
+    const { play, clock } = await started();
+    clock.t += 40_000;
+    expect((await play()).current).toEqual({ index: 0, remainingMs: 20_000 });
+    expect((await play()).current).toEqual({ index: 0, remainingMs: 20_000 });
+  });
+
+  it('marks a question as out of time and moves to the next one', async () => {
+    const { play, clock } = await started();
+    clock.t += 61_000;
+    const state = await play();
+    expect(state.myAnswers).toEqual([-1, null]);
+    expect(state.current).toEqual({ index: 1, remainingMs: 59_000 });
+  });
+
+  it('refuses an answer that arrives after the time is up, and gives no marks for it', async () => {
+    const { answer, clock, inject, run, me } = await started();
+    clock.t += 61_000;
+    const late = await answer(0, 1);
+    expect(late.statusCode).toBe(409);
+    expect(late.json().code).toBe('TIME_UP');
+    const done = (await inject('POST', `/api/v1/quiz-runs/${run.runId}/finish`, me)).json();
+    expect(done).toMatchObject({ score: 0, myAnswers: [-1, null] });
+  });
+
+  it('runs out every question for a student who walks away', async () => {
+    const { play, clock } = await started();
+    clock.t += 10 * 60_000;
+    const state = await play();
+    expect(state.myAnswers).toEqual([-1, -1]);
+    expect(state.current).toBeNull();
+  });
+
+  it('starts the next question clock when the student answers', async () => {
+    const { play, answer, clock } = await started();
+    clock.t += 30_000;
+    expect((await answer(0, 1)).json()).toEqual({ accepted: true });
+    expect((await play()).current).toEqual({ index: 1, remainingMs: 60_000 });
+  });
+
+  it('refuses an answer to a question the student has not reached yet', async () => {
+    const { play, answer } = await started();
+    const ahead = await answer(1, 1);
+    expect(ahead.statusCode).toBe(409);
+    expect(ahead.json().code).toBe('NOT_YOUR_QUESTION');
+    expect((await play()).myAnswers).toEqual([null, null]);
+  });
+
+  it('starts a late joiner clock from when they joined, not from when the quiz started', async () => {
+    const { inject, teacher, open, asha, studentOn, clock } = await withQuiz();
+    const run = await open();
+    await inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, teacher);
+    clock.t += 5 * 60_000;
+    const state = (await inject('POST', '/api/v1/quiz-runs/join', await studentOn(asha.id, '1111'), { code: run.joinCode })).json();
+    expect(state.current).toEqual({ index: 0, remainingMs: 60_000 });
+  });
+
+  it('shows the teacher real answers only: out-of-time questions are not counted as answered', async () => {
+    const { answer, clock, inject, run, teacher } = await started();
+    clock.t += 61_000;
+    await answer(1, 1); // question 2, right: 1 mark
+    const live = (await inject('GET', `/api/v1/quiz-runs/${run.runId}`, teacher)).json();
+    expect(live.participants[0]).toMatchObject({ answered: 1, correct: 1, score: 1 });
+  });
+
+  it('shows the teacher a student who ran out of time even if that student never came back', async () => {
+    const { clock, inject, run, teacher, me } = await started();
+    clock.t += 10 * 60_000;
+    await inject('GET', `/api/v1/quiz-runs/${run.runId}`, teacher);
+    const mine = (await inject('POST', `/api/v1/quiz-runs/${run.runId}/finish`, me)).json();
+    expect(mine.myAnswers).toEqual([-1, -1]);
   });
 });
 
