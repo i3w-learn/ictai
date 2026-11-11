@@ -1,5 +1,5 @@
 import { AuditLog } from './core/audit.js';
-import type { Clock } from './core/clock.js';
+import { DAY, type Clock } from './core/clock.js';
 import type { Db } from './infra/db/index.js';
 import { FailureLimiter } from './modules/auth/limiter.js';
 import { PrincipalResolver } from './modules/auth/principal.resolver.js';
@@ -62,6 +62,7 @@ export function createContainer(opts: {
   };
 
   const audit = new AuditLog(db, now);
+  audit.forgetAiText(now() - 90 * DAY);
   const relay = new Relay(now, (err) => console.error('[relay]', err));
   const identity = new SchoolIdentity(db, opts.version);
   identity.ensure(now());
@@ -86,7 +87,7 @@ export function createContainer(opts: {
     staffAdmin: new StaffAdminService(now, repos.staff, repos.sessions, repos.classes, audit),
     enrolment: new DeviceEnrolmentService(now, repos.enrolWindows, repos.devices, identity, new FailureLimiter(now), audit),
     studentAdmin: new StudentAdminService(now, repos.classes, repos.students, repos.sessions, audit),
-    quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes),
+    quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes, audit),
     runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, new FailureLimiter(now), audit),
     results: new ResultsService(repos.results, repos.classes),
     notes: new NoteService(now, repos.notes),

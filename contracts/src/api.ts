@@ -3,7 +3,7 @@ import { AuditEntry, AuditQuery, Health } from './common.js';
 import { Principal, SessionResult, StaffLogin, StudentFirstLogin, StudentPinLogin, StudentQrLogin } from './auth.js';
 import { Device, DeviceEnrol, DeviceEnrolResult, EnrolWindow, OpenEnrolWindow } from './devices.js';
 import {
-  ClassCode, ClassQuery, CreatedStudent, PromoteClass, PromoteResult, SignInCard, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
+  ClassCode, ClassQuery, CreatedStudent, ImportResult, ImportStudents, PromoteClass, PromoteResult, SignInCard, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
   SchoolClass, Section, SetPin, Student, StudentEnrolmentCode, UpdateStudent,
 } from './students.js';
 import {
@@ -69,6 +69,7 @@ export const API = {
   'POST /api/v1/classes/:id/promote': { summary: 'Move every student to another class', access: staff('students.manage'), params: IdParams, body: PromoteClass, status: 200, response: PromoteResult },
   'POST /api/v1/classes/:id/enrolment-codes': { summary: 'First sign-in codes for every student in a class', access: staff('students.manage'), params: IdParams, status: 201, response: z.array(ClassCode) },
   'POST /api/v1/classes/:id/cards': { summary: 'Printable sign-in cards (new QR + first sign-in code) for a class', access: staff('students.manage'), params: IdParams, status: 201, response: z.array(SignInCard) },
+  'POST /api/v1/classes/:id/students/import': { summary: 'Add many students from a spreadsheet file', access: staff('students.manage'), params: IdParams, body: ImportStudents, status: 200, response: ImportResult },
   'POST /api/v1/sections': { summary: 'Add a section', access: staff('setup.master'), body: NewSection, status: 201, response: Section },
   'GET /api/v1/sections': { summary: 'Sections in a class', access: staff(), query: ClassQuery, status: 200, response: z.array(Section) },
   'GET /api/v1/students': { summary: 'Students in a class', access: staff('students.manage'), query: ClassQuery, status: 200, response: z.array(Student) },

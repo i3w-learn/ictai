@@ -2811,6 +2811,139 @@
         }
       }
     },
+    "/api/v1/classes/{id}/students/import": {
+      "post": {
+        "summary": "Add many students from a spreadsheet file",
+        "x-access": {
+          "kind": "staff",
+          "permission": "students.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rows": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "rollNo": {
+                          "default": null,
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "section": {
+                          "default": null,
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "rows"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "added": {
+                      "type": "number"
+                    },
+                    "skipped": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "row": {
+                            "type": "number"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "row",
+                          "name",
+                          "reason"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "added",
+                    "skipped"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sections": {
       "post": {
         "summary": "Add a section",
@@ -4959,6 +5092,22 @@
                         "type": "number"
                       }
                     },
+                    "current": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "index": {
+                          "type": "number"
+                        },
+                        "remainingMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "index",
+                        "remainingMs"
+                      ]
+                    },
                     "finished": {
                       "type": "boolean"
                     },
@@ -4978,6 +5127,7 @@
                     "secondsPerQuestion",
                     "questions",
                     "myAnswers",
+                    "current",
                     "finished",
                     "score",
                     "totalMarks"
@@ -5091,6 +5241,22 @@
                         "type": "number"
                       }
                     },
+                    "current": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "index": {
+                          "type": "number"
+                        },
+                        "remainingMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "index",
+                        "remainingMs"
+                      ]
+                    },
                     "finished": {
                       "type": "boolean"
                     },
@@ -5110,6 +5276,7 @@
                     "secondsPerQuestion",
                     "questions",
                     "myAnswers",
+                    "current",
                     "finished",
                     "score",
                     "totalMarks"
@@ -5314,6 +5481,22 @@
                         "type": "number"
                       }
                     },
+                    "current": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "index": {
+                          "type": "number"
+                        },
+                        "remainingMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "index",
+                        "remainingMs"
+                      ]
+                    },
                     "finished": {
                       "type": "boolean"
                     },
@@ -5333,6 +5516,7 @@
                     "secondsPerQuestion",
                     "questions",
                     "myAnswers",
+                    "current",
                     "finished",
                     "score",
                     "totalMarks"

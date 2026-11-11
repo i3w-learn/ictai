@@ -24,6 +24,12 @@ describe('staff management (Super Admin)', () => {
     expect(await login('priya', 'priya-pass')).toEqual(expect.any(String));
   });
 
+  it('says which username is taken', async () => {
+    const { add } = await withAdmin();
+    await add();
+    expect((await add()).json().message).toBe('Username "priya" is already taken.');
+  });
+
   it('rejects a duplicate username in any case', async () => {
     const { add } = await withAdmin();
     await add();

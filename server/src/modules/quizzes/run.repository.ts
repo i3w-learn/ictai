@@ -7,6 +7,17 @@ export interface RunRow {
   class_id: string;
   join_code: string;
   status: RunStatus;
+  started_at: number | null;
+}
+
+const RUN_COLUMNS = 'id, quiz_id, class_id, join_code, status, started_at';
+
+// `choice` is TIMED_OUT for a question whose time ran out; `answered_at` is then its deadline.
+export interface AnswerRow {
+  question_index: number;
+  choice: number;
+  points: number;
+  answered_at: number;
 }
 
 export class RunRepository {
@@ -19,13 +30,13 @@ export class RunRepository {
   }
 
   get(id: string): RunRow | undefined {
-    return this.db.prepare('SELECT id, quiz_id, class_id, join_code, status FROM quiz_runs WHERE id = ?').get(id) as RunRow | undefined;
+    return this.db.prepare(`SELECT ${RUN_COLUMNS} FROM quiz_runs WHERE id = ?`).get(id) as RunRow | undefined;
   }
 
   // Codes are unique only among runs that are still open.
   findOpenByCode(code: string): RunRow | undefined {
     return this.db
-      .prepare(`SELECT id, quiz_id, class_id, join_code, status FROM quiz_runs WHERE join_code = ? AND status != 'ended'`)
+      .prepare(`SELECT ${RUN_COLUMNS} FROM quiz_runs WHERE join_code = ? AND status != 'ended'`)
       .get(code) as RunRow | undefined;
   }
 
@@ -58,10 +69,18 @@ export class RunRepository {
       .run(runId, studentId, deviceId, now);
   }
 
-  participant(runId: string, studentId: string): { finished_at: number | null } | undefined {
+  participant(runId: string, studentId: string): { joined_at: number; finished_at: number | null } | undefined {
     return this.db
-      .prepare('SELECT finished_at FROM quiz_participants WHERE run_id = ? AND student_id = ?')
-      .get(runId, studentId) as { finished_at: number | null } | undefined;
+      .prepare('SELECT joined_at, finished_at FROM quiz_participants WHERE run_id = ? AND student_id = ?')
+      .get(runId, studentId) as { joined_at: number; finished_at: number | null } | undefined;
+  }
+
+  // Students still working on the run.
+  unfinishedIds(runId: string): string[] {
+    return this.db
+      .prepare('SELECT student_id FROM quiz_participants WHERE run_id = ? AND finished_at IS NULL')
+      .pluck()
+      .all(runId) as string[];
   }
 
   finish(runId: string, studentId: string, now: number) {
@@ -70,12 +89,12 @@ export class RunRepository {
       .run(now, runId, studentId);
   }
 
-  // Highest score first, then by name.
+  // Highest score first, then by name. A question that ran out of time is not an answer.
   participants(runId: string): RunParticipant[] {
     const rows = this.db
       .prepare(
         `SELECT p.student_id AS studentId, s.name, s.roll_no AS rollNo, p.finished_at AS finishedAt,
-           COUNT(a.question_index) AS answered,
+           COALESCE(SUM(a.choice >= 0), 0) AS answered,
            COALESCE(SUM(a.points > 0), 0) AS correct,
            COALESCE(SUM(a.points), 0) AS score
          FROM quiz_participants p
@@ -100,9 +119,9 @@ export class RunRepository {
     );
   }
 
-  answers(runId: string, studentId: string): { question_index: number; choice: number; points: number }[] {
+  answers(runId: string, studentId: string): AnswerRow[] {
     return this.db
-      .prepare('SELECT question_index, choice, points FROM quiz_answers WHERE run_id = ? AND student_id = ?')
-      .all(runId, studentId) as { question_index: number; choice: number; points: number }[];
+      .prepare('SELECT question_index, choice, points, answered_at FROM quiz_answers WHERE run_id = ? AND student_id = ?')
+      .all(runId, studentId) as AnswerRow[];
   }
 }

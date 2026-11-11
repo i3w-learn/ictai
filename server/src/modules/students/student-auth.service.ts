@@ -39,16 +39,25 @@ export class StudentAuthService {
 
     const st = this.students.findActive(studentId);
     if (!st?.pin_hash || !(await checkSecret(pin, st.pin_hash))) {
-      this.limiter.fail(key);
+      this.failed(device, key, 'pin', st?.id ?? null);
       throw wrongPin();
     }
     this.limiter.succeed(key);
     return this.start(device, st, 'pin');
   }
 
+  // Same lockout as wrong PINs, counted per lab PC: five unknown cards and it waits five minutes.
   withQr(device: DevicePrincipal, qrToken: string): SessionResult {
+    const key = `qr:${device.deviceId}`;
+    const wait = this.limiter.blockedFor(key);
+    if (wait > 0) throw lockedOut(wait);
+
     const st = this.students.findByQrHash(hashToken(qrToken));
-    if (!st) throw new AppError(401, 'INVALID_CREDENTIALS', 'This card is not recognised.');
+    if (!st) {
+      this.failed(device, key, 'qr');
+      throw new AppError(401, 'INVALID_CREDENTIALS', 'This card is not recognised.');
+    }
+    this.limiter.succeed(key);
     return this.start(device, st, 'qr');
   }
 
@@ -60,13 +69,19 @@ export class StudentAuthService {
     const now = this.now();
     const st = this.students.findByEnrolCodeHash(hashToken(code), now);
     if (!st) {
-      this.limiter.fail(key);
+      this.failed(device, key, 'enrolment-code');
       throw new AppError(401, 'INVALID_CREDENTIALS', 'That code is not right or has expired.');
     }
     this.limiter.succeed(key);
     this.students.setPin(st.id, await hashSecret(pin), now);
     this.students.setEnrolCode(st.id, null, null, now); // one-time
     return this.start(device, st, 'enrolment-code');
+  }
+
+  // Spec 4.5: wrong tries are logged against the lab PC they came from, never with what was typed.
+  private failed(device: DevicePrincipal, key: string, method: string, studentId: string | null = null) {
+    this.limiter.fail(key);
+    this.audit.record({ kind: 'device', id: device.deviceId }, 'student.signin.failed', studentId, { method });
   }
 
   private start(device: DevicePrincipal, st: StudentAuthRow, method: string): SessionResult {

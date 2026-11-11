@@ -83,7 +83,7 @@ export function Centered({ narrow, children }: { narrow?: boolean; children: Rea
 }
 
 export function Note({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-secondary-foreground">{children}</p>;
+  return <div className="rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-secondary-foreground">{children}</div>;
 }
 
 export function ErrorNote({ message }: { message: string | null }) {
