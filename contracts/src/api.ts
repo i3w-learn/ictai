@@ -12,6 +12,7 @@ import {
 } from './quizzes.js';
 import { AiJob, AiQuizRequest, AiStatus } from './ai.js';
 import { ResultsOverview, ResultsQuery, StudentResults, TeacherActivity } from './results.js';
+import { Note, NoteInput } from './notes.js';
 import { NewTeacher, SetPassword, StaffMember, UpdateTeacher } from './staff.js';
 import type { Permission } from './permissions.js';
 
@@ -97,6 +98,12 @@ export const API = {
   'POST /api/v1/ai/quiz': { summary: 'Ask the AI for a draft quiz; returns the queued job', access: staff('ai.teacher'), body: AiQuizRequest, status: 202, response: AiJob },
   'GET /api/v1/ai/jobs': { summary: 'Your last 10 AI requests, newest first', access: staff('ai.teacher'), status: 200, response: z.array(AiJob) },
   'GET /api/v1/ai/jobs/:id': { summary: 'One of your AI requests, with the draft when done', access: staff('ai.teacher'), params: IdParams, status: 200, response: AiJob },
+
+  // My notes: a student's own notebook. Staff have no route to it.
+  'GET /api/v1/notes': { summary: 'Your notes, most recently changed first', access: student, status: 200, response: z.array(Note) },
+  'POST /api/v1/notes': { summary: 'Write a new note', access: student, body: NoteInput, status: 201, response: Note },
+  'PUT /api/v1/notes/:id': { summary: 'Change one of your notes', access: student, params: IdParams, body: NoteInput, status: 200, response: Note },
+  'DELETE /api/v1/notes/:id': { summary: 'Delete one of your notes for good', access: student, params: IdParams, status: 204 },
 
   // Results (spec 4.4)
   'GET /api/v1/results/overview': { summary: 'How each student is doing, optionally for one class', access: staff('results.view'), query: ResultsQuery, status: 200, response: ResultsOverview },

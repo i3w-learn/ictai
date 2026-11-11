@@ -223,4 +223,23 @@ export const migrations: Migration[] = [
       );
     `,
   },
+  {
+    // 7 is taken by the Ask AI work (ai_jobs_ask) on its own branch. Each pending number runs
+    // on its own, so the two can merge in either order.
+    version: 8,
+    name: 'student_notes',
+    sql: `
+      -- "My notes": a student's own notebook. Deleting a note removes the row for good.
+      CREATE TABLE student_notes (
+        id         TEXT PRIMARY KEY,
+        student_id TEXT NOT NULL REFERENCES students(id),
+        title      TEXT NOT NULL,
+        body       TEXT NOT NULL,
+        subject    TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE INDEX student_notes_owner ON student_notes(student_id, updated_at);
+    `,
+  },
 ];
