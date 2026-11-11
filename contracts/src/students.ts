@@ -64,6 +64,21 @@ export type ClassCode = z.infer<typeof ClassCode>;
 export const SignInCard = ClassCode.extend({ qrToken: z.string() });
 export type SignInCard = z.infer<typeof SignInCard>;
 
+// A class list read from a spreadsheet file (spec 4.1). Rows are checked one by one on the
+// server, so one bad row is reported and the rest are still added.
+export const MAX_IMPORT_ROWS = 500;
+const Cell = z.string().max(200).nullable().default(null);
+export const ImportStudents = z.object({
+  rows: z.array(z.object({ name: z.string().max(200), rollNo: Cell, section: Cell })).min(1).max(MAX_IMPORT_ROWS),
+});
+export type ImportStudents = z.infer<typeof ImportStudents>;
+export const ImportResult = z.object({
+  added: z.number(),
+  // `row` counts from 1, matching the order the rows were sent in.
+  skipped: z.array(z.object({ row: z.number(), name: z.string(), reason: z.string() })),
+});
+export type ImportResult = z.infer<typeof ImportResult>;
+
 // Moves every student of a class into another class (e.g. 7 → 8 at year end).
 export const PromoteClass = z.object({ toClassId: Id });
 export const PromoteResult = z.object({ moved: z.number() });

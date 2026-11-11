@@ -79,7 +79,14 @@ export const TeacherRunState = z.object({
 });
 export type TeacherRunState = z.infer<typeof TeacherRunState>;
 
+// Stored and shown in place of a choice when a question's time ran out with no answer.
+export const TIMED_OUT = -1;
+
 // What a student sees. Never includes the correct answers.
+// The server keeps each question's clock: `current` says which question the student is on and
+// how long is left, so reloading the page cannot win time back. It is null when there is nothing
+// to answer (lobby, ended, handed in, or every question done). `myAnswers` holds the chosen
+// option, TIMED_OUT, or null for a question not reached yet.
 export const StudentRunState = z.object({
   kind: z.literal('student'),
   runId: z.string(),
@@ -88,6 +95,7 @@ export const StudentRunState = z.object({
   secondsPerQuestion: z.number(),
   questions: z.array(z.object({ text: z.string(), options: z.array(z.string()) })),
   myAnswers: z.array(z.number().nullable()),
+  current: z.object({ index: z.number(), remainingMs: z.number() }).nullable(),
   finished: z.boolean(),
   score: z.number().nullable(),
   totalMarks: z.number(),

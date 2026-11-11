@@ -4,6 +4,7 @@ import { EnrolDevice } from '../features/setup/EnrolDevice';
 import { FindServer } from '../features/setup/FindServer';
 import { RolePicker } from '../features/setup/RolePicker';
 import { Home } from '../features/home/Home';
+import { RelayChip } from '../features/quizzes/RelayChip';
 import { StaffSignIn } from '../features/signin/StaffSignIn';
 import { StudentSignIn } from '../features/signin/StudentSignIn';
 import { Button, cn } from '../ui/ui';
@@ -77,6 +78,7 @@ export function App() {
 
         <div className="flex-1" />
 
+        {state.session && <RelayChip />}
         {server && (
           <span className="hidden text-[13px] text-muted-foreground sm:inline">
             Server: <span className="text-foreground">{server.name}</span>
