@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { StudentRunState } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Centered, PageTitle } from '../../ui/ui';
+import { Button, Centered, PageTitle, Panel } from '../../ui/ui';
 import { AuditPanel } from './AuditPanel';
 import { DevicesPanel } from './DevicesPanel';
 import { StaffPanel } from './StaffPanel';
@@ -12,6 +12,7 @@ import { PlayQuiz } from '../quizzes/PlayQuiz';
 import { QuizEditor } from '../quizzes/QuizEditor';
 import { QuizzesPanel } from '../quizzes/QuizzesPanel';
 import { AiQuizMaker, type AiDraft } from '../quizzes/AiQuizMaker';
+import { MyNotes } from '../notes/MyNotes';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { StudentResultsPage } from '../results/StudentResultsPage';
 import { TeachersPanel } from '../results/TeachersPanel';
@@ -34,13 +35,18 @@ export function Home() {
   const p = state.session!.principal;
   const [view, setView] = useState<View>({ kind: 'dash' });
   const [playing, setPlaying] = useState<StudentRunState | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   if (p.kind === 'student') {
     if (playing) return <PlayQuiz initial={playing} onExit={() => setPlaying(null)} />;
+    if (notesOpen) return <MyNotes onBack={() => setNotesOpen(false)} />;
     return (
       <Centered>
         <PageTitle eyebrow={greeting()} sub="When your teacher starts a lesson, it will open here.">Hello, {p.name}</PageTitle>
         <JoinQuiz onJoined={setPlaying} />
+        <Panel title="My notes" actions={<Button variant="quiet" onClick={() => setNotesOpen(true)}>Open my notes</Button>}>
+          <p className="text-sm text-muted-foreground">Write down what you learn. Only you can read your notes.</p>
+        </Panel>
       </Centered>
     );
   }

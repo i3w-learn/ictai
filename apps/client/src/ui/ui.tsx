@@ -93,12 +93,13 @@ export function ErrorNote({ message }: { message: string | null }) {
 // A button that asks "Sure?" inline before acting. No browser confirm(): it blocks the webview.
 export function ConfirmButton({ children, question, onConfirm }: { children: ReactNode; question: string; onConfirm: () => void }) {
   const [asking, setAsking] = useState(false);
-  if (!asking) return <Button variant="quiet" onClick={() => setAsking(true)}>{children}</Button>;
+  // type="button" throughout: inside a form these must never count as the form's Save.
+  if (!asking) return <Button type="button" variant="quiet" onClick={() => setAsking(true)}>{children}</Button>;
   return (
     <span className="flex items-center gap-2 text-sm">
       {question}
-      <Button className="bg-destructive text-white shadow-none hover:bg-destructive/90" onClick={() => { setAsking(false); onConfirm(); }}>Yes</Button>
-      <Button variant="quiet" onClick={() => setAsking(false)}>No</Button>
+      <Button type="button" className="bg-destructive text-white shadow-none hover:bg-destructive/90" onClick={() => { setAsking(false); onConfirm(); }}>Yes</Button>
+      <Button type="button" variant="quiet" onClick={() => setAsking(false)}>No</Button>
     </span>
   );
 }
