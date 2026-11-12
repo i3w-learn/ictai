@@ -27,6 +27,7 @@ const ACTION: Record<string, string> = {
   'quiz.start': 'started the quiz',
   'quiz.end': 'ended the quiz',
   'ai.quiz.request': 'asked the AI for a quiz',
+  'ai.ask.request': 'asked the AI a question',
 };
 
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
