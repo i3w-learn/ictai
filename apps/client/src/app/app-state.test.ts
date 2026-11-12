@@ -16,6 +16,16 @@ describe('app state', () => {
     expect(phaseOf(s)).toBe('sign-in');
   });
 
+  it('a PC the server no longer knows signs the student out and goes back to joining', () => {
+    let s = reducer(initialState, { type: 'loaded', settings: { role: 'student', server, device } });
+    s = reducer(s, { type: 'session', session: { token: 'x' } as never });
+    expect(phaseOf(s)).toBe('home');
+    s = reducer(s, { type: 'left-lab' });
+    expect(s.session).toBeNull();
+    expect(s.settings).toEqual({ role: 'student', server, device: null });
+    expect(phaseOf(s)).toBe('enrol');
+  });
+
   it('a console skips enrolment', () => {
     let s = reducer(initialState, { type: 'loaded', settings: { role: 'console', server, device: null } });
     expect(phaseOf(s)).toBe('sign-in');

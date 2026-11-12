@@ -7,7 +7,7 @@ import { toImportRows } from './import';
 import { StudentRow } from './StudentRow';
 
 // Classes, sections and students, managed by teachers.
-export function StudentsPanel() {
+export function StudentsPanel({ onClassAdded }: { onClassAdded: () => void }) {
   const { call, state } = useApp();
   // Only the Super Admin (or a teacher with no classes set) adds classes.
   const p = state.session?.principal;
@@ -49,6 +49,7 @@ export function StudentsPanel() {
     setNewClass('');
     await loadClasses.run();
     setClassId(c.id);
+    onClassAdded();
   });
 
   const addSection = useAction(async () => {

@@ -29,8 +29,8 @@ async function withResults(subject: string | null = 'Maths') {
   const run = (await inject('POST', '/api/v1/quiz-runs', teacher, { quizId: quiz.id })).json();
   const a = await studentOn(asha.id, '1111');
   const r = await studentOn(rohan.id, '2222');
-  await inject('POST', '/api/v1/quiz-runs/join', a, { code: run.joinCode });
-  await inject('POST', '/api/v1/quiz-runs/join', r, { code: run.joinCode });
+  await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, a);
+  await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, r);
   await inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, teacher);
   await inject('POST', `/api/v1/quiz-runs/${run.runId}/answers`, a, { questionIndex: 0, choice: 1 });
   await inject('POST', `/api/v1/quiz-runs/${run.runId}/answers`, a, { questionIndex: 1, choice: 1 });

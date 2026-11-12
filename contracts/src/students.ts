@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Id } from './common.js';
-import { Pin } from './auth.js';
+import { Pin, rollKey } from './auth.js';
 
 export const NewClass = z.object({ name: z.string().trim().min(1).max(32) });
 export const SchoolClass = z.object({ id: z.string(), name: z.string() });
@@ -47,8 +47,13 @@ export const SetPin = z.object({ pin: Pin });
 export const StudentEnrolmentCode = z.object({ code: z.string().regex(/^\d{6}$/), expiresAt: z.number() });
 
 // What the sign-in screen on a lab PC may see: names only.
-export const RosterEntry = z.object({ id: z.string(), name: z.string(), rollNo: z.string().nullable() });
+export const RosterEntry = z.object({ id: z.string(), name: z.string(), rollNo: z.string().nullable(), sectionId: z.string().nullable() });
 export type RosterEntry = z.infer<typeof RosterEntry>;
+
+// Is this the student who typed that roll number? A student the teacher has not put in a
+// section yet is matched in every section of the class.
+export const sameRoll = (s: RosterEntry, sectionId: string | null, rollNo: string) =>
+  s.rollNo !== null && rollKey(s.rollNo) === rollKey(rollNo) && (s.sectionId === sectionId || s.sectionId === null);
 
 // A class's first sign-in codes, made in one go (spec 4.1).
 export const ClassCode = z.object({

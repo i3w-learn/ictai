@@ -15,6 +15,7 @@ export type Action =
   | { type: 'server'; server: ServerTarget }
   | { type: 'forget-server' }
   | { type: 'device'; device: NonNullable<DeviceSettings['device']> }
+  | { type: 'left-lab' }
   | { type: 'session'; session: SessionResult | null }
   | { type: 'reset' };
 
@@ -33,6 +34,10 @@ export function reducer(state: AppState, a: Action): AppState {
       return { ...state, session: null, settings: { ...state.settings, server: null, device: null } };
     case 'device':
       return { ...state, settings: { ...state.settings, device: a.device } };
+    case 'left-lab':
+      // The server no longer knows this PC (staff removed it, or it sat unused for months). Keep the role
+      // and the server, drop the dead lab pass and whoever was signed in: the PC then joins again by itself.
+      return { ...state, session: null, settings: { ...state.settings, device: null } };
     case 'session':
       return { ...state, session: a.session };
     case 'reset':

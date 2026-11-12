@@ -32,7 +32,7 @@ async function play(t: Awaited<ReturnType<typeof withRavi>>, quizId: string, cho
   const device = t.auth(await t.enrolDevice('lab_pc'));
   const a = t.auth((await t.inject('POST', '/api/v1/auth/student/pin', device, { studentId: t.asha.id, pin: '1111' })).json().token);
   const run = (await t.inject('POST', '/api/v1/quiz-runs', t.admin, { quizId })).json();
-  await t.inject('POST', '/api/v1/quiz-runs/join', a, { code: run.joinCode });
+  await t.inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, a);
   await t.inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, t.admin);
   await t.inject('POST', `/api/v1/quiz-runs/${run.runId}/answers`, a, { questionIndex: 0, choice });
   await t.inject('POST', `/api/v1/quiz-runs/${run.runId}/end`, t.admin);
