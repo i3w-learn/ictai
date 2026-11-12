@@ -113,8 +113,11 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
       try {
         return await api.call(key, input, token);
       } catch (e) {
-        // An expired session sends the person back to sign-in.
-        if (e instanceof ApiCallError && e.status === 401 && credential === 'session') dispatch({ type: 'session', session: null });
+        // An expired session sends the person back to sign-in. Only if it is still the session in use: a late
+        // refusal for the person who just signed out must not sign out the next person at the same PC.
+        if (e instanceof ApiCallError && e.status === 401 && credential === 'session' && stateRef.current.session?.token === token) {
+          dispatch({ type: 'session', session: null });
+        }
         // A refusal may mean our picture of this person is stale; fetch a fresh one.
         if (e instanceof ApiCallError && e.status === 403 && credential === 'session') void refreshMe();
         throw e;
