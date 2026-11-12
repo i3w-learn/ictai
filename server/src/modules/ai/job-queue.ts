@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import type { AiJob, AiQuizRequest, AiQuizResult } from '@ict/contracts';
+import type { AiJob, AiJobKind, AiJobOf, AiRequestOf, AiResultOf } from '@ict/contracts';
 import { DAY, type Clock } from '../../core/clock.js';
 import { AppError } from '../../core/errors.js';
 import type { JobRepository } from './job.repository.js';
 
-export type JobRunner = (request: AiQuizRequest, signal: AbortSignal) => Promise<AiQuizResult>;
+export type JobRunner<K extends AiJobKind> = (request: AiRequestOf<K>, signal: AbortSignal) => Promise<AiResultOf<K>>;
+// One runner per kind of job. A new kind means a new runner here; the queue itself does not change.
+export type JobRunners = { [K in AiJobKind]: JobRunner<K> };
 
-const TIMED_OUT = 'Making the quiz took too long. Try fewer questions.';
+const TIMED_OUT = 'The AI took too long. Try a smaller request.';
 const CRASHED = 'The AI stopped unexpectedly. Try again.';
 const RESTARTED = 'The server restarted. Try again.';
 
@@ -15,11 +17,13 @@ const RESTARTED = 'The server restarted. Try again.';
 export class JobQueue {
   private loop: Promise<void> | null = null;
   private stopping = false;
+  // Callers holding an HTTP request open for a job's result; woken when that job finishes.
+  private waiters = new Map<string, (() => void)[]>();
 
   constructor(
     private readonly now: Clock,
     private readonly repo: JobRepository,
-    private readonly run: JobRunner,
+    private readonly runners: JobRunners,
     private readonly timeoutMs = 15 * 60_000,
     // Loads the model; runs before the time limit starts, since a 33 GB model can take minutes to load.
     private readonly prepare: () => Promise<void> = async () => {},
@@ -31,13 +35,13 @@ export class JobQueue {
     this.kick();
   }
 
-  enqueue(userId: string, request: AiQuizRequest): AiJob {
+  enqueue<K extends AiJobKind>(userId: string, kind: K, request: AiRequestOf<K>): AiJobOf<K> {
     if (this.repo.hasOpen(userId)) {
-      throw new AppError(409, 'AI_BUSY', 'You already have a quiz being made. Wait for it to finish.');
+      throw new AppError(409, 'AI_BUSY', 'You already have an AI request in progress. Wait for it to finish.');
     }
     const id = randomUUID();
-    this.repo.insert(id, userId, request, this.now());
-    const job = this.repo.get(id)!;
+    this.repo.insert(id, userId, kind, request, this.now());
+    const job = this.repo.get(id) as AiJobOf<K>; // just inserted with this kind
     this.kick();
     return job;
   }
@@ -58,9 +62,29 @@ export class JobQueue {
     return this.repo.queuedCount();
   }
 
+  // Resolves with the job once it is done or failed, or as it stands when maxMs runs out.
+  waitFor(id: string, maxMs: number): Promise<AiJob> {
+    const job = this.repo.get(id);
+    if (!job || job.status === 'done' || job.status === 'failed') return Promise.resolve(job!);
+    return new Promise((resolve) => {
+      const finish = () => {
+        clearTimeout(timer);
+        // Drop the empty list too, or one entry per job would pile up for as long as the server runs.
+        const left = (this.waiters.get(id) ?? []).filter((w) => w !== finish);
+        if (left.length > 0) this.waiters.set(id, left);
+        else this.waiters.delete(id);
+        resolve(this.repo.get(id)!);
+      };
+      const timer = setTimeout(finish, maxMs);
+      this.waiters.set(id, [...(this.waiters.get(id) ?? []), finish]);
+    });
+  }
+
   // Shutdown: the running job ends as "restarted" and nothing new starts; queued jobs wait for the next boot.
+  // Callers still holding a request open get the job as it stands, so shutdown does not hang on them.
   stop() {
     this.stopping = true;
+    [...this.waiters.values()].flat().forEach((wake) => wake());
   }
 
   // Resolves once nothing is running (used by tests and shutdown).
@@ -81,15 +105,16 @@ export class JobQueue {
       this.repo.markRunning(job.id, this.now());
       try {
         await this.prepare();
-        this.repo.markDone(job.id, await this.withTimeout(job.request), this.now());
+        this.repo.markDone(job.id, await this.withTimeout(job), this.now());
       } catch (err) {
         this.repo.markFailed(job.id, this.reason(err), this.now());
       }
+      this.waiters.get(job.id)?.slice().forEach((wake) => wake());
     }
   }
 
   // The runner gets the signal; the race makes sure a runner that ignores it still stops.
-  private withTimeout(request: AiQuizRequest) {
+  private withTimeout(job: AiJob) {
     const ctl = new AbortController();
     let timer: NodeJS.Timeout | undefined;
     const timedOut = new Promise<never>((_, reject) => {
@@ -98,7 +123,13 @@ export class JobQueue {
         reject(new Error(TIMED_OUT));
       }, this.timeoutMs);
     });
-    return Promise.race([this.run(request, ctl.signal), timedOut]).finally(() => clearTimeout(timer));
+    return Promise.race([this.runFor(job, ctl.signal), timedOut]).finally(() => clearTimeout(timer));
+  }
+
+  // The job's kind picks its runner. TypeScript cannot pair a union's kind with its request on its own, hence the cast.
+  private runFor(job: AiJob, signal: AbortSignal) {
+    const run = this.runners[job.kind] as JobRunner<AiJobKind>;
+    return run(job.request, signal);
   }
 
   private reason(err: unknown) {

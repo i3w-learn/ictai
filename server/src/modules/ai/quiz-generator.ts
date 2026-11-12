@@ -2,7 +2,7 @@ import type { AiFlag, AiLanguage, AiQuizRequest, AiQuizResult, Question } from '
 import { z, ZodError } from 'zod';
 import { AppError, notFound } from '../../core/errors.js';
 import type { Llm } from './llm-client.js';
-import { ANSWER_SYSTEM, answerPrompt, WRITE_SYSTEM, writeQuizPrompt } from './prompts.js';
+import { ANSWER_SYSTEM, answerPrompt, THINKING_ROOM, WRITE_SYSTEM, writeQuizPrompt } from './prompts.js';
 
 type Raw = { text: string; options: string[]; correct: number };
 
@@ -48,9 +48,6 @@ export function checkQuestion(q: Raw, language: AiLanguage): string | null {
   }
   return null;
 }
-
-// Room for the model to think before it answers (thinking counts against max_tokens).
-const THINKING_ROOM = 4000;
 
 // Question i is shown with its options rotated, so the right answer moves before the model is asked again.
 const shiftOf = (i: number) => (i % 3) + 1;

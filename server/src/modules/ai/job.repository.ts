@@ -1,8 +1,9 @@
-import type { AiJob, AiQuizRequest, AiQuizResult } from '@ict/contracts';
+import type { AiJob, AiJobKind, AiRequestOf, AiResultOf } from '@ict/contracts';
 import type { Db } from '../../infra/db/index.js';
 
 interface JobRow {
   id: string;
+  kind: AiJobKind;
   requested_by: string;
   request_json: string;
   status: AiJob['status'];
@@ -19,25 +20,27 @@ const SELECT = `
     THEN (SELECT COUNT(*) FROM ai_jobs q WHERE q.status = 'queued' AND q.rowid <= j.rowid) END AS position
   FROM ai_jobs j`;
 
-const toJob = (r: JobRow): AiJob => ({
-  id: r.id,
-  kind: 'quiz',
-  status: r.status,
-  position: r.position,
-  request: JSON.parse(r.request_json) as AiQuizRequest,
-  result: r.result_json ? (JSON.parse(r.result_json) as AiQuizResult) : null,
-  error: r.error,
-  createdAt: r.created_at,
-  finishedAt: r.finished_at,
-});
+// kind decides the shape of request and result; both passed the contract before they were stored.
+const toJob = (r: JobRow) =>
+  ({
+    id: r.id,
+    kind: r.kind,
+    status: r.status,
+    position: r.position,
+    request: JSON.parse(r.request_json),
+    result: r.result_json ? JSON.parse(r.result_json) : null,
+    error: r.error,
+    createdAt: r.created_at,
+    finishedAt: r.finished_at,
+  }) as AiJob;
 
 export class JobRepository {
   constructor(private readonly db: Db) {}
 
-  insert(id: string, userId: string, request: AiQuizRequest, now: number) {
+  insert<K extends AiJobKind>(id: string, userId: string, kind: K, request: AiRequestOf<K>, now: number) {
     this.db
-      .prepare(`INSERT INTO ai_jobs (id, kind, requested_by, request_json, status, created_at) VALUES (?, 'quiz', ?, ?, 'queued', ?)`)
-      .run(id, userId, JSON.stringify(request), now);
+      .prepare(`INSERT INTO ai_jobs (id, kind, requested_by, request_json, status, created_at) VALUES (?, ?, ?, ?, 'queued', ?)`)
+      .run(id, kind, userId, JSON.stringify(request), now);
   }
 
   get(id: string): AiJob | null {
@@ -71,7 +74,7 @@ export class JobRepository {
     this.db.prepare(`UPDATE ai_jobs SET status = 'running', started_at = ? WHERE id = ?`).run(now, id);
   }
 
-  markDone(id: string, result: AiQuizResult, now: number) {
+  markDone(id: string, result: AiResultOf<AiJobKind>, now: number) {
     this.db.prepare(`UPDATE ai_jobs SET status = 'done', result_json = ?, finished_at = ? WHERE id = ?`).run(JSON.stringify(result), now, id);
   }
 

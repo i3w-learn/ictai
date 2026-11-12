@@ -25,7 +25,8 @@ import { NoteService } from './modules/notes/note.service.js';
 import { Relay } from './relay/relay.js';
 import { aiNotInstalled } from './core/errors.js';
 import { AiService, type AiRuntimeInfo } from './modules/ai/ai.service.js';
-import { JobQueue } from './modules/ai/job-queue.js';
+import { AnswerGenerator } from './modules/ai/answer-generator.js';
+import { JobQueue, type JobRunners } from './modules/ai/job-queue.js';
 import { JobRepository } from './modules/ai/job.repository.js';
 import type { Llm } from './modules/ai/llm-client.js';
 import { QuizGenerator } from './modules/ai/quiz-generator.js';
@@ -71,7 +72,12 @@ export function createContainer(opts: {
   const ai: { runtime: AiRuntimeInfo & { ensureReady?(): Promise<void> }; llm: Llm } = opts.ai ?? noAi;
   const generator = new QuizGenerator(ai.llm, (id) => repos.classes.name(id) ?? null);
   const load = ai.runtime.ensureReady?.bind(ai.runtime);
-  const aiQueue = new JobQueue(now, repos.aiJobs, (req, signal) => generator.generate(req, signal), undefined, load);
+  const answers = new AnswerGenerator(ai.llm);
+  const runners = {
+    quiz: (req, signal) => generator.generate(req, signal),
+    ask: (req, signal) => answers.answer(req, signal),
+  } satisfies JobRunners;
+  const aiQueue = new JobQueue(now, repos.aiJobs, runners, undefined, load);
 
   return {
     audit,

@@ -2,6 +2,9 @@ import type { AiLanguage } from '@ict/contracts';
 
 const LANGUAGE = { en: 'English', hi: 'Hindi (Devanagari script)' } as const;
 
+// Gemma thinks before it answers; the thinking counts against max tokens, so every request leaves room for it.
+export const THINKING_ROOM = 4000;
+
 export const WRITE_SYSTEM =
   'You write multiple-choice quiz questions for Indian school students. You are careful: every fact must be correct, ' +
   'and exactly one option must be right.';
@@ -21,6 +24,14 @@ export function writeQuizPrompt(p: { className: string; subject: string; topic: 
     '- "correct" is the position (0, 1, 2 or 3) of the right option.',
     ...(p.avoid.length ? ['Do not repeat these questions:', ...p.avoid.map((t) => `- ${t}`)] : []),
   ].join('\n');
+}
+
+export const ASK_SYSTEM =
+  'You are a helpful assistant for teachers in an Indian school. Answer correctly and clearly in plain text: ' +
+  'no markdown, no LaTeX, no special symbols. Keep it short unless the question needs detail.';
+
+export function askPrompt(p: { question: string; language: AiLanguage }) {
+  return [`Answer in ${LANGUAGE[p.language]}.`, '', p.question].join('\n');
 }
 
 export const ANSWER_SYSTEM = 'You are a careful teacher checking a quiz. Work out each answer yourself.';
