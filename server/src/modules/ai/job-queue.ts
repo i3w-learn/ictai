@@ -69,7 +69,10 @@ export class JobQueue {
     return new Promise((resolve) => {
       const finish = () => {
         clearTimeout(timer);
-        this.waiters.set(id, (this.waiters.get(id) ?? []).filter((w) => w !== finish));
+        // Drop the empty list too, or one entry per job would pile up for as long as the server runs.
+        const left = (this.waiters.get(id) ?? []).filter((w) => w !== finish);
+        if (left.length > 0) this.waiters.set(id, left);
+        else this.waiters.delete(id);
         resolve(this.repo.get(id)!);
       };
       const timer = setTimeout(finish, maxMs);
@@ -78,8 +81,10 @@ export class JobQueue {
   }
 
   // Shutdown: the running job ends as "restarted" and nothing new starts; queued jobs wait for the next boot.
+  // Callers still holding a request open get the job as it stands, so shutdown does not hang on them.
   stop() {
     this.stopping = true;
+    [...this.waiters.values()].flat().forEach((wake) => wake());
   }
 
   // Resolves once nothing is running (used by tests and shutdown).

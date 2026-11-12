@@ -33,7 +33,8 @@ describe('AI ask', () => {
   it('with wait=1 the answer comes back in the same call', async () => {
     const { inject, teacher } = await setup({ llm: echoLlm, installed: true });
     const res = await inject('POST', '/api/v1/ai/ask?wait=1', teacher, { question: 'What is 2 + 2?' });
-    expect(res.statusCode).toBe(202);
+    // 200, not 202: the answer is in this reply, there is nothing to come back for.
+    expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ kind: 'ask', status: 'done', result: { answer: 'You asked: What is 2 + 2?' } });
   });
 

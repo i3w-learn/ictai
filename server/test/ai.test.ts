@@ -57,7 +57,7 @@ describe('AI quiz maker', () => {
   it('with wait=1 the draft comes back in the same call', async () => {
     const { inject, teacher, c7 } = await setup({ llm: goodLlm, installed: true });
     const res = await inject('POST', '/api/v1/ai/quiz?wait=1', teacher, { classId: c7.id, subject: 'Maths', topic: 'Adding', count: 2 });
-    expect(res.statusCode).toBe(202);
+    expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ kind: 'quiz', status: 'done' });
     expect(res.json().result.questions).toHaveLength(2);
   });

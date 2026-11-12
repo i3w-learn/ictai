@@ -81,6 +81,20 @@ describe('AI job queue', () => {
     await m.next();
     expect((await done).status).toBe('done');
     expect((await queue.waitFor(a.id, 10_000)).status).toBe('done');
+    // Nothing is kept for a job once nobody waits on it.
+    expect((queue as unknown as { waiters: Map<string, unknown> }).waiters.size).toBe(0);
+  });
+
+  it('lets go of waiting callers when the server stops', async () => {
+    const m = manualRun();
+    const { queue, user } = setup(m.run);
+    queue.start();
+    const a = queue.enqueue(user('a'), 'quiz', request);
+    const held = queue.waitFor(a.id, 60_000);
+    queue.stop();
+    // The caller gets the job as it stands (not finished) straight away, not after a minute.
+    expect((await held).status).not.toBe('done');
+    expect((queue as unknown as { waiters: Map<string, unknown> }).waiters.size).toBe(0);
   });
 
   it('one open job per user', () => {

@@ -23,6 +23,8 @@ export function route<K extends RouteKey>(
   app: FastifyInstance,
   key: K,
   handler: (input: RouteInput<K>) => Promise<Output<K>> | Output<K>,
+  // Only for a route whose success status depends on the answer; every other route uses the contract's.
+  statusOf?: (out: Output<K>) => number,
 ) {
   const [method, url] = key.split(' ') as [string, string];
   const ep: Endpoint = API[key];
@@ -39,7 +41,7 @@ export function route<K extends RouteKey>(
         req,
       } as RouteInput<K>;
       const out = await handler(input);
-      reply.status(ep.status);
+      reply.status(statusOf ? statusOf(out) : ep.status);
       return ep.response ? out : reply.send();
     },
   });
