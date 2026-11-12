@@ -43,6 +43,32 @@ export class SessionRepository {
     this.db.prepare('DELETE FROM sessions WHERE kind = ? AND user_id = ?').run(kind, userId);
   }
 
+  // The lab PC a student is using right now, if it is not `exceptDeviceId`. Dead sessions do not count.
+  liveStudentDevice(studentId: string, exceptDeviceId: string, now: number): string | undefined {
+    return this.db
+      .prepare(
+        `SELECT device_id FROM sessions
+         WHERE kind = 'student' AND user_id = ? AND device_id IS NOT ? AND expires_at >= ? AND ? - last_used_at <= idle_ms
+         LIMIT 1`,
+      )
+      .pluck()
+      .get(studentId, exceptDeviceId, now, now) as string | undefined;
+  }
+
+  // Every student signed in right now, oldest sign-in first, with the lab PC they are on.
+  liveStudents(now: number): { deviceId: string; name: string; classId: string; className: string }[] {
+    return this.db
+      .prepare(
+        `SELECT s.device_id AS deviceId, st.name, st.class_id AS classId, c.name AS className
+         FROM sessions s
+         JOIN students st ON st.id = s.user_id AND st.status = 'active'
+         JOIN classes c ON c.id = st.class_id
+         WHERE s.kind = 'student' AND s.device_id IS NOT NULL AND s.expires_at >= ? AND ? - s.last_used_at <= s.idle_ms
+         ORDER BY s.created_at`,
+      )
+      .all(now, now) as { deviceId: string; name: string; classId: string; className: string }[];
+  }
+
   deleteByTokenHash(hash: string) {
     this.db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(hash);
   }

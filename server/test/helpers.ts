@@ -28,12 +28,14 @@ export async function testServer(opts: { ai?: { llm: Llm; installed: boolean } }
     return res.json().token;
   }
 
+  // Each test PC joins from its own address, as each lab PC does on the lab network.
+  let pcs = 0;
   async function enrolDevice(kind: 'lab_pc' | 'board' = 'lab_pc'): Promise<string> {
-    const staff = await login('admin', 'admin-pass');
-    const { code } = (await app.inject({ method: 'POST', url: '/api/v1/devices/enrol-window', headers: auth(staff), payload: {} })).json();
+    pcs += 1;
     const res = await app.inject({
       method: 'POST', url: '/api/v1/auth/device/enrol',
-      payload: { code, kind, name: `${kind}-1`, appVersion: '0.1.0' },
+      payload: { kind, appVersion: '0.1.0' },
+      remoteAddress: `10.1.${Math.floor(pcs / 250)}.${(pcs % 250) + 1}`,
     });
     return res.json().token;
   }

@@ -1,7 +1,7 @@
 import { z, type ZodType } from 'zod';
 import { AuditEntry, AuditQuery, Health } from './common.js';
-import { Principal, SessionResult, StaffLogin, StudentFirstLogin, StudentPinLogin, StudentQrLogin } from './auth.js';
-import { Device, DeviceEnrol, DeviceEnrolResult, EnrolWindow, OpenEnrolWindow } from './devices.js';
+import { Principal, SessionResult, StaffLogin, StudentFirstLogin, StudentPinLogin, StudentQrLogin, StudentRollLogin } from './auth.js';
+import { Device, DeviceEnrol, DeviceEnrolResult, Joining } from './devices.js';
 import {
   ClassCode, ClassQuery, CreatedStudent, ImportResult, ImportStudents, PromoteClass, PromoteResult, SignInCard, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
   SchoolClass, Section, SetPin, Student, StudentEnrolmentCode, UpdateStudent,
@@ -49,14 +49,18 @@ export const API = {
 
   'GET /api/v1/auth/student/classes': { summary: 'Classes for the sign-in screen', access: labPc, status: 200, response: z.array(SchoolClass) },
   'GET /api/v1/auth/student/roster': { summary: 'Student names in a class', access: labPc, query: ClassQuery, status: 200, response: z.array(RosterEntry) },
+  'GET /api/v1/auth/student/sections': { summary: 'Sections of a class, for the sign-in screen', access: labPc, query: ClassQuery, status: 200, response: z.array(Section) },
+  'POST /api/v1/auth/student/roll': { summary: 'Student sign-in with class and roll number; adds the student the first time', access: labPc, body: StudentRollLogin, status: 201, response: SessionResult },
   'POST /api/v1/auth/student/pin': { summary: 'Student sign-in with PIN', access: labPc, body: StudentPinLogin, status: 201, response: SessionResult },
   'POST /api/v1/auth/student/qr': { summary: 'Student sign-in with QR card', access: labPc, body: StudentQrLogin, status: 201, response: SessionResult },
   'POST /api/v1/auth/student/enrol': { summary: 'First sign-in with an enrolment code; sets the PIN', access: labPc, body: StudentFirstLogin, status: 201, response: SessionResult },
 
-  'POST /api/v1/auth/device/enrol': { summary: 'Enrol a lab PC or board with the window code', access: pub, body: DeviceEnrol, status: 201, response: DeviceEnrolResult },
-  'POST /api/v1/devices/enrol-window': { summary: 'Open a device enrol window', access: staff('setup.devices'), body: OpenEnrolWindow, status: 201, response: EnrolWindow },
-  'DELETE /api/v1/devices/enrol-window': { summary: 'Close the enrol window', access: staff('setup.devices'), status: 204 },
-  'GET /api/v1/devices': { summary: 'List devices', access: staff('setup.devices'), status: 200, response: z.array(Device) },
+  'POST /api/v1/auth/device/enrol': { summary: 'A lab PC or board joins the lab by itself, unless staff have locked the lab', access: pub, body: DeviceEnrol, status: 201, response: DeviceEnrolResult },
+  'GET /api/v1/devices/joining': { summary: 'Whether new PCs and boards can still join', access: staff('setup.devices'), status: 200, response: Joining },
+  'PUT /api/v1/devices/joining': { summary: 'Lock the lab against new devices, or open it again', access: staff('setup.devices'), body: Joining, status: 200, response: Joining },
+  'POST /api/v1/devices/ping': { summary: 'A lab PC or board says it is switched on and reachable', access: { kind: 'device' }, status: 204 },
+  'DELETE /api/v1/devices/:id': { summary: 'Remove a PC or board from the lab; it is signed out and must join again', access: staff('setup.devices'), params: IdParams, status: 204 },
+  'GET /api/v1/devices': { summary: 'Devices, whether each is connected, and who is signed in on it', access: staff('setup.devices'), status: 200, response: z.array(Device) },
 
   'GET /api/v1/staff': { summary: 'List staff accounts', access: staff('staff.manage'), status: 200, response: z.array(StaffMember) },
   'POST /api/v1/staff': { summary: 'Add a teacher', access: staff('staff.manage'), body: NewTeacher, status: 201, response: StaffMember },

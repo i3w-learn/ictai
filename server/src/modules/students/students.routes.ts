@@ -26,6 +26,8 @@ export function studentRoutes(app: FastifyInstance, deps: { admin: StudentAdminS
   // Lab PC: student sign-in
   route(app, 'GET /api/v1/auth/student/classes', () => auth.listClasses());
   route(app, 'GET /api/v1/auth/student/roster', ({ query }) => auth.roster(query.classId));
+  route(app, 'GET /api/v1/auth/student/sections', ({ query }) => auth.sections(query.classId));
+  route(app, 'POST /api/v1/auth/student/roll', ({ body, principal }) => auth.withRoll(asDevice(principal), body));
   route(app, 'POST /api/v1/auth/student/pin', ({ body, principal }) => auth.withPin(asDevice(principal), body.studentId, body.pin));
   route(app, 'POST /api/v1/auth/student/qr', ({ body, principal }) => auth.withQr(asDevice(principal), body.qrToken));
   route(app, 'POST /api/v1/auth/student/enrol', ({ body, principal }) => auth.firstSignIn(asDevice(principal), body.code, body.pin));

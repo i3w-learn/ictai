@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
-import type { RouteKey } from '@ict/contracts';
+import { DEVICE_PING_MS, type RouteKey } from '@ict/contracts';
 import { ApiCallError, ApiClient, type CallInput, type CallOutput } from '../core/api-client';
 import { RelayClient, type RelayStatus } from '../core/relay-client';
 import { ServerLocator } from '../core/server-locator';
@@ -71,6 +71,17 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
     if (sessionToken) relay.connect(sessionToken);
     else relay.disconnect();
   }, [relay, sessionToken]);
+
+  // A lab PC or board tells the server "I am here" every few seconds, signed in or not, so the
+  // console can show which PCs are connected.
+  const deviceToken = state.settings.device?.token ?? null;
+  useEffect(() => {
+    if (!api || !deviceToken) return;
+    const ping = () => void api.call('POST /api/v1/devices/ping', {}, deviceToken).catch(() => undefined);
+    ping();
+    const t = setInterval(ping, DEVICE_PING_MS);
+    return () => clearInterval(t);
+  }, [api, deviceToken]);
 
   // Who is signed in can change while the app is open: the Super Admin may edit a teacher's
   // classes, subjects or permissions. Re-read it after any refusal and once a minute, so the

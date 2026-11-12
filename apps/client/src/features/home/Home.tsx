@@ -35,6 +35,8 @@ export function Home() {
   const p = state.session!.principal;
   const [view, setView] = useState<View>({ kind: 'dash' });
   const [playing, setPlaying] = useState<StudentRunState | null>(null);
+  // Goes up each time a class is added, so the teacher form shows the new class at once.
+  const [classesChanged, setClassesChanged] = useState(0);
   const [notesOpen, setNotesOpen] = useState(false);
 
   if (p.kind === 'student') {
@@ -67,9 +69,9 @@ export function Home() {
           <QuizzesPanel onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} />
         )}
         {p.permissions.includes('staff.manage') && <TeachersPanel />}
-        {p.permissions.includes('staff.manage') && <StaffPanel />}
+        {p.permissions.includes('staff.manage') && <StaffPanel classesChanged={classesChanged} />}
         {p.permissions.includes('setup.devices') && <DevicesPanel />}
-        {p.permissions.includes('students.manage') && <StudentsPanel />}
+        {p.permissions.includes('students.manage') && <StudentsPanel onClassAdded={() => setClassesChanged((n) => n + 1)} />}
         {p.permissions.includes('server.manage') && <AuditPanel />}
       </div>
     );

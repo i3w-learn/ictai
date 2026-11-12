@@ -44,7 +44,7 @@ describe('student edit and delete', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ name: 'Asha V', rollNo: '13', hasPin: true });
     const roster = await app.inject({ method: 'GET', url: `/api/v1/auth/student/roster?classId=${cls.id}`, headers: device });
-    expect(roster.json()).toEqual([{ id: student.id, name: 'Asha V', rollNo: '13' }]);
+    expect(roster.json()).toEqual([{ id: student.id, name: 'Asha V', rollNo: '13', sectionId: expect.any(String) }]);
   });
 
   it('rejects a section from another class', async () => {
@@ -76,7 +76,7 @@ describe('student sign-in on a lab PC', () => {
   it('shows classes and names to an enrolled lab PC only', async () => {
     const { app, cls, device, enrolDevice, auth } = await withStudent();
     const roster = await app.inject({ method: 'GET', url: `/api/v1/auth/student/roster?classId=${cls.id}`, headers: device });
-    expect(roster.json()).toEqual([{ id: expect.any(String), name: 'Asha Verma', rollNo: '12' }]);
+    expect(roster.json()).toEqual([{ id: expect.any(String), name: 'Asha Verma', rollNo: '12', sectionId: expect.any(String) }]);
 
     expect((await app.inject({ method: 'GET', url: '/api/v1/auth/student/classes' })).statusCode).toBe(401);
     const board = auth(await enrolDevice('board'));

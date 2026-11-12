@@ -119,5 +119,5 @@ export function useAction<A extends unknown[]>(fn: (...args: A) => Promise<void>
       setBusy(false);
     }
   };
-  return { run, busy, error };
+  return { run, busy, error, clear: () => setError(null) };
 }
