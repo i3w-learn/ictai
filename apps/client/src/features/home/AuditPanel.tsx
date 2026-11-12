@@ -12,15 +12,21 @@ const ACTION: Record<string, string> = {
   'staff.password': 'reset the password of',
   'staff.delete': 'deleted teacher',
   'student.delete': 'deleted student',
+  'student.import': 'added students from a file to class',
+  'student.signin.failed': 'had a wrong student sign-in try',
+  'quiz.delete': 'deleted the quiz',
   'class.promote': 'moved all students out of class',
   'class.codes': 'made first sign-in codes for class',
   'class.cards': 'printed sign-in cards for class',
   'enrol_window.open': 'opened device joining',
+  'lab.lock': 'locked the lab against new devices',
+  'lab.unlock': 'unlocked the lab for new devices',
   'device.enrol': 'joined the lab',
+  'device.remove': 'removed a device from the lab',
   'quiz.open': 'opened Lab Mode for',
   'quiz.start': 'started the quiz',
   'quiz.end': 'ended the quiz',
-  'ai.quiz.request': 'asked the AI for a quiz on',
+  'ai.quiz.request': 'asked the AI for a quiz',
 };
 
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -47,8 +53,9 @@ export function AuditPanel() {
             <span className="min-w-0 flex-1">
               <b className="font-semibold">{e.actorName ?? (e.action === 'signin.failed' ? 'Someone' : e.actorKind)}</b>{' '}
               {ACTION[e.action] ?? e.action}
-              {e.targetName && e.actorName !== e.targetName && <>{e.action === 'signin' ? ' on' : ''} <b className="font-semibold">{e.targetName}</b></>}
-              {e.action === 'ai.quiz.request' && <> <b className="font-semibold">{(e.detail as { topic?: string } | null)?.topic}</b></>}
+              {e.targetName && e.actorName !== e.targetName && <>{e.action === 'signin' ? ' on' : e.action === 'student.signin.failed' ? ' for' : ''} <b className="font-semibold">{e.targetName}</b></>}
+              {/* The topic is forgotten after 90 days; the line then just says a quiz was asked for. */}
+              {e.action === 'ai.quiz.request' && (e.detail as { topic?: string } | null)?.topic && <> on <b className="font-semibold">{(e.detail as { topic: string }).topic}</b></>}
               {e.action === 'signin.failed' && e.target && <span className="text-muted-foreground"> as “{e.target}”</span>}
             </span>
           </li>

@@ -14,6 +14,17 @@ export const StudentPinLogin = z.object({ studentId: Id, pin: Pin });
 export const StudentQrLogin = z.object({ qrToken: z.string().min(16).max(128) });
 export const StudentFirstLogin = z.object({ code: z.string().regex(/^\d{6}$/), pin: Pin });
 
+// Easy sign-in: class, section and roll number, with no PIN. Only a student the teacher has added
+// gets in: the class, section and roll number together are that student's ID.
+export const StudentRollLogin = z.object({
+  classId: Id,
+  sectionId: Id.nullable().default(null),
+  rollNo: z.string().trim().min(1).max(16),
+});
+
+// Roll numbers are matched loosely: "05", "5" and " 5 " are the same student, and so are "a1" and "A1".
+export const rollKey = (rollNo: string) => rollNo.trim().toLowerCase().replace(/^0+(?=.)/, '');
+
 export const StaffPrincipal = z.object({
   kind: z.literal('staff'),
   userId: z.string(),

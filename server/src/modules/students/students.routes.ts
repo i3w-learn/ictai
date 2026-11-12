@@ -13,6 +13,7 @@ export function studentRoutes(app: FastifyInstance, deps: { admin: StudentAdminS
   route(app, 'POST /api/v1/classes/:id/promote', ({ params, body, principal }) => admin.promote(asStaff(principal), params.id, body.toClassId));
   route(app, 'POST /api/v1/classes/:id/enrolment-codes', ({ params, principal }) => admin.classCodes(asStaff(principal), params.id));
   route(app, 'POST /api/v1/classes/:id/cards', ({ params, principal }) => admin.cards(asStaff(principal), params.id));
+  route(app, 'POST /api/v1/classes/:id/students/import', ({ params, body, principal }) => admin.importStudents(asStaff(principal), params.id, body.rows));
   route(app, 'POST /api/v1/sections', ({ body, principal }) => admin.addSection(scopeOf(asStaff(principal)), body.classId, body.name));
   route(app, 'GET /api/v1/sections', ({ query, principal }) => admin.listSections(scopeOf(asStaff(principal)), query.classId));
   route(app, 'GET /api/v1/students', ({ query, principal }) => admin.listStudents(scopeOf(asStaff(principal)), query.classId));
@@ -25,6 +26,8 @@ export function studentRoutes(app: FastifyInstance, deps: { admin: StudentAdminS
   // Lab PC: student sign-in
   route(app, 'GET /api/v1/auth/student/classes', () => auth.listClasses());
   route(app, 'GET /api/v1/auth/student/roster', ({ query }) => auth.roster(query.classId));
+  route(app, 'GET /api/v1/auth/student/sections', ({ query }) => auth.sections(query.classId));
+  route(app, 'POST /api/v1/auth/student/roll', ({ body, principal }) => auth.withRoll(asDevice(principal), body));
   route(app, 'POST /api/v1/auth/student/pin', ({ body, principal }) => auth.withPin(asDevice(principal), body.studentId, body.pin));
   route(app, 'POST /api/v1/auth/student/qr', ({ body, principal }) => auth.withQr(asDevice(principal), body.qrToken));
   route(app, 'POST /api/v1/auth/student/enrol', ({ body, principal }) => auth.firstSignIn(asDevice(principal), body.code, body.pin));

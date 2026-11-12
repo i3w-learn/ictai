@@ -44,7 +44,7 @@ export class StudentRepository {
 
   roster(classId: string): RosterEntry[] {
     return this.db
-      .prepare(`SELECT id, name, roll_no AS rollNo FROM students WHERE class_id = ? AND status = 'active' ORDER BY roll_no, name`)
+      .prepare(`SELECT id, name, roll_no AS rollNo, section_id AS sectionId FROM students WHERE class_id = ? AND status = 'active' ORDER BY roll_no, name`)
       .all(classId) as RosterEntry[];
   }
 

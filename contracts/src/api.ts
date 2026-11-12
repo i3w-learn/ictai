@@ -1,17 +1,18 @@
 import { z, type ZodType } from 'zod';
 import { AuditEntry, AuditQuery, Health } from './common.js';
-import { Principal, SessionResult, StaffLogin, StudentFirstLogin, StudentPinLogin, StudentQrLogin } from './auth.js';
-import { Device, DeviceEnrol, DeviceEnrolResult, EnrolWindow, OpenEnrolWindow } from './devices.js';
+import { Principal, SessionResult, StaffLogin, StudentFirstLogin, StudentPinLogin, StudentQrLogin, StudentRollLogin } from './auth.js';
+import { Device, DeviceEnrol, DeviceEnrolResult, Joining } from './devices.js';
 import {
-  ClassCode, ClassQuery, CreatedStudent, PromoteClass, PromoteResult, SignInCard, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
+  ClassCode, ClassQuery, CreatedStudent, ImportResult, ImportStudents, PromoteClass, PromoteResult, SignInCard, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
   SchoolClass, Section, SetPin, Student, StudentEnrolmentCode, UpdateStudent,
 } from './students.js';
 import {
-  AnswerResult, JoinRun, OpenRun, Quiz, QuizInput, QuizQuery, QuizSummary, RunQuery, RunSummary,
+  AnswerResult, OpenRun, OpenRunForStudent, Quiz, QuizInput, QuizQuery, QuizSummary, RunQuery, RunSummary,
   StudentRunState, SubmitAnswer, TeacherRunState,
 } from './quizzes.js';
 import { AiAskJob, AiAskRequest, AiJob, AiQuizJob, AiQuizRequest, AiStatus, AiWaitQuery } from './ai.js';
 import { ResultsOverview, ResultsQuery, StudentResults, TeacherActivity } from './results.js';
+import { Note, NoteInput } from './notes.js';
 import { NewTeacher, SetPassword, StaffMember, UpdateTeacher } from './staff.js';
 import type { Permission } from './permissions.js';
 
@@ -48,14 +49,18 @@ export const API = {
 
   'GET /api/v1/auth/student/classes': { summary: 'Classes for the sign-in screen', access: labPc, status: 200, response: z.array(SchoolClass) },
   'GET /api/v1/auth/student/roster': { summary: 'Student names in a class', access: labPc, query: ClassQuery, status: 200, response: z.array(RosterEntry) },
+  'GET /api/v1/auth/student/sections': { summary: 'Sections of a class, for the sign-in screen', access: labPc, query: ClassQuery, status: 200, response: z.array(Section) },
+  'POST /api/v1/auth/student/roll': { summary: 'Student sign-in with class and roll number; adds the student the first time', access: labPc, body: StudentRollLogin, status: 201, response: SessionResult },
   'POST /api/v1/auth/student/pin': { summary: 'Student sign-in with PIN', access: labPc, body: StudentPinLogin, status: 201, response: SessionResult },
   'POST /api/v1/auth/student/qr': { summary: 'Student sign-in with QR card', access: labPc, body: StudentQrLogin, status: 201, response: SessionResult },
   'POST /api/v1/auth/student/enrol': { summary: 'First sign-in with an enrolment code; sets the PIN', access: labPc, body: StudentFirstLogin, status: 201, response: SessionResult },
 
-  'POST /api/v1/auth/device/enrol': { summary: 'Enrol a lab PC or board with the window code', access: pub, body: DeviceEnrol, status: 201, response: DeviceEnrolResult },
-  'POST /api/v1/devices/enrol-window': { summary: 'Open a device enrol window', access: staff('setup.devices'), body: OpenEnrolWindow, status: 201, response: EnrolWindow },
-  'DELETE /api/v1/devices/enrol-window': { summary: 'Close the enrol window', access: staff('setup.devices'), status: 204 },
-  'GET /api/v1/devices': { summary: 'List devices', access: staff('setup.devices'), status: 200, response: z.array(Device) },
+  'POST /api/v1/auth/device/enrol': { summary: 'A lab PC or board joins the lab by itself, unless staff have locked the lab', access: pub, body: DeviceEnrol, status: 201, response: DeviceEnrolResult },
+  'GET /api/v1/devices/joining': { summary: 'Whether new PCs and boards can still join', access: staff('setup.devices'), status: 200, response: Joining },
+  'PUT /api/v1/devices/joining': { summary: 'Lock the lab against new devices, or open it again', access: staff('setup.devices'), body: Joining, status: 200, response: Joining },
+  'POST /api/v1/devices/ping': { summary: 'A lab PC or board says it is switched on and reachable', access: { kind: 'device' }, status: 204 },
+  'DELETE /api/v1/devices/:id': { summary: 'Remove a PC or board from the lab; it is signed out and must join again', access: staff('setup.devices'), params: IdParams, status: 204 },
+  'GET /api/v1/devices': { summary: 'Devices, whether each is connected, and who is signed in on it', access: staff('setup.devices'), status: 200, response: z.array(Device) },
 
   'GET /api/v1/staff': { summary: 'List staff accounts', access: staff('staff.manage'), status: 200, response: z.array(StaffMember) },
   'POST /api/v1/staff': { summary: 'Add a teacher', access: staff('staff.manage'), body: NewTeacher, status: 201, response: StaffMember },
@@ -68,6 +73,7 @@ export const API = {
   'POST /api/v1/classes/:id/promote': { summary: 'Move every student to another class', access: staff('students.manage'), params: IdParams, body: PromoteClass, status: 200, response: PromoteResult },
   'POST /api/v1/classes/:id/enrolment-codes': { summary: 'First sign-in codes for every student in a class', access: staff('students.manage'), params: IdParams, status: 201, response: z.array(ClassCode) },
   'POST /api/v1/classes/:id/cards': { summary: 'Printable sign-in cards (new QR + first sign-in code) for a class', access: staff('students.manage'), params: IdParams, status: 201, response: z.array(SignInCard) },
+  'POST /api/v1/classes/:id/students/import': { summary: 'Add many students from a spreadsheet file', access: staff('students.manage'), params: IdParams, body: ImportStudents, status: 200, response: ImportResult },
   'POST /api/v1/sections': { summary: 'Add a section', access: staff('setup.master'), body: NewSection, status: 201, response: Section },
   'GET /api/v1/sections': { summary: 'Sections in a class', access: staff(), query: ClassQuery, status: 200, response: z.array(Section) },
   'GET /api/v1/students': { summary: 'Students in a class', access: staff('students.manage'), query: ClassQuery, status: 200, response: z.array(Student) },
@@ -83,12 +89,13 @@ export const API = {
   'PUT /api/v1/quizzes/:id': { summary: 'Replace a quiz; refused while it is running', access: staff('teaching.manage'), params: IdParams, body: QuizInput, status: 200, response: Quiz },
   'DELETE /api/v1/quizzes/:id': { summary: 'Delete a quiz', access: staff('teaching.manage'), params: IdParams, status: 204 },
 
-  'POST /api/v1/quiz-runs': { summary: 'Open a Lab Mode run with a 6-digit join code', access: staff('lesson.start'), body: OpenRun, status: 201, response: TeacherRunState },
+  'POST /api/v1/quiz-runs': { summary: 'Open a Lab Mode run; the students of that class see it on their screens', access: staff('lesson.start'), body: OpenRun, status: 201, response: TeacherRunState },
   'GET /api/v1/quiz-runs': { summary: 'Runs of a quiz, newest first', access: staff(), query: RunQuery, status: 200, response: z.array(RunSummary) },
   'GET /api/v1/quiz-runs/:id': { summary: 'Live view of a run for the teacher', access: staff(), params: IdParams, status: 200, response: TeacherRunState },
   'POST /api/v1/quiz-runs/:id/start': { summary: 'Let joined students start answering', access: staff('lesson.control'), params: IdParams, status: 200, response: TeacherRunState },
-  'POST /api/v1/quiz-runs/:id/end': { summary: 'End the run; the join code stops working', access: staff('lesson.control'), params: IdParams, status: 200, response: TeacherRunState },
-  'POST /api/v1/quiz-runs/join': { summary: 'Student joins a run by its code', access: student, body: JoinRun, status: 200, response: StudentRunState },
+  'POST /api/v1/quiz-runs/:id/end': { summary: 'End the run; nobody can join or answer any more', access: staff('lesson.control'), params: IdParams, status: 200, response: TeacherRunState },
+  'GET /api/v1/quiz-runs/open': { summary: "Quizzes open for the student's class that they have not handed in", access: student, status: 200, response: z.array(OpenRunForStudent) },
+  'POST /api/v1/quiz-runs/:id/join': { summary: "Student joins a run opened for their class", access: student, params: IdParams, status: 200, response: StudentRunState },
   'GET /api/v1/quiz-runs/:id/play': { summary: "The student's view of a run", access: student, params: IdParams, status: 200, response: StudentRunState },
   'POST /api/v1/quiz-runs/:id/answers': { summary: 'Answer one question; the first answer counts', access: student, params: IdParams, body: SubmitAnswer, status: 200, response: AnswerResult },
   'POST /api/v1/quiz-runs/:id/finish': { summary: 'Student is done; returns their score', access: student, params: IdParams, status: 200, response: StudentRunState },
@@ -98,6 +105,12 @@ export const API = {
   'POST /api/v1/ai/ask': { summary: 'Ask the AI a question; returns the queued job, or with ?wait=1 the finished job with the answer', access: staff('ai.teacher'), query: AiWaitQuery, body: AiAskRequest, status: 202, response: AiAskJob },
   'GET /api/v1/ai/jobs': { summary: 'Your last 10 AI requests, newest first', access: staff('ai.teacher'), status: 200, response: z.array(AiJob) },
   'GET /api/v1/ai/jobs/:id': { summary: 'One of your AI requests, with the draft when done', access: staff('ai.teacher'), params: IdParams, status: 200, response: AiJob },
+
+  // My notes: a student's own notebook. Staff have no route to it.
+  'GET /api/v1/notes': { summary: 'Your notes, most recently changed first', access: student, status: 200, response: z.array(Note) },
+  'POST /api/v1/notes': { summary: 'Write a new note', access: student, body: NoteInput, status: 201, response: Note },
+  'PUT /api/v1/notes/:id': { summary: 'Change one of your notes', access: student, params: IdParams, body: NoteInput, status: 200, response: Note },
+  'DELETE /api/v1/notes/:id': { summary: 'Delete one of your notes for good', access: student, params: IdParams, status: 204 },
 
   // Results (spec 4.4)
   'GET /api/v1/results/overview': { summary: 'How each student is doing, optionally for one class', access: staff('results.view'), query: ResultsQuery, status: 200, response: ResultsOverview },

@@ -1,7 +1,17 @@
-; ICT App Windows installer (Inno Setup 6). Built by .github/workflows/windows.yml.
-; One installer; the first page asks: Server PC, Student PC or Smart board (spec 1).
+; ICT App Windows installers (Inno Setup 6). Built by .github/workflows/windows.yml.
+; This one file makes two installers:
+;   ICT-Setup-x.y.z.exe          for the Server PC or the Smart board; its first page asks which.
+;   ICT-Student-Setup-x.y.z.exe  for student lab PCs (built with /DStudentOnly). It asks nothing,
+;                                holds no server files, and opens straight on the student screens.
+; Both hold the same ict-client.exe; install-role.txt tells it which screens to show.
 
-#define AppName "ICT App"
+#ifdef StudentOnly
+  #define AppName "ICT Student"
+  #define SetupName "ICT-Student-Setup"
+#else
+  #define AppName "ICT App"
+  #define SetupName "ICT-Setup"
+#endif
 #ifndef AppVersion
   #define AppVersion "0.1.0"
 #endif
@@ -13,7 +23,11 @@
 #endif
 
 [Setup]
+#ifdef StudentOnly
+AppId={{B3F1C2A4-7D5E-4A19-8F60-2C9E5D1B7A33}
+#else
 AppId={{6E0D5B7A-3C1F-4B8E-9C2D-1A7F4E2B9D10}
+#endif
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=i3w
@@ -23,7 +37,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-OutputBaseFilename=ICT-Setup-{#AppVersion}
+OutputBaseFilename={#SetupName}-{#AppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -31,7 +45,9 @@ UninstallDisplayIcon={app}\ict-client.exe
 
 [Files]
 Source: "{#Stage}\client\ict-client.exe"; DestDir: "{app}"; Flags: ignoreversion
+#ifndef StudentOnly
 Source: "{#Stage}\server\*"; DestDir: "{app}\server"; Flags: ignoreversion recursesubdirs; Check: IsServer
+#endif
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\ict-client.exe"
@@ -54,6 +70,17 @@ Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""ICT App 
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""ICT App Finder"""; Flags: runhidden; RunOnceId: "FwFinder"
 
 [Code]
+#ifdef StudentOnly
+function IsServer: Boolean;
+begin
+  Result := False;
+end;
+
+function RoleId: String;
+begin
+  Result := 'student';
+end;
+#else
 var
   RolePage: TInputOptionWizardPage;
   AdminPage: TInputQueryWizardPage;
@@ -63,30 +90,22 @@ begin
   Result := RolePage.SelectedValueIndex = 0;
 end;
 
-function IsServerInstalled: Boolean;
-begin
-  Result := FileExists(ExpandConstant('{app}\server\ict-server.exe'));
-end;
-
 function RoleId: String;
 begin
-  case RolePage.SelectedValueIndex of
-    0: Result := 'console';
-    1: Result := 'student';
+  if RolePage.SelectedValueIndex = 0 then
+    Result := 'console'
   else
     Result := 'board';
-  end;
 end;
 
 procedure InitializeWizard;
 begin
   RolePage := CreateInputOptionPage(wpWelcome,
     'What is this PC?', 'Choose how this PC is used in the lab.',
-    'Pick one. Each PC in the lab gets the same installer.', True, False);
+    'Pick one. Student PCs use the other installer, ICT-Student-Setup.', True, False);
   RolePage.Add('Server PC (runs the lab; admin and teachers use the console here)');
-  RolePage.Add('Student PC');
   RolePage.Add('Smart board (a Windows PC used as the classroom board)');
-  RolePage.SelectedValueIndex := 1;
+  RolePage.SelectedValueIndex := 0;
 
   AdminPage := CreateInputQueryPage(RolePage.ID,
     'First admin account', 'Create the Super Admin for this school.',
@@ -109,6 +128,12 @@ begin
     MsgBox('The password needs at least 8 characters.', mbError, MB_OK);
     Result := False;
   end;
+end;
+#endif
+
+function IsServerInstalled: Boolean;
+begin
+  Result := FileExists(ExpandConstant('{app}\server\ict-server.exe'));
 end;
 
 function JsonEscape(S: String): String;
@@ -134,6 +159,7 @@ begin
     ForceDirectories(ExpandConstant('{app}'));
     SaveStringToFile(ExpandConstant('{app}\install-role.txt'), RoleId, False);
 
+#ifndef StudentOnly
     if IsServer then
     begin
       // One-time file: the server creates the account and deletes it on first start.
@@ -142,5 +168,6 @@ begin
       SaveStringToFile(DataDir + '\bootstrap-admin.json',
         '{"username":"' + JsonEscape(AdminPage.Values[0]) + '","password":"' + JsonEscape(AdminPage.Values[1]) + '"}', False);
     end;
+#endif
   end;
 end;

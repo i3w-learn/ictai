@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
-import type { SchoolClass, Section, Student } from '@ict/contracts';
+import { useEffect, useRef, useState } from 'react';
+import type { ImportResult, SchoolClass, Section, Student } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ConfirmButton, ErrorNote, Field, Note, Panel, Select, useAction } from '../../ui/ui';
 import { ClassSheet, type Sheet } from './ClassSheet';
+import { toImportRows } from './import';
 import { StudentRow } from './StudentRow';
 
 // Classes, sections and students, managed by teachers.
-export function StudentsPanel() {
+export function StudentsPanel({ onClassAdded }: { onClassAdded: () => void }) {
   const { call, state } = useApp();
   // Only the Super Admin (or a teacher with no classes set) adds classes.
   const p = state.session?.principal;
@@ -21,6 +22,8 @@ export function StudentsPanel() {
   const [promoteTo, setPromoteTo] = useState('');
   const [promoted, setPromoted] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [imported, setImported] = useState<(ImportResult & { firstLine: number }) | null>(null);
+  const filePicker = useRef<HTMLInputElement>(null);
   const className = classes.find((c) => c.id === classId)?.name ?? '';
 
   const loadClasses = useAction(async () => setClasses(await call('GET /api/v1/classes')));
@@ -39,13 +42,14 @@ export function StudentsPanel() {
   });
 
   useEffect(() => { void loadClasses.run(); }, []);
-  useEffect(() => { void loadClass.run(classId); setPromoted(null); setPromoteTo(''); }, [classId]);
+  useEffect(() => { void loadClass.run(classId); setPromoted(null); setPromoteTo(''); setImported(null); }, [classId]);
 
   const addClass = useAction(async () => {
     const c = await call('POST /api/v1/classes', { body: { name: newClass } });
     setNewClass('');
     await loadClasses.run();
     setClassId(c.id);
+    onClassAdded();
   });
 
   const addSection = useAction(async () => {
@@ -65,6 +69,16 @@ export function StudentsPanel() {
       },
     });
     setForm({ name: '', rollNo: '', sectionId: form.sectionId, pin: '' });
+    await loadClass.run(classId);
+  });
+
+  // Reads a class list saved from Excel as CSV and adds every good row.
+  const importFile = useAction(async (file: File) => {
+    setImported(null);
+    const read = toImportRows(await file.text());
+    if ('problem' in read) throw new Error(read.problem);
+    const result = await call('POST /api/v1/classes/:id/students/import', { params: { id: classId }, body: { rows: read.rows } });
+    setImported({ ...result, firstLine: read.firstLine });
     await loadClass.run(classId);
   });
 
@@ -120,7 +134,26 @@ export function StudentsPanel() {
             )}
             <Field id="student-pin" className="w-36" label="PIN (optional)" inputMode="numeric" maxLength={4} value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, '') })} />
             <Button type="submit" disabled={!form.name.trim() || (form.pin.length > 0 && form.pin.length !== 4)}>Add student</Button>
+            <input
+              ref={filePicker} type="file" accept=".csv,text/csv" className="hidden" aria-label="Class list file"
+              onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void importFile.run(f); }}
+            />
+            <Button type="button" variant="quiet" disabled={importFile.busy} onClick={() => filePicker.current?.click()}>Add from a file</Button>
           </form>
+          <p className="text-xs text-muted-foreground">
+            A file from Excel: use Save as → CSV. Columns: Name, Roll no, Section (roll no and section may be empty).
+          </p>
+          {imported && (
+            <Note>
+              Added {imported.added} {imported.added === 1 ? 'student' : 'students'}.
+              {imported.skipped.length > 0 && <> Left out {imported.skipped.length}:</>}
+              {imported.skipped.length > 0 && (
+                <ul className="mt-1 list-disc pl-5">
+                  {imported.skipped.map((s) => <li key={s.row}>Line {s.row + imported.firstLine - 1}{s.name ? ` (${s.name})` : ''}: {s.reason}</li>)}
+                </ul>
+              )}
+            </Note>
+          )}
           {students.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-xl bg-secondary px-3 py-2">
               <span className="text-sm font-medium text-secondary-foreground">Whole class</span>
@@ -149,7 +182,7 @@ export function StudentsPanel() {
           </ul>
         </>
       )}
-      <ErrorNote message={loadClasses.error ?? loadClass.error ?? addClass.error ?? addSection.error ?? addStudent.error ?? makeCodes.error ?? makeCards.error ?? promote.error} />
+      <ErrorNote message={loadClasses.error ?? loadClass.error ?? addClass.error ?? addSection.error ?? addStudent.error ?? importFile.error ?? makeCodes.error ?? makeCards.error ?? promote.error} />
     </Panel>
   );
 }

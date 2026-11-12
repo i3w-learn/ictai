@@ -1,5 +1,5 @@
 import { AuditLog } from './core/audit.js';
-import type { Clock } from './core/clock.js';
+import { DAY, type Clock } from './core/clock.js';
 import type { Db } from './infra/db/index.js';
 import { FailureLimiter } from './modules/auth/limiter.js';
 import { PrincipalResolver } from './modules/auth/principal.resolver.js';
@@ -9,7 +9,6 @@ import { StaffAuthService } from './modules/auth/staff-auth.service.js';
 import { StaffRepository } from './modules/auth/staff.repository.js';
 import { DeviceEnrolmentService } from './modules/devices/device-enrolment.service.js';
 import { DeviceRepository } from './modules/devices/device.repository.js';
-import { EnrolWindowRepository } from './modules/devices/enrol-window.repository.js';
 import { ClassRepository } from './modules/students/class.repository.js';
 import { StudentAdminService } from './modules/students/student-admin.service.js';
 import { StudentAuthService } from './modules/students/student-auth.service.js';
@@ -21,6 +20,8 @@ import { RunRepository } from './modules/quizzes/run.repository.js';
 import { RunService } from './modules/quizzes/run.service.js';
 import { ResultsRepository } from './modules/results/results.repository.js';
 import { ResultsService } from './modules/results/results.service.js';
+import { NoteRepository } from './modules/notes/note.repository.js';
+import { NoteService } from './modules/notes/note.service.js';
 import { Relay } from './relay/relay.js';
 import { aiNotInstalled } from './core/errors.js';
 import { AiService, type AiRuntimeInfo } from './modules/ai/ai.service.js';
@@ -50,16 +51,17 @@ export function createContainer(opts: {
     sessions: new SessionRepository(db),
     staff: new StaffRepository(db),
     devices: new DeviceRepository(db),
-    enrolWindows: new EnrolWindowRepository(db),
     classes: new ClassRepository(db),
     students: new StudentRepository(db),
     quizzes: new QuizRepository(db),
     runs: new RunRepository(db),
     aiJobs: new JobRepository(db),
     results: new ResultsRepository(db),
+    notes: new NoteRepository(db),
   };
 
   const audit = new AuditLog(db, now);
+  audit.forgetAiText(now() - 90 * DAY);
   const relay = new Relay(now, (err) => console.error('[relay]', err));
   const identity = new SchoolIdentity(db, opts.version);
   identity.ensure(now());
@@ -87,12 +89,13 @@ export function createContainer(opts: {
     ai: new AiService(ai.runtime, aiQueue, repos.classes, audit),
     staffAuth: new StaffAuthService(now, repos.staff, sessions, new FailureLimiter(now), audit),
     staffAdmin: new StaffAdminService(now, repos.staff, repos.sessions, repos.classes, audit),
-    enrolment: new DeviceEnrolmentService(now, repos.enrolWindows, repos.devices, identity, new FailureLimiter(now), audit),
+    enrolment: new DeviceEnrolmentService(now, repos.devices, identity, new FailureLimiter(now), audit, repos.sessions, db),
     studentAdmin: new StudentAdminService(now, repos.classes, repos.students, repos.sessions, audit),
-    quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes),
-    runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, new FailureLimiter(now), audit),
+    quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes, audit),
+    runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, audit),
     results: new ResultsService(repos.results, repos.classes),
-    studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, new FailureLimiter(now), audit),
+    notes: new NoteService(now, repos.notes),
+    studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, new FailureLimiter(now), audit, repos.sessions, repos.devices),
   };
 }
 

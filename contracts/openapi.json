@@ -724,14 +724,369 @@
                       "rollNo": {
                         "nullable": true,
                         "type": "string"
+                      },
+                      "sectionId": {
+                        "nullable": true,
+                        "type": "string"
                       }
                     },
                     "required": [
                       "id",
                       "name",
-                      "rollNo"
+                      "rollNo",
+                      "sectionId"
                     ]
                   }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/student/sections": {
+      "get": {
+        "summary": "Sections of a class, for the sign-in screen",
+        "x-access": {
+          "kind": "device",
+          "deviceKind": "lab_pc"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "classId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "classId": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "classId",
+                      "name"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/student/roll": {
+      "post": {
+        "summary": "Student sign-in with class and roll number; adds the student the first time",
+        "x-access": {
+          "kind": "device",
+          "deviceKind": "lab_pc"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "classId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "sectionId": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "rollNo": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 16
+                  }
+                },
+                "required": [
+                  "classId",
+                  "rollNo"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "type": "number"
+                    },
+                    "principal": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "staff"
+                              ]
+                            },
+                            "userId": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "super_admin",
+                                "teacher"
+                              ]
+                            },
+                            "username": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "permissions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "staff.manage",
+                                  "students.manage",
+                                  "setup.devices",
+                                  "setup.master",
+                                  "setup.content",
+                                  "setup.timetable",
+                                  "teaching.manage",
+                                  "lesson.start",
+                                  "lesson.control",
+                                  "lesson.present",
+                                  "screen.watch",
+                                  "results.view",
+                                  "results.view.own",
+                                  "ai.teacher",
+                                  "ai.tutor",
+                                  "licence.view",
+                                  "updates.view",
+                                  "licence.renew",
+                                  "updates.install",
+                                  "settings.manage",
+                                  "server.manage"
+                                ]
+                              }
+                            },
+                            "classIds": {
+                              "nullable": true,
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "subjects": {
+                              "nullable": true,
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "userId",
+                            "role",
+                            "username",
+                            "displayName",
+                            "permissions",
+                            "classIds",
+                            "subjects"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "student"
+                              ]
+                            },
+                            "studentId": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "classId": {
+                              "type": "string"
+                            },
+                            "sectionId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "deviceId": {
+                              "type": "string"
+                            },
+                            "permissions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "staff.manage",
+                                  "students.manage",
+                                  "setup.devices",
+                                  "setup.master",
+                                  "setup.content",
+                                  "setup.timetable",
+                                  "teaching.manage",
+                                  "lesson.start",
+                                  "lesson.control",
+                                  "lesson.present",
+                                  "screen.watch",
+                                  "results.view",
+                                  "results.view.own",
+                                  "ai.teacher",
+                                  "ai.tutor",
+                                  "licence.view",
+                                  "updates.view",
+                                  "licence.renew",
+                                  "updates.install",
+                                  "settings.manage",
+                                  "server.manage"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "studentId",
+                            "name",
+                            "classId",
+                            "sectionId",
+                            "deviceId",
+                            "permissions"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "device"
+                              ]
+                            },
+                            "deviceId": {
+                              "type": "string"
+                            },
+                            "deviceKind": {
+                              "type": "string",
+                              "enum": [
+                                "lab_pc",
+                                "board"
+                              ]
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "deviceId",
+                            "deviceKind",
+                            "name"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "expiresAt",
+                    "principal"
+                  ]
                 }
               }
             }
@@ -1552,7 +1907,7 @@
     },
     "/api/v1/auth/device/enrol": {
       "post": {
-        "summary": "Enrol a lab PC or board with the window code",
+        "summary": "A lab PC or board joins the lab by itself, unless staff have locked the lab",
         "x-access": {
           "kind": "public"
         },
@@ -1563,10 +1918,6 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "code": {
-                    "type": "string",
-                    "pattern": "^\\d{6}$"
-                  },
                   "kind": {
                     "type": "string",
                     "enum": [
@@ -1574,20 +1925,13 @@
                       "board"
                     ]
                   },
-                  "name": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 64
-                  },
                   "appVersion": {
                     "type": "string",
                     "maxLength": 32
                   }
                 },
                 "required": [
-                  "code",
                   "kind",
-                  "name",
                   "appVersion"
                 ]
               }
@@ -1603,6 +1947,9 @@
                   "type": "object",
                   "properties": {
                     "deviceId": {
+                      "type": "string"
+                    },
+                    "name": {
                       "type": "string"
                     },
                     "token": {
@@ -1621,6 +1968,7 @@
                   },
                   "required": [
                     "deviceId",
+                    "name",
                     "token",
                     "expiresAt",
                     "serverId",
@@ -1655,9 +2003,9 @@
         }
       }
     },
-    "/api/v1/devices/enrol-window": {
-      "post": {
-        "summary": "Open a device enrol window",
+    "/api/v1/devices/joining": {
+      "get": {
+        "summary": "Whether new PCs and boards can still join",
         "x-access": {
           "kind": "staff",
           "permission": "setup.devices"
@@ -1667,47 +2015,20 @@
             "bearer": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "minutes": {
-                    "default": 30,
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 30
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
-          "201": {
+          "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "code": {
-                      "type": "string",
-                      "pattern": "^\\d{6}$"
-                    },
-                    "closesAt": {
-                      "type": "number"
+                    "open": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
-                    "id",
-                    "code",
-                    "closesAt"
+                    "open"
                   ]
                 }
               }
@@ -1737,11 +2058,84 @@
           }
         }
       },
-      "delete": {
-        "summary": "Close the enrol window",
+      "put": {
+        "summary": "Lock the lab against new devices, or open it again",
         "x-access": {
           "kind": "staff",
           "permission": "setup.devices"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "open": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "open"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "open": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "open"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/ping": {
+      "post": {
+        "summary": "A lab PC or board says it is switched on and reachable",
+        "x-access": {
+          "kind": "device"
         },
         "security": [
           {
@@ -1777,9 +2171,60 @@
         }
       }
     },
+    "/api/v1/devices/{id}": {
+      "delete": {
+        "summary": "Remove a PC or board from the lab; it is signed out and must join again",
+        "x-access": {
+          "kind": "staff",
+          "permission": "setup.devices"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices": {
       "get": {
-        "summary": "List devices",
+        "summary": "Devices, whether each is connected, and who is signed in on it",
         "x-access": {
           "kind": "staff",
           "permission": "setup.devices"
@@ -1826,6 +2271,26 @@
                       "lastSeen": {
                         "nullable": true,
                         "type": "number"
+                      },
+                      "connected": {
+                        "type": "boolean"
+                      },
+                      "student": {
+                        "nullable": true,
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "className": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "className"
+                        ]
                       }
                     },
                     "required": [
@@ -1834,7 +2299,9 @@
                       "name",
                       "status",
                       "appVersion",
-                      "lastSeen"
+                      "lastSeen",
+                      "connected",
+                      "student"
                     ]
                   }
                 }
@@ -2782,6 +3249,139 @@
                       "qrToken"
                     ]
                   }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/classes/{id}/students/import": {
+      "post": {
+        "summary": "Add many students from a spreadsheet file",
+        "x-access": {
+          "kind": "staff",
+          "permission": "students.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rows": {
+                    "minItems": 1,
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "rollNo": {
+                          "default": null,
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "section": {
+                          "default": null,
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "rows"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "added": {
+                      "type": "number"
+                    },
+                    "skipped": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "row": {
+                            "type": "number"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "row",
+                          "name",
+                          "reason"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "added",
+                    "skipped"
+                  ]
                 }
               }
             }
@@ -4179,7 +4779,7 @@
     },
     "/api/v1/quiz-runs": {
       "post": {
-        "summary": "Open a Lab Mode run with a 6-digit join code",
+        "summary": "Open a Lab Mode run; the students of that class see it on their screens",
         "x-access": {
           "kind": "staff",
           "permission": "lesson.start"
@@ -4233,10 +4833,6 @@
                       "type": "string"
                     },
                     "className": {
-                      "type": "string"
-                    },
-                    "joinCode": {
-                      "nullable": true,
                       "type": "string"
                     },
                     "status": {
@@ -4299,7 +4895,6 @@
                     "quizId",
                     "title",
                     "className",
-                    "joinCode",
                     "status",
                     "questionCount",
                     "totalMarks",
@@ -4380,10 +4975,6 @@
                           "ended"
                         ]
                       },
-                      "joinCode": {
-                        "nullable": true,
-                        "type": "string"
-                      },
                       "createdAt": {
                         "type": "number"
                       },
@@ -4396,7 +4987,6 @@
                       "quizId",
                       "title",
                       "status",
-                      "joinCode",
                       "createdAt",
                       "participants"
                     ]
@@ -4477,10 +5067,6 @@
                     "className": {
                       "type": "string"
                     },
-                    "joinCode": {
-                      "nullable": true,
-                      "type": "string"
-                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -4541,7 +5127,6 @@
                     "quizId",
                     "title",
                     "className",
-                    "joinCode",
                     "status",
                     "questionCount",
                     "totalMarks",
@@ -4624,10 +5209,6 @@
                     "className": {
                       "type": "string"
                     },
-                    "joinCode": {
-                      "nullable": true,
-                      "type": "string"
-                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -4688,7 +5269,6 @@
                     "quizId",
                     "title",
                     "className",
-                    "joinCode",
                     "status",
                     "questionCount",
                     "totalMarks",
@@ -4725,7 +5305,7 @@
     },
     "/api/v1/quiz-runs/{id}/end": {
       "post": {
-        "summary": "End the run; the join code stops working",
+        "summary": "End the run; nobody can join or answer any more",
         "x-access": {
           "kind": "staff",
           "permission": "lesson.control"
@@ -4771,10 +5351,6 @@
                     "className": {
                       "type": "string"
                     },
-                    "joinCode": {
-                      "nullable": true,
-                      "type": "string"
-                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -4835,7 +5411,6 @@
                     "quizId",
                     "title",
                     "className",
-                    "joinCode",
                     "status",
                     "questionCount",
                     "totalMarks",
@@ -4870,9 +5445,9 @@
         }
       }
     },
-    "/api/v1/quiz-runs/join": {
-      "post": {
-        "summary": "Student joins a run by its code",
+    "/api/v1/quiz-runs/open": {
+      "get": {
+        "summary": "Quizzes open for the student's class that they have not handed in",
         "x-access": {
           "kind": "student"
         },
@@ -4881,25 +5456,87 @@
             "bearer": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "code": {
-                    "type": "string",
-                    "pattern": "^\\d{6}$"
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "runId": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "lobby",
+                          "active",
+                          "ended"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "runId",
+                      "title",
+                      "status"
+                    ]
                   }
-                },
-                "required": [
-                  "code"
-                ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
               }
             }
           }
+        }
+      }
+    },
+    "/api/v1/quiz-runs/{id}/join": {
+      "post": {
+        "summary": "Student joins a run opened for their class",
+        "x-access": {
+          "kind": "student"
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -4959,6 +5596,22 @@
                         "type": "number"
                       }
                     },
+                    "current": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "index": {
+                          "type": "number"
+                        },
+                        "remainingMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "index",
+                        "remainingMs"
+                      ]
+                    },
                     "finished": {
                       "type": "boolean"
                     },
@@ -4978,6 +5631,7 @@
                     "secondsPerQuestion",
                     "questions",
                     "myAnswers",
+                    "current",
                     "finished",
                     "score",
                     "totalMarks"
@@ -5091,6 +5745,22 @@
                         "type": "number"
                       }
                     },
+                    "current": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "index": {
+                          "type": "number"
+                        },
+                        "remainingMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "index",
+                        "remainingMs"
+                      ]
+                    },
                     "finished": {
                       "type": "boolean"
                     },
@@ -5110,6 +5780,7 @@
                     "secondsPerQuestion",
                     "questions",
                     "myAnswers",
+                    "current",
                     "finished",
                     "score",
                     "totalMarks"
@@ -5314,6 +5985,22 @@
                         "type": "number"
                       }
                     },
+                    "current": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "index": {
+                          "type": "number"
+                        },
+                        "remainingMs": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "index",
+                        "remainingMs"
+                      ]
+                    },
                     "finished": {
                       "type": "boolean"
                     },
@@ -5333,6 +6020,7 @@
                     "secondsPerQuestion",
                     "questions",
                     "myAnswers",
+                    "current",
                     "finished",
                     "score",
                     "totalMarks"
@@ -6433,6 +7121,355 @@
                 }
               }
             }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notes": {
+      "get": {
+        "summary": "Your notes, most recently changed first",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "body": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "number"
+                      },
+                      "updatedAt": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "body",
+                      "subject",
+                      "createdAt",
+                      "updatedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Write a new note",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "body": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 20000
+                  },
+                  "subject": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 60
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "body": {
+                      "type": "string"
+                    },
+                    "subject": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    },
+                    "updatedAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "body",
+                    "subject",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notes/{id}": {
+      "put": {
+        "summary": "Change one of your notes",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "body": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 20000
+                  },
+                  "subject": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 60
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "body": {
+                      "type": "string"
+                    },
+                    "subject": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    },
+                    "updatedAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "body",
+                    "subject",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete one of your notes for good",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
           },
           "default": {
             "description": "Error",

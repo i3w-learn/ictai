@@ -71,7 +71,6 @@ export const TeacherRunState = z.object({
   quizId: z.string(),
   title: z.string(),
   className: z.string(),
-  joinCode: z.string().nullable(),
   status: RunStatus,
   questionCount: z.number(),
   totalMarks: z.number(),
@@ -79,7 +78,14 @@ export const TeacherRunState = z.object({
 });
 export type TeacherRunState = z.infer<typeof TeacherRunState>;
 
+// Stored and shown in place of a choice when a question's time ran out with no answer.
+export const TIMED_OUT = -1;
+
 // What a student sees. Never includes the correct answers.
+// The server keeps each question's clock: `current` says which question the student is on and
+// how long is left, so reloading the page cannot win time back. It is null when there is nothing
+// to answer (lobby, ended, handed in, or every question done). `myAnswers` holds the chosen
+// option, TIMED_OUT, or null for a question not reached yet.
 export const StudentRunState = z.object({
   kind: z.literal('student'),
   runId: z.string(),
@@ -88,6 +94,7 @@ export const StudentRunState = z.object({
   secondsPerQuestion: z.number(),
   questions: z.array(z.object({ text: z.string(), options: z.array(z.string()) })),
   myAnswers: z.array(z.number().nullable()),
+  current: z.object({ index: z.number(), remainingMs: z.number() }).nullable(),
   finished: z.boolean(),
   score: z.number().nullable(),
   totalMarks: z.number(),
@@ -99,7 +106,6 @@ export const RunSummary = z.object({
   quizId: z.string(),
   title: z.string(),
   status: RunStatus,
-  joinCode: z.string().nullable(),
   createdAt: z.number(),
   participants: z.number(),
 });
@@ -107,7 +113,10 @@ export type RunSummary = z.infer<typeof RunSummary>;
 
 export const OpenRun = z.object({ quizId: Id });
 export const RunQuery = z.object({ quizId: Id });
-export const JoinRun = z.object({ code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code') });
+// A quiz the teacher has opened for the student's class, which the student has not handed in yet.
+// The student's screen shows it by itself; there is no code to type.
+export const OpenRunForStudent = z.object({ runId: z.string(), title: z.string(), status: RunStatus });
+export type OpenRunForStudent = z.infer<typeof OpenRunForStudent>;
 export const SubmitAnswer = z.object({ questionIndex: z.number().int().min(0), choice: z.number().int().min(0) });
 export const AnswerResult = z.object({ accepted: z.boolean() });
 

@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import type { StudentRunState } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Centered, PageTitle } from '../../ui/ui';
+import { Button, Centered, PageTitle, Panel } from '../../ui/ui';
 import { AuditPanel } from './AuditPanel';
 import { DevicesPanel } from './DevicesPanel';
 import { StaffPanel } from './StaffPanel';
 import { StudentsPanel } from './StudentsPanel';
-import { JoinQuiz } from '../quizzes/JoinQuiz';
+import { QuizPopup, QuizWaiting, useOpenQuiz } from '../quizzes/QuizInvite';
 import { LabSession } from '../quizzes/LabSession';
 import { PlayQuiz } from '../quizzes/PlayQuiz';
 import { QuizEditor } from '../quizzes/QuizEditor';
 import { QuizzesPanel } from '../quizzes/QuizzesPanel';
 import { AiQuizMaker, type AiDraft } from '../quizzes/AiQuizMaker';
+import { MyNotes } from '../notes/MyNotes';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { StudentResultsPage } from '../results/StudentResultsPage';
 import { TeachersPanel } from '../results/TeachersPanel';
@@ -33,18 +34,10 @@ export function Home() {
   const { state } = useApp();
   const p = state.session!.principal;
   const [view, setView] = useState<View>({ kind: 'dash' });
-  const [playing, setPlaying] = useState<StudentRunState | null>(null);
+  // Goes up each time a class is added, so the teacher form shows the new class at once.
+  const [classesChanged, setClassesChanged] = useState(0);
 
-  if (p.kind === 'student') {
-    if (playing) return <PlayQuiz initial={playing} onExit={() => setPlaying(null)} />;
-    return (
-      <Centered>
-        <PageTitle eyebrow={greeting()} sub="When your teacher starts a lesson, it will open here.">Hello, {p.name}</PageTitle>
-        <JoinQuiz onJoined={setPlaying} />
-      </Centered>
-    );
-  }
-
+  if (p.kind === 'student') return <StudentHome name={p.name} />;
   if (p.kind === 'staff' && state.settings.role === 'console') {
     if (view.kind === 'edit-quiz') return <QuizEditor quizId={view.quizId} draft={view.draft} onDone={() => setView({ kind: 'dash' })} />;
     if (view.kind === 'ai-quiz') return <AiQuizMaker onDraft={(draft) => setView({ kind: 'edit-quiz', quizId: null, draft })} onBack={() => setView({ kind: 'dash' })} />;
@@ -61,9 +54,9 @@ export function Home() {
           <QuizzesPanel onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} />
         )}
         {p.permissions.includes('staff.manage') && <TeachersPanel />}
-        {p.permissions.includes('staff.manage') && <StaffPanel />}
+        {p.permissions.includes('staff.manage') && <StaffPanel classesChanged={classesChanged} />}
         {p.permissions.includes('setup.devices') && <DevicesPanel />}
-        {p.permissions.includes('students.manage') && <StudentsPanel />}
+        {p.permissions.includes('students.manage') && <StudentsPanel onClassAdded={() => setClassesChanged((n) => n + 1)} />}
         {p.permissions.includes('server.manage') && <AuditPanel />}
       </div>
     );
@@ -72,6 +65,29 @@ export function Home() {
   return (
     <Centered>
       <PageTitle sub="Live lessons arrive in the next milestone (M2).">Ready, {p.kind === 'staff' ? p.displayName : 'device'}</PageTitle>
+    </Centered>
+  );
+}
+
+// The student's own screens. A quiz the teacher opens for the class pops up over any of them.
+function StudentHome({ name }: { name: string }) {
+  const [playing, setPlaying] = useState<StudentRunState | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+  // The quiz the student said "Not now" to; a different quiz pops up again.
+  const [later, setLater] = useState<string | null>(null);
+  const quiz = useOpenQuiz();
+
+  if (playing) return <PlayQuiz initial={playing} onExit={() => setPlaying(null)} />;
+  const popup = quiz && quiz.runId !== later && <QuizPopup quiz={quiz} onJoined={setPlaying} onLater={() => setLater(quiz.runId)} />;
+  if (notesOpen) return <>{popup}<MyNotes onBack={() => setNotesOpen(false)} /></>;
+  return (
+    <Centered>
+      {popup}
+      <PageTitle eyebrow={greeting()} sub="When your teacher starts a quiz, it will open here.">Hello, {name}</PageTitle>
+      {quiz && <QuizWaiting quiz={quiz} onJoined={setPlaying} />}
+      <Panel title="My notes" actions={<Button variant="quiet" onClick={() => setNotesOpen(true)}>Open my notes</Button>}>
+        <p className="text-sm text-muted-foreground">Write down what you learn. Only you can read your notes.</p>
+      </Panel>
     </Centered>
   );
 }

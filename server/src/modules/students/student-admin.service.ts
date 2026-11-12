@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ClassCode, NewStudent, SchoolClass, Section, SignInCard, StaffPrincipal, Student, UpdateStudent } from '@ict/contracts';
+import type { ClassCode, ImportResult, ImportStudents, NewStudent, SchoolClass, Section, SignInCard, StaffPrincipal, Student, UpdateStudent } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import { DAY, type Clock } from '../../core/clock.js';
 import { AppError, forbidden, notFound, unique } from '../../core/errors.js';
@@ -59,6 +59,30 @@ export class StudentAdminService {
       now: this.now(),
     });
     return { ...student, qrToken };
+  }
+
+  // Each row is judged alone: good rows are added, bad ones come back with the reason.
+  // Imported students have no PIN yet; they start with a first sign-in code or a card.
+  importStudents(actor: StaffPrincipal, classId: string, rows: ImportStudents['rows']): ImportResult {
+    this.myClass(scopeOf(actor), classId);
+    const sections = new Map(this.classes.listSections(classId).map((x) => [x.name.toLowerCase(), x.id]));
+    const result: ImportResult = { added: 0, skipped: [] };
+    rows.forEach((r, i) => {
+      const name = r.name.trim();
+      const rollNo = r.rollNo?.trim() || null;
+      const section = r.section?.trim() || null;
+      const skip = (reason: string) => result.skipped.push({ row: i + 1, name, reason });
+      if (!name) return skip('The name is empty.');
+      if (name.length > 80) return skip('The name is longer than 80 letters.');
+      if (rollNo && rollNo.length > 16) return skip('The roll number is longer than 16 letters.');
+      const sectionId = section ? sections.get(section.toLowerCase()) : null;
+      if (sectionId === undefined) return skip(`Section "${section}" is not in this class. Add the section first.`);
+      if (this.students.findDuplicate(name, classId, rollNo)) return skip('Already in this class with the same roll number.');
+      this.students.insert({ id: randomUUID(), name, classId, sectionId, rollNo, pinHash: null, qrTokenHash: hashToken(newToken()), now: this.now() });
+      result.added++;
+    });
+    if (result.added > 0) this.audit.record({ kind: 'staff', id: actor.userId }, 'student.import', classId, { added: result.added });
+    return result;
   }
 
   listStudents(scope: Scope, classId: string): Student[] {

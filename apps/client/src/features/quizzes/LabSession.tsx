@@ -3,7 +3,6 @@ import { ArrowLeft, Check, Trophy } from 'lucide-react';
 import { quizRoom, type TeacherRunState } from '@ict/contracts';
 import { useApp, useLiveState } from '../../app/app-context';
 import { Button, ConfirmButton, ErrorNote, Panel, useAction } from '../../ui/ui';
-import { RelayChip } from './RelayChip';
 
 const STATUS = { lobby: 'Waiting to start', active: 'Live', ended: 'Ended' } as const;
 
@@ -28,17 +27,16 @@ export function LabSession({ runId, onExit }: { runId: string; onExit: () => voi
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="quiet" onClick={onExit}><ArrowLeft className="size-4" /> Quizzes</Button>
         <h1 className="flex-1 font-display text-2xl font-semibold">{run.title} <span className="text-base font-normal text-muted-foreground">· Class {run.className}</span></h1>
-        <RelayChip />
         <span className={run.status === 'active' ? 'rounded-full bg-success/10 px-3 py-1 text-sm font-semibold text-success' : 'rounded-full bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground'}>
           {STATUS[run.status]}
         </span>
       </div>
 
-      {run.joinCode && (
-        <div className="grid justify-items-center gap-2 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 p-8">
-          <span className="text-sm text-muted-foreground">Students: tap <b>Join a quiz</b> and type</span>
-          <strong className="font-mono text-6xl tracking-[0.2em] text-primary">{run.joinCode}</strong>
-          <span className="text-sm text-muted-foreground">{run.participants.length} joined · {run.questionCount} questions · {run.totalMarks} marks</span>
+      {run.status !== 'ended' && (
+        <div className="grid justify-items-center gap-2 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 p-8 text-center">
+          <span className="text-sm text-muted-foreground">Class {run.className} sees this quiz on their screens now. They press <b>Join the quiz</b>; there is no code.</span>
+          <strong className="font-display text-5xl font-semibold text-primary">{run.participants.length} joined</strong>
+          <span className="text-sm text-muted-foreground">{run.questionCount} questions · {run.totalMarks} marks</span>
         </div>
       )}
 

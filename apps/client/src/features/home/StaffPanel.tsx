@@ -10,7 +10,7 @@ const EMPTY = { username: '', displayName: '', password: '', classIds: [] as str
 const toSubjects = (text: string) => [...new Set(text.split(',').map((x) => x.trim()).filter(Boolean))];
 
 // Spec 4.1: the Super Admin adds, edits and deletes teachers, and picks each teacher's classes and subjects.
-export function StaffPanel() {
+export function StaffPanel({ classesChanged }: { classesChanged: number }) {
   const { call } = useApp();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -21,7 +21,7 @@ export function StaffPanel() {
     setStaff(s);
     setClasses(c);
   });
-  useEffect(() => { void load.run(); }, []);
+  useEffect(() => { void load.run(); }, [classesChanged]);
 
   const add = useAction(async () => {
     await call('POST /api/v1/staff', { body: { ...form, subjects: toSubjects(form.subjects) } });
