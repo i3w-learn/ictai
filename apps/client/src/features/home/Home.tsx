@@ -12,6 +12,7 @@ import { PlayQuiz } from '../quizzes/PlayQuiz';
 import { QuizEditor } from '../quizzes/QuizEditor';
 import { QuizzesPanel } from '../quizzes/QuizzesPanel';
 import { AiQuizMaker, type AiDraft } from '../quizzes/AiQuizMaker';
+import { AskAi } from '../quizzes/AskAi';
 import { MyNotes } from '../notes/MyNotes';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { StudentResultsPage } from '../results/StudentResultsPage';
@@ -23,6 +24,7 @@ type View =
   | { kind: 'edit-quiz'; quizId: string | null; draft?: AiDraft }
   | { kind: 'lab'; runId: string }
   | { kind: 'ai-quiz' }
+  | { kind: 'ask-ai' }
   | { kind: 'student'; studentId: string };
 
 function greeting() {
@@ -41,6 +43,7 @@ export function Home() {
   if (p.kind === 'staff' && state.settings.role === 'console') {
     if (view.kind === 'edit-quiz') return <QuizEditor quizId={view.quizId} draft={view.draft} onDone={() => setView({ kind: 'dash' })} />;
     if (view.kind === 'ai-quiz') return <AiQuizMaker onDraft={(draft) => setView({ kind: 'edit-quiz', quizId: null, draft })} onBack={() => setView({ kind: 'dash' })} />;
+    if (view.kind === 'ask-ai') return <AskAi onBack={() => setView({ kind: 'dash' })} />;
     if (view.kind === 'lab') return <LabSession runId={view.runId} onExit={() => setView({ kind: 'dash' })} />;
     if (view.kind === 'student') return <StudentResultsPage studentId={view.studentId} onBack={() => setView({ kind: 'dash' })} />;
     const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
@@ -51,7 +54,7 @@ export function Home() {
         </header>
         {p.permissions.includes('results.view') && <ResultsPanel onStudent={(studentId) => setView({ kind: 'student', studentId })} />}
         {p.permissions.includes('teaching.manage') && (
-          <QuizzesPanel onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} />
+          <QuizzesPanel onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} onAsk={() => setView({ kind: 'ask-ai' })} />
         )}
         {p.permissions.includes('staff.manage') && <TeachersPanel />}
         {p.permissions.includes('staff.manage') && <StaffPanel classesChanged={classesChanged} />}
