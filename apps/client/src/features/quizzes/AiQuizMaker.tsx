@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Sparkles } from 'lucide-react';
-import type { AiJob, AiQuizRequest, AiQuizResult, AiStatus, SchoolClass } from '@ict/contracts';
+import type { AiQuizJob, AiQuizRequest, AiQuizResult, AiStatus, SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Field, Note, Panel, Select, useAction } from '../../ui/ui';
 import { SubjectField } from './SubjectField';
@@ -14,17 +14,19 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
   const { call } = useApp();
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [recent, setRecent] = useState<AiJob[]>([]);
+  const [recent, setRecent] = useState<AiQuizJob[]>([]);
   const [form, setForm] = useState({ classId: '', subject: '', topic: '', count: '10', language: 'en' as AiQuizRequest['language'] });
-  const [job, setJob] = useState<AiJob | null>(null);
+  const [job, setJob] = useState<AiQuizJob | null>(null);
 
   const load = useAction(async () => {
     const [s, cls, jobs] = await Promise.all([call('GET /api/v1/ai/status'), call('GET /api/v1/classes'), call('GET /api/v1/ai/jobs')]);
+    // This screen is about quizzes; questions the teacher asked the AI live elsewhere.
+    const quizzes = jobs.filter((j): j is AiQuizJob => j.kind === 'quiz');
     setStatus(s);
     setClasses(cls);
-    setRecent(jobs);
+    setRecent(quizzes);
     // Pick up a request still in progress, e.g. after leaving this screen.
-    setJob((cur) => cur ?? jobs.find((j) => j.status === 'queued' || j.status === 'running') ?? null);
+    setJob((cur) => cur ?? quizzes.find((j) => j.status === 'queued' || j.status === 'running') ?? null);
   });
   useEffect(() => { void load.run(); }, []);
 
@@ -34,6 +36,7 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
     if (!waiting || !job) return;
     const timer = setInterval(() => {
       call('GET /api/v1/ai/jobs/:id', { params: { id: job.id } }).then((j) => {
+        if (j.kind !== 'quiz') return;
         setJob(j);
         if (j.status === 'done' || j.status === 'failed') void load.run();
       }, () => {});
@@ -50,11 +53,11 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
     : null;
 
   const make = useAction(async () => {
-    setJob(await call('POST /api/v1/ai/quiz', { body: { classId: form.classId, subject: form.subject, topic: form.topic, count, language: form.language } }));
+    setJob(await call('POST /api/v1/ai/quiz', { query: {}, body: { classId: form.classId, subject: form.subject, topic: form.topic, count, language: form.language } }));
   });
 
   const className = (id: string) => classes.find((c) => c.id === id)?.name ?? '?';
-  const open = (j: AiJob) => j.result && onDraft({ request: j.request, result: j.result });
+  const open = (j: AiQuizJob) => j.result && onDraft({ request: j.request, result: j.result });
 
   return (
     <div className="mx-auto grid max-w-4xl gap-6">

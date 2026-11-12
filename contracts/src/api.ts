@@ -10,7 +10,7 @@ import {
   AnswerResult, JoinRun, OpenRun, Quiz, QuizInput, QuizQuery, QuizSummary, RunQuery, RunSummary,
   StudentRunState, SubmitAnswer, TeacherRunState,
 } from './quizzes.js';
-import { AiJob, AiQuizRequest, AiStatus } from './ai.js';
+import { AiAskJob, AiAskRequest, AiJob, AiQuizJob, AiQuizRequest, AiStatus, AiWaitQuery } from './ai.js';
 import { ResultsOverview, ResultsQuery, StudentResults, TeacherActivity } from './results.js';
 import { NewTeacher, SetPassword, StaffMember, UpdateTeacher } from './staff.js';
 import type { Permission } from './permissions.js';
@@ -94,7 +94,8 @@ export const API = {
   'POST /api/v1/quiz-runs/:id/finish': { summary: 'Student is done; returns their score', access: student, params: IdParams, status: 200, response: StudentRunState },
 
   'GET /api/v1/ai/status': { summary: 'Is the AI installed and ready, and how many requests wait', access: staff('ai.teacher'), status: 200, response: AiStatus },
-  'POST /api/v1/ai/quiz': { summary: 'Ask the AI for a draft quiz; returns the queued job', access: staff('ai.teacher'), body: AiQuizRequest, status: 202, response: AiJob },
+  'POST /api/v1/ai/quiz': { summary: 'Ask the AI for a draft quiz; returns the queued job, or with ?wait=1 the finished job with the questions', access: staff('ai.teacher'), query: AiWaitQuery, body: AiQuizRequest, status: 202, response: AiQuizJob },
+  'POST /api/v1/ai/ask': { summary: 'Ask the AI a question; returns the queued job, or with ?wait=1 the finished job with the answer', access: staff('ai.teacher'), query: AiWaitQuery, body: AiAskRequest, status: 202, response: AiAskJob },
   'GET /api/v1/ai/jobs': { summary: 'Your last 10 AI requests, newest first', access: staff('ai.teacher'), status: 200, response: z.array(AiJob) },
   'GET /api/v1/ai/jobs/:id': { summary: 'One of your AI requests, with the draft when done', access: staff('ai.teacher'), params: IdParams, status: 200, response: AiJob },
 

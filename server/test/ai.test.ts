@@ -54,6 +54,14 @@ describe('AI quiz maker', () => {
     expect((await inject('GET', '/api/v1/ai/jobs', teacher)).json().map((j: { id: string }) => j.id)).toEqual([job.id]);
   });
 
+  it('with wait=1 the draft comes back in the same call', async () => {
+    const { inject, teacher, c7 } = await setup({ llm: goodLlm, installed: true });
+    const res = await inject('POST', '/api/v1/ai/quiz?wait=1', teacher, { classId: c7.id, subject: 'Maths', topic: 'Adding', count: 2 });
+    expect(res.statusCode).toBe(202);
+    expect(res.json()).toMatchObject({ kind: 'quiz', status: 'done' });
+    expect(res.json().result.questions).toHaveLength(2);
+  });
+
   it('records the request in the activity log', async () => {
     const { ask, inject, teacher, admin } = await setup({ llm: goodLlm, installed: true });
     await ask(teacher);

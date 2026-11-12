@@ -5437,7 +5437,7 @@
     },
     "/api/v1/ai/quiz": {
       "post": {
-        "summary": "Ask the AI for a draft quiz; returns the queued job",
+        "summary": "Ask the AI for a draft quiz; returns the queued job, or with ?wait=1 the finished job with the questions",
         "x-access": {
           "kind": "staff",
           "permission": "ai.teacher"
@@ -5445,6 +5445,16 @@
         "security": [
           {
             "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wait",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -5504,12 +5514,6 @@
                     "id": {
                       "type": "string"
                     },
-                    "kind": {
-                      "type": "string",
-                      "enum": [
-                        "quiz"
-                      ]
-                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -5522,6 +5526,23 @@
                     "position": {
                       "nullable": true,
                       "type": "number"
+                    },
+                    "error": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    },
+                    "finishedAt": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "quiz"
+                      ]
                     },
                     "request": {
                       "type": "object",
@@ -5634,6 +5655,121 @@
                         "flags",
                         "note"
                       ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "position",
+                    "error",
+                    "createdAt",
+                    "finishedAt",
+                    "kind",
+                    "request",
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/ask": {
+      "post": {
+        "summary": "Ask the AI a question; returns the queued job, or with ?wait=1 the finished job with the answer",
+        "x-access": {
+          "kind": "staff",
+          "permission": "ai.teacher"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wait",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "language": {
+                    "default": "en",
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "hi"
+                    ]
+                  }
+                },
+                "required": [
+                  "question"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "done",
+                        "failed"
+                      ]
+                    },
+                    "position": {
+                      "nullable": true,
+                      "type": "number"
                     },
                     "error": {
                       "nullable": true,
@@ -5645,18 +5781,57 @@
                     "finishedAt": {
                       "nullable": true,
                       "type": "number"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "ask"
+                      ]
+                    },
+                    "request": {
+                      "type": "object",
+                      "properties": {
+                        "question": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        },
+                        "language": {
+                          "default": "en",
+                          "type": "string",
+                          "enum": [
+                            "en",
+                            "hi"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "question"
+                      ]
+                    },
+                    "result": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "answer": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "answer"
+                      ]
                     }
                   },
                   "required": [
                     "id",
-                    "kind",
                     "status",
                     "position",
-                    "request",
-                    "result",
                     "error",
                     "createdAt",
-                    "finishedAt"
+                    "finishedAt",
+                    "kind",
+                    "request",
+                    "result"
                   ]
                 }
               }
@@ -5707,164 +5882,250 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "kind": {
-                        "type": "string",
-                        "enum": [
-                          "quiz"
-                        ]
-                      },
-                      "status": {
-                        "type": "string",
-                        "enum": [
-                          "queued",
-                          "running",
-                          "done",
-                          "failed"
-                        ]
-                      },
-                      "position": {
-                        "nullable": true,
-                        "type": "number"
-                      },
-                      "request": {
+                    "oneOf": [
+                      {
                         "type": "object",
                         "properties": {
-                          "classId": {
-                            "type": "string",
-                            "format": "uuid",
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "id": {
+                            "type": "string"
                           },
-                          "subject": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 60
-                          },
-                          "topic": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 120
-                          },
-                          "count": {
-                            "default": 10,
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 20
-                          },
-                          "language": {
-                            "default": "en",
+                          "status": {
                             "type": "string",
                             "enum": [
-                              "en",
-                              "hi"
+                              "queued",
+                              "running",
+                              "done",
+                              "failed"
+                            ]
+                          },
+                          "position": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "error": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "finishedAt": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "quiz"
+                            ]
+                          },
+                          "request": {
+                            "type": "object",
+                            "properties": {
+                              "classId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "subject": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 60
+                              },
+                              "topic": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 120
+                              },
+                              "count": {
+                                "default": 10,
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 20
+                              },
+                              "language": {
+                                "default": "en",
+                                "type": "string",
+                                "enum": [
+                                  "en",
+                                  "hi"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "classId",
+                              "subject",
+                              "topic"
+                            ]
+                          },
+                          "result": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "questions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "text": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 500
+                                    },
+                                    "options": {
+                                      "minItems": 2,
+                                      "maxItems": 6,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      }
+                                    },
+                                    "correct": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "marks": {
+                                      "default": 1,
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 10
+                                    }
+                                  },
+                                  "required": [
+                                    "text",
+                                    "options",
+                                    "correct"
+                                  ]
+                                }
+                              },
+                              "flags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "ok": {
+                                      "type": "boolean"
+                                    },
+                                    "note": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "ok",
+                                    "note"
+                                  ]
+                                }
+                              },
+                              "note": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "questions",
+                              "flags",
+                              "note"
                             ]
                           }
                         },
                         "required": [
-                          "classId",
-                          "subject",
-                          "topic"
+                          "id",
+                          "status",
+                          "position",
+                          "error",
+                          "createdAt",
+                          "finishedAt",
+                          "kind",
+                          "request",
+                          "result"
                         ]
                       },
-                      "result": {
-                        "nullable": true,
+                      {
                         "type": "object",
                         "properties": {
-                          "questions": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "text": {
-                                  "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 500
-                                },
-                                "options": {
-                                  "minItems": 2,
-                                  "maxItems": 6,
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "maxLength": 200
-                                  }
-                                },
-                                "correct": {
-                                  "type": "integer",
-                                  "minimum": 0,
-                                  "maximum": 9007199254740991
-                                },
-                                "marks": {
-                                  "default": 1,
-                                  "type": "integer",
-                                  "minimum": 1,
-                                  "maximum": 10
-                                }
-                              },
-                              "required": [
-                                "text",
-                                "options",
-                                "correct"
-                              ]
-                            }
+                          "id": {
+                            "type": "string"
                           },
-                          "flags": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "ok": {
-                                  "type": "boolean"
-                                },
-                                "note": {
-                                  "nullable": true,
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "ok",
-                                "note"
-                              ]
-                            }
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "queued",
+                              "running",
+                              "done",
+                              "failed"
+                            ]
                           },
-                          "note": {
+                          "position": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "error": {
                             "nullable": true,
                             "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "finishedAt": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "ask"
+                            ]
+                          },
+                          "request": {
+                            "type": "object",
+                            "properties": {
+                              "question": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2000
+                              },
+                              "language": {
+                                "default": "en",
+                                "type": "string",
+                                "enum": [
+                                  "en",
+                                  "hi"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "question"
+                            ]
+                          },
+                          "result": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "answer": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "answer"
+                            ]
                           }
                         },
                         "required": [
-                          "questions",
-                          "flags",
-                          "note"
+                          "id",
+                          "status",
+                          "position",
+                          "error",
+                          "createdAt",
+                          "finishedAt",
+                          "kind",
+                          "request",
+                          "result"
                         ]
-                      },
-                      "error": {
-                        "nullable": true,
-                        "type": "string"
-                      },
-                      "createdAt": {
-                        "type": "number"
-                      },
-                      "finishedAt": {
-                        "nullable": true,
-                        "type": "number"
                       }
-                    },
-                    "required": [
-                      "id",
-                      "kind",
-                      "status",
-                      "position",
-                      "request",
-                      "result",
-                      "error",
-                      "createdAt",
-                      "finishedAt"
                     ]
                   }
                 }
@@ -5924,164 +6185,250 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "kind": {
-                      "type": "string",
-                      "enum": [
-                        "quiz"
-                      ]
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "queued",
-                        "running",
-                        "done",
-                        "failed"
-                      ]
-                    },
-                    "position": {
-                      "nullable": true,
-                      "type": "number"
-                    },
-                    "request": {
+                  "oneOf": [
+                    {
                       "type": "object",
                       "properties": {
-                        "classId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        "id": {
+                          "type": "string"
                         },
-                        "subject": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 60
-                        },
-                        "topic": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 120
-                        },
-                        "count": {
-                          "default": 10,
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 20
-                        },
-                        "language": {
-                          "default": "en",
+                        "status": {
                           "type": "string",
                           "enum": [
-                            "en",
-                            "hi"
+                            "queued",
+                            "running",
+                            "done",
+                            "failed"
+                          ]
+                        },
+                        "position": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "error": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "finishedAt": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "quiz"
+                          ]
+                        },
+                        "request": {
+                          "type": "object",
+                          "properties": {
+                            "classId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "subject": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 60
+                            },
+                            "topic": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 120
+                            },
+                            "count": {
+                              "default": 10,
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 20
+                            },
+                            "language": {
+                              "default": "en",
+                              "type": "string",
+                              "enum": [
+                                "en",
+                                "hi"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "classId",
+                            "subject",
+                            "topic"
+                          ]
+                        },
+                        "result": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "questions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "text": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 500
+                                  },
+                                  "options": {
+                                    "minItems": 2,
+                                    "maxItems": 6,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 200
+                                    }
+                                  },
+                                  "correct": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "marks": {
+                                    "default": 1,
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 10
+                                  }
+                                },
+                                "required": [
+                                  "text",
+                                  "options",
+                                  "correct"
+                                ]
+                              }
+                            },
+                            "flags": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "ok": {
+                                    "type": "boolean"
+                                  },
+                                  "note": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "ok",
+                                  "note"
+                                ]
+                              }
+                            },
+                            "note": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "questions",
+                            "flags",
+                            "note"
                           ]
                         }
                       },
                       "required": [
-                        "classId",
-                        "subject",
-                        "topic"
+                        "id",
+                        "status",
+                        "position",
+                        "error",
+                        "createdAt",
+                        "finishedAt",
+                        "kind",
+                        "request",
+                        "result"
                       ]
                     },
-                    "result": {
-                      "nullable": true,
+                    {
                       "type": "object",
                       "properties": {
-                        "questions": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "text": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 500
-                              },
-                              "options": {
-                                "minItems": 2,
-                                "maxItems": 6,
-                                "type": "array",
-                                "items": {
-                                  "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 200
-                                }
-                              },
-                              "correct": {
-                                "type": "integer",
-                                "minimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "marks": {
-                                "default": 1,
-                                "type": "integer",
-                                "minimum": 1,
-                                "maximum": 10
-                              }
-                            },
-                            "required": [
-                              "text",
-                              "options",
-                              "correct"
-                            ]
-                          }
+                        "id": {
+                          "type": "string"
                         },
-                        "flags": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "ok": {
-                                "type": "boolean"
-                              },
-                              "note": {
-                                "nullable": true,
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "ok",
-                              "note"
-                            ]
-                          }
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "done",
+                            "failed"
+                          ]
                         },
-                        "note": {
+                        "position": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "error": {
                           "nullable": true,
                           "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "finishedAt": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "ask"
+                          ]
+                        },
+                        "request": {
+                          "type": "object",
+                          "properties": {
+                            "question": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 2000
+                            },
+                            "language": {
+                              "default": "en",
+                              "type": "string",
+                              "enum": [
+                                "en",
+                                "hi"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "question"
+                          ]
+                        },
+                        "result": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "answer": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "answer"
+                          ]
                         }
                       },
                       "required": [
-                        "questions",
-                        "flags",
-                        "note"
+                        "id",
+                        "status",
+                        "position",
+                        "error",
+                        "createdAt",
+                        "finishedAt",
+                        "kind",
+                        "request",
+                        "result"
                       ]
-                    },
-                    "error": {
-                      "nullable": true,
-                      "type": "string"
-                    },
-                    "createdAt": {
-                      "type": "number"
-                    },
-                    "finishedAt": {
-                      "nullable": true,
-                      "type": "number"
                     }
-                  },
-                  "required": [
-                    "id",
-                    "kind",
-                    "status",
-                    "position",
-                    "request",
-                    "result",
-                    "error",
-                    "createdAt",
-                    "finishedAt"
                   ]
                 }
               }
