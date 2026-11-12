@@ -71,7 +71,6 @@ export const TeacherRunState = z.object({
   quizId: z.string(),
   title: z.string(),
   className: z.string(),
-  joinCode: z.string().nullable(),
   status: RunStatus,
   questionCount: z.number(),
   totalMarks: z.number(),
@@ -107,7 +106,6 @@ export const RunSummary = z.object({
   quizId: z.string(),
   title: z.string(),
   status: RunStatus,
-  joinCode: z.string().nullable(),
   createdAt: z.number(),
   participants: z.number(),
 });
@@ -115,7 +113,10 @@ export type RunSummary = z.infer<typeof RunSummary>;
 
 export const OpenRun = z.object({ quizId: Id });
 export const RunQuery = z.object({ quizId: Id });
-export const JoinRun = z.object({ code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code') });
+// A quiz the teacher has opened for the student's class, which the student has not handed in yet.
+// The student's screen shows it by itself; there is no code to type.
+export const OpenRunForStudent = z.object({ runId: z.string(), title: z.string(), status: RunStatus });
+export type OpenRunForStudent = z.infer<typeof OpenRunForStudent>;
 export const SubmitAnswer = z.object({ questionIndex: z.number().int().min(0), choice: z.number().int().min(0) });
 export const AnswerResult = z.object({ accepted: z.boolean() });
 

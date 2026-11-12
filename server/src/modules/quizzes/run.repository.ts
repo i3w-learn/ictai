@@ -5,12 +5,11 @@ export interface RunRow {
   id: string;
   quiz_id: string;
   class_id: string;
-  join_code: string;
   status: RunStatus;
   started_at: number | null;
 }
 
-const RUN_COLUMNS = 'id, quiz_id, class_id, join_code, status, started_at';
+const RUN_COLUMNS = 'id, quiz_id, class_id, status, started_at';
 
 // `choice` is TIMED_OUT for a question whose time ran out; `answered_at` is then its deadline.
 export interface AnswerRow {
@@ -23,21 +22,27 @@ export interface AnswerRow {
 export class RunRepository {
   constructor(private readonly db: Db) {}
 
-  insert(r: { id: string; quizId: string; classId: string; joinCode: string; openedBy: string; now: number }) {
+  insert(r: { id: string; quizId: string; classId: string; openedBy: string; now: number }) {
     this.db
-      .prepare(`INSERT INTO quiz_runs (id, quiz_id, class_id, join_code, status, opened_by, created_at) VALUES (?, ?, ?, ?, 'lobby', ?, ?)`)
-      .run(r.id, r.quizId, r.classId, r.joinCode, r.openedBy, r.now);
+      // join_code is left from when students typed a code to join; it is no longer used.
+      .prepare(`INSERT INTO quiz_runs (id, quiz_id, class_id, join_code, status, opened_by, created_at) VALUES (?, ?, ?, '', 'lobby', ?, ?)`)
+      .run(r.id, r.quizId, r.classId, r.openedBy, r.now);
   }
 
   get(id: string): RunRow | undefined {
     return this.db.prepare(`SELECT ${RUN_COLUMNS} FROM quiz_runs WHERE id = ?`).get(id) as RunRow | undefined;
   }
 
-  // Codes are unique only among runs that are still open.
-  findOpenByCode(code: string): RunRow | undefined {
+  // Runs still open for a class that this student has not handed in, newest first.
+  openForStudent(classId: string, studentId: string): { id: string; quiz_id: string; status: RunRow['status'] }[] {
     return this.db
-      .prepare(`SELECT ${RUN_COLUMNS} FROM quiz_runs WHERE join_code = ? AND status != 'ended'`)
-      .get(code) as RunRow | undefined;
+      .prepare(
+        `SELECT r.id, r.quiz_id, r.status FROM quiz_runs r
+         WHERE r.class_id = ? AND r.status != 'ended'
+           AND NOT EXISTS (SELECT 1 FROM quiz_participants p WHERE p.run_id = r.id AND p.student_id = ? AND p.finished_at IS NOT NULL)
+         ORDER BY r.created_at DESC`,
+      )
+      .all(classId, studentId) as { id: string; quiz_id: string; status: RunRow['status'] }[];
   }
 
   hasOpenRun(quizId: string): boolean {
@@ -55,12 +60,12 @@ export class RunRepository {
   listByQuiz(quizId: string): Omit<RunSummary, 'title'>[] {
     const rows = this.db
       .prepare(
-        `SELECT r.id, r.quiz_id AS quizId, r.status, r.join_code AS joinCode, r.created_at AS createdAt,
+        `SELECT r.id, r.quiz_id AS quizId, r.status, r.created_at AS createdAt,
            (SELECT COUNT(*) FROM quiz_participants p WHERE p.run_id = r.id) AS participants
          FROM quiz_runs r WHERE r.quiz_id = ? ORDER BY r.created_at DESC`,
       )
       .all(quizId) as Omit<RunSummary, 'title'>[];
-    return rows.map((r) => ({ ...r, joinCode: r.status === 'ended' ? null : r.joinCode }));
+    return rows;
   }
 
   addParticipant(runId: string, studentId: string, deviceId: string, now: number) {

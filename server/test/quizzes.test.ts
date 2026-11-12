@@ -64,14 +64,14 @@ describe('Lab Mode', () => {
   it('opens a run with a 6-digit code', async () => {
     const { open } = await withQuiz();
     const run = await open();
-    expect(run).toMatchObject({ kind: 'teacher', status: 'lobby', className: '7', joinCode: expect.stringMatching(/^\d{6}$/), participants: [] });
+    expect(run).toMatchObject({ kind: 'teacher', status: 'lobby', className: '7', participants: [] });
   });
 
   it('lets a student join by code and hides the correct answers', async () => {
     const { inject, open, asha, studentOn } = await withQuiz();
     const run = await open();
     const me = await studentOn(asha.id, '1111');
-    const res = await inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode });
+    const res = await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, me);
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ kind: 'student', status: 'lobby', myAnswers: [null, null], score: null, totalMarks: 3 });
     expect(JSON.stringify(res.json())).not.toMatch(/correct/);
@@ -80,25 +80,45 @@ describe('Lab Mode', () => {
   it('refuses a student from another class', async () => {
     const { inject, open, kabir, studentOn } = await withQuiz();
     const run = await open();
-    const res = await inject('POST', '/api/v1/quiz-runs/join', await studentOn(kabir.id, '2222'), { code: run.joinCode });
+    const res = await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, await studentOn(kabir.id, '2222'));
     expect(res.statusCode).toBe(403);
     expect(res.json().message).toMatch(/Class 7/);
   });
 
-  it('blocks code guessing after 5 wrong codes', async () => {
-    const { inject, open, asha, studentOn } = await withQuiz();
-    const run = await open();
+  it('shows an open quiz to the students of its class by itself, with no code', async () => {
+    const { inject, teacher, open, asha, kabir, studentOn } = await withQuiz();
     const me = await studentOn(asha.id, '1111');
-    const wrong = run.joinCode === '000000' ? '000001' : '000000';
-    for (let i = 0; i < 5; i++) expect((await inject('POST', '/api/v1/quiz-runs/join', me, { code: wrong })).statusCode).toBe(404);
-    expect((await inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode })).statusCode).toBe(429);
+    const other = await studentOn(kabir.id, '2222'); // Kabir is in another class
+    const openFor = async (who: object) => (await inject('GET', '/api/v1/quiz-runs/open', who)).json();
+    expect(await openFor(me)).toEqual([]);
+
+    const run = await open();
+    expect(run).not.toHaveProperty('joinCode');
+    expect(await openFor(me)).toEqual([{ runId: run.runId, title: run.title, status: 'lobby' }]);
+    expect(await openFor(other)).toEqual([]);
+    expect((await inject('GET', '/api/v1/quiz-runs/open', teacher)).statusCode).toBe(403);
+
+    // Still offered after joining (the app may have been closed), until it is handed in or ended.
+    await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, me);
+    await inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, teacher);
+    expect(await openFor(me)).toEqual([{ runId: run.runId, title: run.title, status: 'active' }]);
+    await inject('POST', `/api/v1/quiz-runs/${run.runId}/finish`, me);
+    expect(await openFor(me)).toEqual([]);
+  });
+
+  it('stops offering a quiz once the teacher ends it', async () => {
+    const { inject, teacher, open, asha, studentOn } = await withQuiz();
+    const me = await studentOn(asha.id, '1111');
+    const run = await open();
+    await inject('POST', `/api/v1/quiz-runs/${run.runId}/end`, teacher);
+    expect((await inject('GET', '/api/v1/quiz-runs/open', me)).json()).toEqual([]);
   });
 
   it('runs a whole quiz: lobby, answers, score, leaderboard, end', async () => {
     const { inject, teacher, open, asha, studentOn, login } = await withQuiz();
     const run = await open();
     const me = await studentOn(asha.id, '1111');
-    await inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode });
+    await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, me);
     const answer = (questionIndex: number, choice: number) =>
       inject('POST', `/api/v1/quiz-runs/${run.runId}/answers`, me, { questionIndex, choice });
 
@@ -116,7 +136,7 @@ describe('Lab Mode', () => {
     expect((await answer(1, 1)).statusCode).toBe(409); // finished: no changes
 
     const ended = (await inject('POST', `/api/v1/quiz-runs/${run.runId}/end`, teacher)).json();
-    expect(ended).toMatchObject({ status: 'ended', joinCode: null });
+    expect(ended).toMatchObject({ status: 'ended' });
     expect(ended.participants[0]).toMatchObject({ score: 2, finished: true });
 
     const admin = { authorization: `Bearer ${await login('admin', 'admin-pass')}` };
@@ -128,7 +148,7 @@ describe('Lab Mode', () => {
     const { inject, teacher, open, asha, studentOn } = await withQuiz();
     const run = await open();
     const me = await studentOn(asha.id, '1111');
-    await inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode });
+    await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, me);
     await inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, teacher);
     await inject('POST', `/api/v1/quiz-runs/${run.runId}/answers`, me, { questionIndex: 0, choice: 1 });
     const again = await inject('POST', `/api/v1/quiz-runs/${run.runId}/answers`, me, { questionIndex: 0, choice: 2 });
@@ -141,7 +161,7 @@ describe('Lab Mode', () => {
     const { inject, teacher, open, asha, studentOn } = await withQuiz();
     const run = await open();
     await inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, teacher);
-    const state = (await inject('POST', '/api/v1/quiz-runs/join', await studentOn(asha.id, '1111'), { code: run.joinCode })).json();
+    const state = (await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, await studentOn(asha.id, '1111'))).json();
     expect(state).toMatchObject({ status: 'active', questions: [{ text: '2 + 2 = ?' }, { text: 'Capital of India?' }] });
   });
 
@@ -149,13 +169,13 @@ describe('Lab Mode', () => {
     const { inject, teacher, open, asha, studentOn } = await withQuiz();
     const run = await open();
     const me = await studentOn(asha.id, '1111');
-    await inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode });
+    await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, me);
     await inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, teacher);
     await inject('POST', `/api/v1/quiz-runs/${run.runId}/end`, teacher);
     const late = await inject('POST', `/api/v1/quiz-runs/${run.runId}/answers`, me, { questionIndex: 0, choice: 1 });
     expect(late.statusCode).toBe(409);
     expect(late.json().message).toMatch(/ended/);
-    expect((await inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode })).statusCode).toBe(404);
+    expect((await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, me)).statusCode).toBe(409);
     expect((await inject('GET', `/api/v1/quiz-runs/${run.runId}/play`, me)).json()).toMatchObject({ status: 'ended', score: 0 });
   });
 
@@ -179,7 +199,7 @@ describe('Lab Mode timer', () => {
     const t = await withQuiz();
     const run = await t.open();
     const me = await t.studentOn(t.asha.id, '1111');
-    await t.inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode });
+    await t.inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, me);
     await t.inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, t.teacher);
     const play = async () => (await t.inject('GET', `/api/v1/quiz-runs/${run.runId}/play`, me)).json();
     const answer = (questionIndex: number, choice: number) =>
@@ -196,7 +216,7 @@ describe('Lab Mode timer', () => {
     const { inject, teacher, open, asha, studentOn } = await withQuiz();
     const run = await open();
     const me = await studentOn(asha.id, '1111');
-    expect((await inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode })).json().current).toBeNull();
+    expect((await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, me)).json().current).toBeNull();
     await inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, teacher);
     await inject('POST', `/api/v1/quiz-runs/${run.runId}/end`, teacher);
     expect((await inject('GET', `/api/v1/quiz-runs/${run.runId}/play`, me)).json().current).toBeNull();
@@ -255,7 +275,7 @@ describe('Lab Mode timer', () => {
     const run = await open();
     await inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, teacher);
     clock.t += 5 * 60_000;
-    const state = (await inject('POST', '/api/v1/quiz-runs/join', await studentOn(asha.id, '1111'), { code: run.joinCode })).json();
+    const state = (await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, await studentOn(asha.id, '1111'))).json();
     expect(state.current).toEqual({ index: 0, remainingMs: 60_000 });
   });
 
@@ -297,7 +317,7 @@ describe('Lab Mode live updates', () => {
     expect((await nextState(() => true)).participants).toEqual([]);
 
     const me = await studentOn(asha.id, '1111');
-    await inject('POST', '/api/v1/quiz-runs/join', me, { code: run.joinCode });
+    await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, me);
     expect((await nextState((p) => p.participants.length === 1)).participants[0].name).toBe('Asha');
 
     await inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, teacher);

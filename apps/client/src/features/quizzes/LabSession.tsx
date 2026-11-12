@@ -32,11 +32,11 @@ export function LabSession({ runId, onExit }: { runId: string; onExit: () => voi
         </span>
       </div>
 
-      {run.joinCode && (
-        <div className="grid justify-items-center gap-2 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 p-8">
-          <span className="text-sm text-muted-foreground">Students: tap <b>Join a quiz</b> and type</span>
-          <strong className="font-mono text-6xl tracking-[0.2em] text-primary">{run.joinCode}</strong>
-          <span className="text-sm text-muted-foreground">{run.participants.length} joined · {run.questionCount} questions · {run.totalMarks} marks</span>
+      {run.status !== 'ended' && (
+        <div className="grid justify-items-center gap-2 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 p-8 text-center">
+          <span className="text-sm text-muted-foreground">Class {run.className} sees this quiz on their screens now. They press <b>Join the quiz</b>; there is no code.</span>
+          <strong className="font-display text-5xl font-semibold text-primary">{run.participants.length} joined</strong>
+          <span className="text-sm text-muted-foreground">{run.questionCount} questions · {run.totalMarks} marks</span>
         </div>
       )}
 

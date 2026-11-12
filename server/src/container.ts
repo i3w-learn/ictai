@@ -86,7 +86,7 @@ export function createContainer(opts: {
     enrolment: new DeviceEnrolmentService(now, repos.devices, identity, new FailureLimiter(now), audit, repos.sessions, db),
     studentAdmin: new StudentAdminService(now, repos.classes, repos.students, repos.sessions, audit),
     quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes, audit),
-    runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, new FailureLimiter(now), audit),
+    runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, audit),
     results: new ResultsService(repos.results, repos.classes),
     notes: new NoteService(now, repos.notes),
     studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, new FailureLimiter(now), audit, repos.sessions, repos.devices),

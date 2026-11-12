@@ -77,7 +77,10 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
   const deviceToken = state.settings.device?.token ?? null;
   useEffect(() => {
     if (!api || !deviceToken) return;
-    const ping = () => void api.call('POST /api/v1/devices/ping', {}, deviceToken).catch(() => undefined);
+    const ping = () => void api.call('POST /api/v1/devices/ping', {}, deviceToken).catch((e) => {
+      // The only way the server answers 401 here is that it no longer accepts this PC's lab pass.
+      if (e instanceof ApiCallError && e.status === 401) dispatch({ type: 'left-lab' });
+    });
     ping();
     const t = setInterval(ping, DEVICE_PING_MS);
     return () => clearInterval(t);

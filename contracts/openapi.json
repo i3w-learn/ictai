@@ -4779,7 +4779,7 @@
     },
     "/api/v1/quiz-runs": {
       "post": {
-        "summary": "Open a Lab Mode run with a 6-digit join code",
+        "summary": "Open a Lab Mode run; the students of that class see it on their screens",
         "x-access": {
           "kind": "staff",
           "permission": "lesson.start"
@@ -4833,10 +4833,6 @@
                       "type": "string"
                     },
                     "className": {
-                      "type": "string"
-                    },
-                    "joinCode": {
-                      "nullable": true,
                       "type": "string"
                     },
                     "status": {
@@ -4899,7 +4895,6 @@
                     "quizId",
                     "title",
                     "className",
-                    "joinCode",
                     "status",
                     "questionCount",
                     "totalMarks",
@@ -4980,10 +4975,6 @@
                           "ended"
                         ]
                       },
-                      "joinCode": {
-                        "nullable": true,
-                        "type": "string"
-                      },
                       "createdAt": {
                         "type": "number"
                       },
@@ -4996,7 +4987,6 @@
                       "quizId",
                       "title",
                       "status",
-                      "joinCode",
                       "createdAt",
                       "participants"
                     ]
@@ -5077,10 +5067,6 @@
                     "className": {
                       "type": "string"
                     },
-                    "joinCode": {
-                      "nullable": true,
-                      "type": "string"
-                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -5141,7 +5127,6 @@
                     "quizId",
                     "title",
                     "className",
-                    "joinCode",
                     "status",
                     "questionCount",
                     "totalMarks",
@@ -5224,10 +5209,6 @@
                     "className": {
                       "type": "string"
                     },
-                    "joinCode": {
-                      "nullable": true,
-                      "type": "string"
-                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -5288,7 +5269,6 @@
                     "quizId",
                     "title",
                     "className",
-                    "joinCode",
                     "status",
                     "questionCount",
                     "totalMarks",
@@ -5325,7 +5305,7 @@
     },
     "/api/v1/quiz-runs/{id}/end": {
       "post": {
-        "summary": "End the run; the join code stops working",
+        "summary": "End the run; nobody can join or answer any more",
         "x-access": {
           "kind": "staff",
           "permission": "lesson.control"
@@ -5371,10 +5351,6 @@
                     "className": {
                       "type": "string"
                     },
-                    "joinCode": {
-                      "nullable": true,
-                      "type": "string"
-                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -5435,7 +5411,6 @@
                     "quizId",
                     "title",
                     "className",
-                    "joinCode",
                     "status",
                     "questionCount",
                     "totalMarks",
@@ -5470,9 +5445,9 @@
         }
       }
     },
-    "/api/v1/quiz-runs/join": {
-      "post": {
-        "summary": "Student joins a run by its code",
+    "/api/v1/quiz-runs/open": {
+      "get": {
+        "summary": "Quizzes open for the student's class that they have not handed in",
         "x-access": {
           "kind": "student"
         },
@@ -5481,25 +5456,87 @@
             "bearer": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "code": {
-                    "type": "string",
-                    "pattern": "^\\d{6}$"
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "runId": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "lobby",
+                          "active",
+                          "ended"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "runId",
+                      "title",
+                      "status"
+                    ]
                   }
-                },
-                "required": [
-                  "code"
-                ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
               }
             }
           }
+        }
+      }
+    },
+    "/api/v1/quiz-runs/{id}/join": {
+      "post": {
+        "summary": "Student joins a run opened for their class",
+        "x-access": {
+          "kind": "student"
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",

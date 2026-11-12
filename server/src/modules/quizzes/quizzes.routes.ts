@@ -19,7 +19,8 @@ export function quizRoutes(app: FastifyInstance, deps: { quizzes: QuizService; r
   route(app, 'GET /api/v1/quiz-runs/:id', ({ params, principal }) => runs.view(scopeOf(asStaff(principal)), params.id));
   route(app, 'POST /api/v1/quiz-runs/:id/start', ({ params, principal }) => runs.start(asStaff(principal), params.id));
   route(app, 'POST /api/v1/quiz-runs/:id/end', ({ params, principal }) => runs.end(asStaff(principal), params.id));
-  route(app, 'POST /api/v1/quiz-runs/join', ({ body, principal }) => runs.join(asStudent(principal), body.code));
+  route(app, 'GET /api/v1/quiz-runs/open', ({ principal }) => runs.openFor(asStudent(principal)));
+  route(app, 'POST /api/v1/quiz-runs/:id/join', ({ params, principal }) => runs.join(asStudent(principal), params.id));
   route(app, 'GET /api/v1/quiz-runs/:id/play', ({ params, principal }) => runs.play(asStudent(principal), params.id));
   route(app, 'POST /api/v1/quiz-runs/:id/answers', ({ params, body, principal }) =>
     runs.answer(asStudent(principal), params.id, body.questionIndex, body.choice));
