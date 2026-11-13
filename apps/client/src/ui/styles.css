@@ -78,3 +78,46 @@
   .print-sheet { position: static !important; overflow: visible !important; padding: 0 !important; }
   .no-print { display: none !important; }
 }
+
+/* A student's own screen choices (Settings in the student app). The markers are set on <html> at sign-in
+   and cleared at sign-out. Text size grows the working area, not the top bar, so the bar never pushes
+   the page off the screen. */
+html[data-text='large'] main { zoom: 1.15; }
+html[data-text='xlarge'] main { zoom: 1.3; }
+
+html[data-contrast='high'] {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(0 0% 0%);
+  --card: hsl(0 0% 100%);
+  --primary: hsl(243 80% 38%);
+  --secondary: hsl(220 20% 90%);
+  --secondary-foreground: hsl(0 0% 0%);
+  --muted-foreground: hsl(220 15% 22%);
+  --border: hsl(220 15% 30%);
+  --destructive: hsl(0 80% 35%);
+  --success: hsl(152 80% 22%);
+}
+@media (prefers-color-scheme: dark) {
+  html[data-contrast='high'] {
+    --background: hsl(0 0% 0%);
+    --foreground: hsl(0 0% 100%);
+    --card: hsl(0 0% 6%);
+    --primary: hsl(243 90% 78%);
+    --primary-foreground: hsl(0 0% 0%);
+    --secondary: hsl(0 0% 14%);
+    --secondary-foreground: hsl(0 0% 100%);
+    --muted-foreground: hsl(0 0% 85%);
+    --border: hsl(0 0% 70%);
+    --destructive: hsl(0 90% 75%);
+    --success: hsl(152 70% 65%);
+  }
+}
+
+/* No special font file is shipped: these faces are already on Windows and are rounder and wider than
+   the app's own, and the extra spacing does much of the work. */
+html[data-font='easy'] body, html[data-font='easy'] body * {
+  font-family: 'Comic Sans MS', 'Comic Sans', Verdana, Tahoma, sans-serif !important;
+  letter-spacing: 0.03em;
+  word-spacing: 0.12em;
+}
+html[data-font='easy'] main p, html[data-font='easy'] main li { line-height: 1.7; }

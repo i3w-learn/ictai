@@ -24,7 +24,7 @@ async function main() {
   const db = openDb(config.dbFile);
   // Spec 9: the AI runtime starts on the first request, not at boot, so a missing kit never blocks the server.
   const runtime = new AiRuntime(config.ai, nodeSpawner(join(config.dataDir, 'ai.log')));
-  const c = createContainer({ db, now: systemClock, version: config.version, ai: { runtime, llm: new LlamaServerLlm(runtime) } });
+  const c = createContainer({ db, now: systemClock, version: config.version, dataDir: config.dataDir, ai: { runtime, llm: new LlamaServerLlm(runtime) } });
   c.aiQueue.start();
   // However Node ends (crash included), take llama-server and its memory with it.
   process.on('exit', () => runtime.stop());

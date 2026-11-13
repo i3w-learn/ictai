@@ -30,7 +30,7 @@ describe('AI quiz maker', () => {
   it('status says not installed', async () => {
     const { inject, teacher } = await setup();
     const res = await inject('GET', '/api/v1/ai/status', teacher);
-    expect(res.json()).toEqual({ installed: false, model: null, ready: false, queued: 0 });
+    expect(res.json()).toEqual({ enabled: true, installed: false, model: null, ready: false, queued: 0 });
   });
 
   it('request returns AI_NOT_INSTALLED without a model', async () => {

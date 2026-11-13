@@ -61,6 +61,16 @@ export class JobRepository {
     return !!this.db.prepare(`SELECT 1 FROM ai_jobs WHERE requested_by = ? AND status IN ('queued','running')`).get(userId);
   }
 
+  // How many requests of one kind this person has made since a moment (used for the students' daily cap).
+  countSince(ownerId: string, kind: AiJobKind, since: number): number {
+    return this.db.prepare('SELECT COUNT(*) FROM ai_jobs WHERE requested_by = ? AND kind = ? AND created_at >= ?').pluck().get(ownerId, kind, since) as number;
+  }
+
+  listKindFor(ownerId: string, kind: AiJobKind, limit: number): AiJob[] {
+    const rows = this.db.prepare(`${SELECT} WHERE j.requested_by = ? AND j.kind = ? ORDER BY j.created_at DESC, j.rowid DESC LIMIT ?`).all(ownerId, kind, limit) as JobRow[];
+    return rows.map(toJob);
+  }
+
   queuedCount(): number {
     return this.db.prepare(`SELECT COUNT(*) FROM ai_jobs WHERE status = 'queued'`).pluck().get() as number;
   }

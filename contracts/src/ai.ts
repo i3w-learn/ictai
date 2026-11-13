@@ -41,6 +41,15 @@ export type AiWaitQuery = z.infer<typeof AiWaitQuery>;
 export const AiAskResult = z.object({ answer: z.string() });
 export type AiAskResult = z.infer<typeof AiAskResult>;
 
+// PRD student app "Ask" (AI tutor): a student types a question and gets a hint in simple words.
+// The tutor explains the idea; it is told not to hand over the finished answer to a piece of work.
+// It answers from the model alone for now: answering from the school's books needs the content library.
+export const TUTOR_DAILY_CAP = 10;
+export const AiTutorRequest = z.object({ question: z.string().trim().min(1, 'Type your question').max(600) });
+export type AiTutorRequest = z.infer<typeof AiTutorRequest>;
+export const AiTutorResult = z.object({ answer: z.string() });
+export type AiTutorResult = z.infer<typeof AiTutorResult>;
+
 export const AiJobStatus = z.enum(['queued', 'running', 'done', 'failed']);
 export type AiJobStatus = z.infer<typeof AiJobStatus>;
 
@@ -59,7 +68,13 @@ export const AiAskJob = z.object({ ...jobFields, kind: z.literal('ask'), request
 export type AiAskJob = z.infer<typeof AiAskJob>;
 
 // Every AI request is a job of one kind; the kind says which request and result it carries.
-export const AiJob = z.discriminatedUnion('kind', [AiQuizJob, AiAskJob]);
+export const AiTutorJob = z.object({ ...jobFields, kind: z.literal('tutor'), request: AiTutorRequest, result: AiTutorResult.nullable() });
+export type AiTutorJob = z.infer<typeof AiTutorJob>;
+// What the student's Ask screen needs: their questions, newest first, and how many they may still ask today.
+export const MyTutor = z.object({ leftToday: z.number(), dailyCap: z.number(), jobs: z.array(AiTutorJob) });
+export type MyTutor = z.infer<typeof MyTutor>;
+
+export const AiJob = z.discriminatedUnion('kind', [AiQuizJob, AiAskJob, AiTutorJob]);
 export type AiJob = z.infer<typeof AiJob>;
 export type AiJobKind = AiJob['kind'];
 export type AiJobOf<K extends AiJobKind> = Extract<AiJob, { kind: K }>;
@@ -67,6 +82,8 @@ export type AiRequestOf<K extends AiJobKind> = Extract<AiJob, { kind: K }>['requ
 export type AiResultOf<K extends AiJobKind> = NonNullable<Extract<AiJob, { kind: K }>['result']>;
 
 export const AiStatus = z.object({
+  // false when the Super Admin has switched AI off in Settings.
+  enabled: z.boolean(),
   installed: z.boolean(),
   model: z.string().nullable(),
   ready: z.boolean(),

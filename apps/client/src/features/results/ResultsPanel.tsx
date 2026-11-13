@@ -48,7 +48,7 @@ function ResultsSheet({ title, rows, onClose }: { title: string; rows: StudentRe
 }
 
 // Spec 4.4: how each student is doing in quizzes. Students who need help are listed first.
-export function ResultsPanel({ onStudent }: { onStudent: (studentId: string) => void }) {
+export function ResultsPanel({ onStudent, refresh }: { onStudent: (studentId: string) => void; refresh: number }) {
   const { call } = useApp();
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [classId, setClassId] = useState('');
@@ -63,7 +63,7 @@ export function ResultsPanel({ onStudent }: { onStudent: (studentId: string) => 
     setClasses(cls);
     setData(overview);
   });
-  useEffect(() => { void load.run(); }, [classId]);
+  useEffect(() => { void load.run(); }, [classId, refresh]);
 
   const download = () => {
     if (!data) return;

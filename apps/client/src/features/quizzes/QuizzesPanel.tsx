@@ -6,7 +6,7 @@ import { ApiCallError } from '../../core/api-client';
 import { Button, ConfirmButton, ErrorNote, Panel, Select, useAction } from '../../ui/ui';
 
 // The teacher's quizzes, filtered by class, with Lab Mode one click away.
-export function QuizzesPanel({ onEdit, onLab, onAi, onAsk }: { onEdit: (quizId: string | null) => void; onLab: (runId: string) => void; onAi: () => void; onAsk: () => void }) {
+export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, refresh }: { refresh: number; onEdit: (quizId: string | null) => void; onLab: (runId: string) => void; onAi: () => void; onAsk: () => void }) {
   const { call, state } = useApp();
   const can = (p: 'lesson.start' | 'ai.teacher') => state.session?.principal.kind === 'staff' && state.session.principal.permissions.includes(p);
   const canHost = can('lesson.start');
@@ -22,7 +22,7 @@ export function QuizzesPanel({ onEdit, onLab, onAi, onAsk }: { onEdit: (quizId: 
     setClasses(cls);
     setQuizzes(list);
   });
-  useEffect(() => { void load.run(); }, [classId]);
+  useEffect(() => { void load.run(); }, [classId, refresh]);
 
   // If this quiz is already open (say, from another console), go back to that run.
   const startLab = useAction(async (quizId: string) => {

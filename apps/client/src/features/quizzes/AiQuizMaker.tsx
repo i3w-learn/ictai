@@ -66,7 +66,11 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
         <h1 className="font-display text-2xl font-semibold">Make a quiz with AI</h1>
       </div>
 
-      {status && !status.installed ? (
+      {status && !status.enabled ? (
+        <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+          AI is switched off for this school. The Super Admin can switch it on in Settings.
+        </p>
+      ) : status && !status.installed ? (
         <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
           AI is not installed on this server. Ask your Super Admin to install the AI kit.
         </p>

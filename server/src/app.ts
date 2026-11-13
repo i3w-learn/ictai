@@ -9,6 +9,13 @@ import { quizRoutes } from './modules/quizzes/quizzes.routes.js';
 import { aiRoutes } from './modules/ai/ai.routes.js';
 import { resultRoutes } from './modules/results/results.routes.js';
 import { noteRoutes } from './modules/notes/notes.routes.js';
+import { noticeRoutes } from './modules/notices/notices.routes.js';
+import { settingsRoutes } from './modules/settings/settings.routes.js';
+import { timetableRoutes } from './modules/timetable/timetable.routes.js';
+import { workRoutes } from './modules/work/work.routes.js';
+import { reportCardRoutes } from './modules/report-cards/report-cards.routes.js';
+import { contentRoutes } from './modules/content/content.routes.js';
+import { sequenceRoutes } from './modules/sequences/sequences.routes.js';
 import { relayRoutes } from './relay/relay.routes.js';
 import { systemRoutes } from './modules/system/system.routes.js';
 
@@ -43,7 +50,14 @@ export function buildApp(c: Container, opts: AppOptions = {}) {
   quizRoutes(app, { quizzes: c.quizzes, runs: c.runs });
   studentRoutes(app, { admin: c.studentAdmin, auth: c.studentAuth });
   aiRoutes(app, { ai: c.ai });
-  resultRoutes(app, { results: c.results });
+  resultRoutes(app, { results: c.results, progress: c.progress });
   noteRoutes(app, { notes: c.notes });
+  noticeRoutes(app, { notices: c.notices });
+  settingsRoutes(app, { settings: c.settings });
+  timetableRoutes(app, { timetable: c.timetable });
+  workRoutes(app, { work: c.work });
+  reportCardRoutes(app, { reportCards: c.reportCards });
+  contentRoutes(app, { content: c.content });
+  sequenceRoutes(app, { sequences: c.sequences });
   return app;
 }
