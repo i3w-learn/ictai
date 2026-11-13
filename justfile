@@ -47,12 +47,12 @@ build-server:
 reset-server:
     rm -rf server/.data
 
-# Pretend to be a lab PC and join with the console's code, e.g. `just enrol 549102`
-enrol code name="TEST-PC-01":
+# Pretend to be a lab PC joining the lab (works while the lab is not locked)
+enrol:
     @curl -sk -X POST https://127.0.0.1:7700/api/v1/auth/device/enrol \
       -H 'content-type: application/json' \
-      -d '{"code":"{{code}}","kind":"lab_pc","name":"{{name}}","appVersion":"0.1.0"}' \
-      | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s);console.log(r.deviceId?"Joined the lab as {{name}}":"Not joined: "+r.message)})'
+      -d '{"kind":"lab_pc","appVersion":"0.1.0"}' \
+      | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s);console.log(r.deviceId?"Joined the lab as "+r.name:"Not joined: "+r.message)})'
 
 # Dev AI: small Gemma (3.1 GB) + llama.cpp from Homebrew, into server/.data/ai (school server uses `ai-install`)
 ai-dev:
