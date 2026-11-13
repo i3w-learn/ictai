@@ -70,6 +70,14 @@ export class WorkRepository {
     this.db.prepare('INSERT INTO submissions (assignment_id, student_id, body, submitted_at, late) VALUES (?, ?, ?, ?, ?)').run(id, studentId, body, now, late ? 1 : 0);
   }
 
+  tries(id: string, studentId: string): number {
+    return this.db.prepare('SELECT COUNT(*) FROM submissions WHERE assignment_id = ? AND student_id = ?').pluck().get(id, studentId) as number;
+  }
+
+  latestAnswer(id: string, studentId: string): string | undefined {
+    return this.db.prepare('SELECT body FROM submissions WHERE assignment_id = ? AND student_id = ? ORDER BY id DESC LIMIT 1').pluck().get(id, studentId) as string | undefined;
+  }
+
   hasAnswer(id: string, studentId: string): boolean {
     return !!this.db.prepare('SELECT 1 FROM submissions WHERE assignment_id = ? AND student_id = ?').get(id, studentId);
   }

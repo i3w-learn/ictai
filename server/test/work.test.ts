@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_TRIES } from '@ict/contracts';
 import { testServer } from './helpers.js';
 
 // Class 7 (sections A: Asha, B: Bina) and Class 8 (Kabir). Ravi teaches Maths to Class 7 only.
@@ -144,5 +145,20 @@ describe('Work', () => {
     expect((await inject('GET', '/api/v1/assignments', asha.as)).statusCode).toBe(403);
     expect((await inject('PUT', `/api/v1/assignments/${w.id}/marks/${asha.id}`, asha.as, { marks: 10 })).statusCode).toBe(403);
     expect((await inject('GET', '/api/v1/work', admin)).statusCode).toBe(403);
+  });
+
+  it('stores nothing new for the same answer sent again, and stops after the allowed number of tries', async () => {
+    const { admin, c7, asha, set, hand, db } = await school();
+    const w = (await set(admin, { title: 'Essay', classId: c7.id })).json();
+    const count = () => db.prepare('SELECT COUNT(*) FROM submissions').pluck().get();
+    expect((await hand(asha.as, w.id, 'Same')).statusCode).toBe(201);
+    expect((await hand(asha.as, w.id, 'Same')).statusCode).toBe(201);
+    expect(count()).toBe(1);
+    for (let i = 1; i < MAX_TRIES; i++) expect((await hand(asha.as, w.id, `Try ${i}`)).statusCode).toBe(201);
+    expect(count()).toBe(MAX_TRIES);
+    const over = await hand(asha.as, w.id, 'One more');
+    expect(over.statusCode).toBe(409);
+    expect(over.json()).toMatchObject({ code: 'TOO_MANY_TRIES' });
+    expect(count()).toBe(MAX_TRIES);
   });
 });
