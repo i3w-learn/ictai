@@ -1,48 +1,23 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Sparkles } from 'lucide-react';
-import type { AiQuizJob, AiQuizRequest, AiQuizResult, AiStatus, SchoolClass } from '@ict/contracts';
+import type { AiQuizJob, AiQuizRequest, AiQuizResult, SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Field, Note, Panel, Select, useAction } from '../../ui/ui';
+import { AiUnavailable, LANGUAGES } from '../ai/ai-shared';
+import { useAiJob } from '../ai/useAiJob';
 import { SubjectField } from './SubjectField';
 
 export type AiDraft = { request: AiQuizRequest; result: AiQuizResult };
 
-const LANGUAGES = { en: 'English', hi: 'हिंदी (Hindi)' } as const;
-
 // Spec 9 /ai/quiz: the AI on the Server PC writes a draft; the teacher checks it in the editor.
 export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void; onBack: () => void }) {
   const { call } = useApp();
-  const [status, setStatus] = useState<AiStatus | null>(null);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [recent, setRecent] = useState<AiQuizJob[]>([]);
   const [form, setForm] = useState({ classId: '', subject: '', topic: '', count: '10', language: 'en' as AiQuizRequest['language'] });
-  const [job, setJob] = useState<AiQuizJob | null>(null);
+  const ai = useAiJob('quiz');
 
-  const load = useAction(async () => {
-    const [s, cls, jobs] = await Promise.all([call('GET /api/v1/ai/status'), call('GET /api/v1/classes'), call('GET /api/v1/ai/jobs')]);
-    // This screen is about quizzes; questions the teacher asked the AI live elsewhere.
-    const quizzes = jobs.filter((j): j is AiQuizJob => j.kind === 'quiz');
-    setStatus(s);
-    setClasses(cls);
-    setRecent(quizzes);
-    // Pick up a request still in progress, e.g. after leaving this screen.
-    setJob((cur) => cur ?? quizzes.find((j) => j.status === 'queued' || j.status === 'running') ?? null);
-  });
-  useEffect(() => { void load.run(); }, []);
-
-  // While the quiz is being made, ask the server every 3 s how it is going.
-  const waiting = job?.status === 'queued' || job?.status === 'running';
-  useEffect(() => {
-    if (!waiting || !job) return;
-    const timer = setInterval(() => {
-      call('GET /api/v1/ai/jobs/:id', { params: { id: job.id } }).then((j) => {
-        if (j.kind !== 'quiz') return;
-        setJob(j);
-        if (j.status === 'done' || j.status === 'failed') void load.run();
-      }, () => {});
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [waiting, job?.id]);
+  const loadClasses = useAction(async () => setClasses(await call('GET /api/v1/classes')));
+  useEffect(() => { void loadClasses.run(); }, []);
 
   const count = Number(form.count);
   const problem =
@@ -50,14 +25,18 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
     : !form.subject.trim() ? 'Choose the subject.'
     : !form.topic.trim() ? 'Type the topic.'
     : !(Number.isInteger(count) && count >= 1 && count <= 20) ? 'Ask for 1 to 20 questions.'
+    : ai.busyElsewhere ? 'Your question is still being answered. Make the quiz when it is done.'
     : null;
 
   const make = useAction(async () => {
-    setJob(await call('POST /api/v1/ai/quiz', { query: {}, body: { classId: form.classId, subject: form.subject, topic: form.topic, count, language: form.language } }));
+    ai.follow(await call('POST /api/v1/ai/quiz', { query: {}, body: { classId: form.classId, subject: form.subject, topic: form.topic, count, language: form.language } }));
   });
+  const canMake = !problem && !make.busy && ai.canStart;
 
   const className = (id: string) => classes.find((c) => c.id === id)?.name ?? '?';
   const open = (j: AiQuizJob) => j.result && onDraft({ request: j.request, result: j.result });
+  const job = ai.job;
+  const done = ai.recent.filter((j) => j.status === 'done');
 
   return (
     <div className="mx-auto grid max-w-4xl gap-6">
@@ -66,15 +45,7 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
         <h1 className="font-display text-2xl font-semibold">Make a quiz with AI</h1>
       </div>
 
-      {status && !status.enabled ? (
-        <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
-          AI is switched off for this school. The Super Admin can switch it on in Settings.
-        </p>
-      ) : status && !status.installed ? (
-        <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
-          AI is not installed on this server. Ask your Super Admin to install the AI kit.
-        </p>
-      ) : status && (
+      {ai.status && !ai.usable ? <AiUnavailable status={ai.status} /> : ai.status && (
         <>
           <Panel title="What should the quiz be about?">
             <div className="flex flex-wrap items-end gap-3">
@@ -96,7 +67,7 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
               </label>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <Button disabled={!!problem || make.busy || waiting} onClick={() => make.run()}><Sparkles className="size-4" /> Make quiz</Button>
+              <Button disabled={!canMake} onClick={() => make.run()}><Sparkles className="size-4" /> Make quiz</Button>
               <span className="text-sm text-muted-foreground">{problem}</span>
             </div>
             <ErrorNote message={make.error} />
@@ -106,6 +77,7 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
             <Panel title={`${job.request.topic} · Class ${className(job.request.classId)}`}>
               {job.status === 'queued' && <Note>You are number {job.position} in line. Your quiz starts after the ones before it.</Note>}
               {job.status === 'running' && <Note>Making your quiz… this can take a few minutes. You can keep working; it will be under Recent AI quizzes.</Note>}
+              {ai.trouble && <Note>{ai.trouble}</Note>}
               {job.status === 'failed' && <ErrorNote message={job.error} />}
               {job.status === 'done' && job.result && (
                 <div className="flex flex-wrap items-center gap-3">
@@ -121,10 +93,10 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
             </Panel>
           )}
 
-          {recent.some((j) => j.status === 'done') && (
+          {done.length > 0 && (
             <Panel title="Recent AI quizzes">
               <ul className="grid gap-2">
-                {recent.filter((j) => j.status === 'done').map((j) => (
+                {done.map((j) => (
                   <li key={j.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border px-3 py-2">
                     <span className="min-w-48 flex-1">
                       <span className="font-medium">{j.request.topic}</span>
@@ -140,7 +112,7 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
           )}
         </>
       )}
-      <ErrorNote message={load.error} />
+      <ErrorNote message={ai.load.error ?? loadClasses.error} />
     </div>
   );
 }

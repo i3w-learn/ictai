@@ -28,8 +28,9 @@ export const AiQuizResult = z.object({
 export type AiQuizResult = z.infer<typeof AiQuizResult>;
 
 // Spec 9 /ai/ask, first step: a plain question answered as plain text. Library search and citations come later.
+export const AI_QUESTION_MAX = 2000;
 export const AiAskRequest = z.object({
-  question: z.string().trim().min(1).max(2000),
+  question: z.string().trim().min(1).max(AI_QUESTION_MAX),
   language: AiLanguage.default('en'),
 });
 export type AiAskRequest = z.infer<typeof AiAskRequest>;
@@ -80,6 +81,11 @@ export type AiJobKind = AiJob['kind'];
 export type AiJobOf<K extends AiJobKind> = Extract<AiJob, { kind: K }>;
 export type AiRequestOf<K extends AiJobKind> = Extract<AiJob, { kind: K }>['request'];
 export type AiResultOf<K extends AiJobKind> = NonNullable<Extract<AiJob, { kind: K }>['result']>;
+
+// GET /ai/jobs lists the last few requests of every kind, or of one kind when the screen asks for it,
+// so a run of AI quizzes cannot push a teacher's answered questions out of their list.
+export const AiJobsQuery = z.object({ kind: z.enum(['quiz', 'ask', 'tutor']).optional() });
+export type AiJobsQuery = z.infer<typeof AiJobsQuery>;
 
 export const AiStatus = z.object({
   // false when the Super Admin has switched AI off in Settings.

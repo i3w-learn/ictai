@@ -10,6 +10,7 @@ export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, refresh }: { refresh:
   const { call, state } = useApp();
   const can = (p: 'lesson.start' | 'ai.teacher') => state.session?.principal.kind === 'staff' && state.session.principal.permissions.includes(p);
   const canHost = can('lesson.start');
+  const canAi = can('ai.teacher');
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [classId, setClassId] = useState('');
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
@@ -46,8 +47,8 @@ export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, refresh }: { refresh:
   return (
     <Panel title="Quizzes" actions={
       <div className="flex gap-2">
-        {can('ai.teacher') && <Button variant="quiet" onClick={onAsk}><MessageCircleQuestion className="size-4" /> Ask AI</Button>}
-        {can('ai.teacher') && <Button variant="quiet" onClick={onAi}><Sparkles className="size-4" /> Make quiz with AI</Button>}
+        {canAi && <Button variant="quiet" onClick={onAsk}><MessageCircleQuestion className="size-4" /> Ask AI</Button>}
+        {canAi && <Button variant="quiet" onClick={onAi}><Sparkles className="size-4" /> Make quiz with AI</Button>}
         <Button onClick={() => onEdit(null)}><Plus className="size-4" strokeWidth={2.25} /> New quiz</Button>
       </div>
     }>

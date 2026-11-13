@@ -1,4 +1,4 @@
-import { TUTOR_DAILY_CAP, type AiAskJob, type AiAskRequest, type AiJob, type AiQuizJob, type AiQuizRequest, type AiStatus, type AiTutorJob, type AiTutorRequest, type MyTutor, type StaffPrincipal, type StudentPrincipal } from '@ict/contracts';
+import { TUTOR_DAILY_CAP, type AiAskJob, type AiAskRequest, type AiJob, type AiJobKind, type AiQuizJob, type AiQuizRequest, type AiStatus, type AiTutorJob, type AiTutorRequest, type MyTutor, type StaffPrincipal, type StudentPrincipal } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import type { Clock } from '../../core/clock.js';
 import { AppError, aiNotInstalled, aiSwitchedOff, notFound } from '../../core/errors.js';
@@ -58,8 +58,8 @@ export class AiService {
     return job;
   }
 
-  jobs(actor: StaffPrincipal): AiJob[] {
-    return this.queue.listFor(actor.userId);
+  jobs(actor: StaffPrincipal, kind?: AiJobKind): AiJob[] {
+    return kind ? this.queue.listKindFor(actor.userId, kind) : this.queue.listFor(actor.userId);
   }
 
   // --- The student tutor (PRD student app "Ask") ---

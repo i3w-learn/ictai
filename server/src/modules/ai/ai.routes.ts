@@ -13,6 +13,6 @@ export function aiRoutes(app: FastifyInstance, deps: { ai: AiService }) {
   route(app, 'GET /api/v1/ai/tutor', ({ principal }) => ai.myTutor(asStudent(principal)));
   route(app, 'POST /api/v1/ai/tutor', ({ body, principal }) => ai.requestTutor(asStudent(principal), body));
   route(app, 'GET /api/v1/ai/tutor/:id', ({ params, principal }) => ai.tutorJob(asStudent(principal), params.id));
-  route(app, 'GET /api/v1/ai/jobs', ({ principal }) => ai.jobs(asStaff(principal)));
+  route(app, 'GET /api/v1/ai/jobs', ({ query, principal }) => ai.jobs(asStaff(principal), query.kind));
   route(app, 'GET /api/v1/ai/jobs/:id', ({ params, principal }) => ai.job(asStaff(principal), params.id));
 }

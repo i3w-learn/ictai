@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
-import { DEFAULT_PREFS, type ContentItem, type StudentPrefs, type StudentRunState } from '@ict/contracts';
+import { DEFAULT_PREFS, type ContentItem, type SchoolSettings, type StudentPrefs, type StudentRunState } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, Centered, PageTitle, Panel, useAction } from '../../ui/ui';
 import { AuditPanel } from './AuditPanel';
@@ -54,13 +54,19 @@ function greeting() {
 }
 
 export function Home() {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const p = state.session!.principal;
   const [view, setView] = useState<View>({ kind: 'dash' });
   // Goes up when one panel changes something another panel lists (a class, a period, a library item, a
   // piece of work), so every panel shows it at once.
   const [refresh, setRefresh] = useState(0);
   const changed = () => setRefresh((n) => n + 1);
+  // The header shows the server by the name it had when this PC found it; a new school name goes there too.
+  const settingsSaved = (s: SchoolSettings) => {
+    changed();
+    const server = state.settings.server;
+    if (server && server.name !== s.schoolName) dispatch({ type: 'server', server: { ...server, name: s.schoolName } });
+  };
 
   if (p.kind === 'student') return <StudentHome name={p.name} />;
   if (p.kind === 'staff' && state.settings.role === 'console') {
@@ -90,8 +96,8 @@ export function Home() {
         {p.permissions.includes('staff.manage') && <TeachersPanel />}
         {p.permissions.includes('staff.manage') && <StaffPanel classesChanged={refresh} />}
         {p.permissions.includes('setup.devices') && <DevicesPanel />}
-        {p.permissions.includes('students.manage') && <StudentsPanel onClassAdded={changed} />}
-        {p.permissions.includes('settings.manage') && <SettingsPanel onSaved={changed} />}
+        {p.permissions.includes('students.manage') && <StudentsPanel onChanged={changed} />}
+        {p.permissions.includes('settings.manage') && <SettingsPanel onSaved={settingsSaved} />}
         {p.permissions.includes('server.manage') && <AuditPanel />}
       </div>
     );
@@ -110,7 +116,7 @@ function StudentHome({ name }: { name: string }) {
   const [notesOpen, setNotesOpen] = useState(false);
   // The quiz the student said "Not now" to; a different quiz pops up again.
   const [later, setLater] = useState<string | null>(null);
-  const quiz = useOpenQuiz();
+  const { quiz, clear: clearQuiz } = useOpenQuiz();
   const { call } = useApp();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [workOpen, setWorkOpen] = useState(false);
@@ -133,7 +139,9 @@ function StudentHome({ name }: { name: string }) {
     await call('PUT /api/v1/me/prefs', { body: p });
   });
 
-  if (playing) return <PlayQuiz initial={playing} onExit={() => setPlaying(null)} />;
+  // "Back to home" after a quiz means home, not the screen the quiz popped up over.
+  const goHome = () => { setNotesOpen(false); setSettingsOpen(false); setWorkOpen(false); setProgressOpen(false); setTutorOpen(false); setBooksOpen(false); setTodoOpen(false); };
+  if (playing) return <PlayQuiz initial={playing} onExit={() => { setPlaying(null); clearQuiz(); goHome(); }} />;
   const popup = quiz && quiz.runId !== later && <QuizPopup quiz={quiz} onJoined={setPlaying} onLater={() => setLater(quiz.runId)} />;
   if (notesOpen) return <>{popup}<MyNotes onBack={() => setNotesOpen(false)} /></>;
   if (progressOpen) return <>{popup}<HowIAmDoing onBack={() => setProgressOpen(false)} onWork={() => { setProgressOpen(false); setWorkOpen(true); }} /></>;

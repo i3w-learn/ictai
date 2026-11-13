@@ -48,6 +48,9 @@ const ACTION: Record<string, string> = {
   'notice.delete': 'took down a notice',
 };
 
+// A long question is cut so one line of the log stays one line.
+const shorten = (text: string, max = 80) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
+
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 // Spec 4.1: who did what and when. Super Admin only.
@@ -75,6 +78,7 @@ export function AuditPanel() {
               {e.targetName && e.actorName !== e.targetName && <>{e.action === 'signin' ? ' on' : e.action === 'student.signin.failed' ? ' for' : ''} <b className="font-semibold">{e.targetName}</b></>}
               {/* The topic is forgotten after 90 days; the line then just says a quiz was asked for. */}
               {e.action === 'ai.quiz.request' && (e.detail as { topic?: string } | null)?.topic && <> on <b className="font-semibold">{(e.detail as { topic: string }).topic}</b></>}
+              {e.action === 'ai.ask.request' && (e.detail as { question?: string } | null)?.question && <>: <i>“{shorten((e.detail as { question: string }).question)}”</i></>}
               {e.action === 'signin.failed' && e.target && <span className="text-muted-foreground"> as “{e.target}”</span>}
             </span>
           </li>

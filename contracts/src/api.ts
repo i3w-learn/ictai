@@ -10,7 +10,7 @@ import {
   AnswerResult, OpenRun, OpenRunForStudent, Quiz, QuizInput, QuizQuery, QuizSummary, RunQuery, RunSummary,
   StudentRunState, SubmitAnswer, TeacherRunState,
 } from './quizzes.js';
-import { AiAskJob, AiAskRequest, AiJob, AiQuizJob, AiQuizRequest, AiStatus, AiTutorJob, AiTutorRequest, AiWaitQuery, MyTutor } from './ai.js';
+import { AiAskJob, AiAskRequest, AiJob, AiJobsQuery, AiQuizJob, AiQuizRequest, AiStatus, AiTutorJob, AiTutorRequest, AiWaitQuery, MyTutor } from './ai.js';
 import { ResultsOverview, ResultsQuery, StudentResults, TeacherActivity, MyProgress } from './results.js';
 import { Note, NoteInput } from './notes.js';
 import { Notice, NoticeInput } from './notices.js';
@@ -113,7 +113,7 @@ export const API = {
   'GET /api/v1/ai/tutor': { summary: "The student's own questions to the tutor, and how many are left today", access: student, status: 200, response: MyTutor },
   'POST /api/v1/ai/tutor': { summary: 'A student asks the tutor a question; returns the queued job', access: student, body: AiTutorRequest, status: 202, response: AiTutorJob },
   'GET /api/v1/ai/tutor/:id': { summary: "One of the student's own questions, with the answer when done", access: student, params: IdParams, status: 200, response: AiTutorJob },
-  'GET /api/v1/ai/jobs': { summary: 'Your last 10 AI requests, newest first', access: staff('ai.teacher'), status: 200, response: z.array(AiJob) },
+  'GET /api/v1/ai/jobs': { summary: 'Your last 10 AI requests, newest first; ?kind= keeps to one kind', access: staff('ai.teacher'), query: AiJobsQuery, status: 200, response: z.array(AiJob) },
   'GET /api/v1/ai/jobs/:id': { summary: 'One of your AI requests, with the draft when done', access: staff('ai.teacher'), params: IdParams, status: 200, response: AiJob },
 
   // Settings: the school's own choices (Super Admin), and each student's screen choices.

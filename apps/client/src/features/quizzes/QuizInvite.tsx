@@ -6,10 +6,13 @@ import { Button, Card, ErrorNote, Panel, useAction } from '../../ui/ui';
 const ASK_EVERY_MS = 4000;
 
 // The quiz the teacher has opened for this student's class, if any. The app asks the server every few
-// seconds, so the student never types a code: the quiz simply shows up.
-export function useOpenQuiz() {
+// seconds, so the student never types a code: the quiz simply shows up. `clear` forgets the quiz at once
+// and asks again, for the moment the student has just handed one in: otherwise the old answer could pop
+// the same quiz up again until the next ask.
+export function useOpenQuiz(): { quiz: OpenRunForStudent | null; clear: () => void } {
   const { call } = useApp();
   const [quiz, setQuiz] = useState<OpenRunForStudent | null>(null);
+  const [asked, setAsked] = useState(0);
   useEffect(() => {
     let alive = true;
     // A missed ask is not worth a message: the next one comes in a few seconds.
@@ -17,8 +20,8 @@ export function useOpenQuiz() {
     ask();
     const t = setInterval(ask, ASK_EVERY_MS);
     return () => { alive = false; clearInterval(t); };
-  }, []);
-  return quiz;
+  }, [asked]);
+  return { quiz, clear: () => { setQuiz(null); setAsked((n) => n + 1); } };
 }
 
 function useJoin(quiz: OpenRunForStudent, onJoined: (s: StudentRunState) => void) {

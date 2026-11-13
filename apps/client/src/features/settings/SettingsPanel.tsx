@@ -5,7 +5,7 @@ import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Field, Note, Panel, useAction } from '../../ui/ui';
 
 // PRD "Settings" (Super Admin only): the school's name, the AI switch, and the periods of the school day.
-export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
+export function SettingsPanel({ onSaved }: { onSaved: (saved: SchoolSettings) => void }) {
   const { call } = useApp();
   const [saved, setSaved] = useState<SchoolSettings | null>(null);
   const [form, setForm] = useState<SchoolSettings | null>(null);
@@ -23,7 +23,7 @@ export function SettingsPanel({ onSaved }: { onSaved: () => void }) {
     setSaved(s);
     setForm(s);
     setDone(true);
-    onSaved();
+    onSaved(s);
   });
 
   if (!form || !saved) return <Panel title="Settings"><ErrorNote message={load.error} /></Panel>;
