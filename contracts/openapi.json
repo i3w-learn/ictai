@@ -6074,6 +6074,9 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
                     "installed": {
                       "type": "boolean"
                     },
@@ -6089,6 +6092,7 @@
                     }
                   },
                   "required": [
+                    "enabled",
                     "installed",
                     "model",
                     "ready",
@@ -6550,9 +6554,410 @@
         }
       }
     },
+    "/api/v1/ai/tutor": {
+      "get": {
+        "summary": "The student's own questions to the tutor, and how many are left today",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "leftToday": {
+                      "type": "number"
+                    },
+                    "dailyCap": {
+                      "type": "number"
+                    },
+                    "jobs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "queued",
+                              "running",
+                              "done",
+                              "failed"
+                            ]
+                          },
+                          "position": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "error": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "finishedAt": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "tutor"
+                            ]
+                          },
+                          "request": {
+                            "type": "object",
+                            "properties": {
+                              "question": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 600
+                              }
+                            },
+                            "required": [
+                              "question"
+                            ]
+                          },
+                          "result": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "answer": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "answer"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "position",
+                          "error",
+                          "createdAt",
+                          "finishedAt",
+                          "kind",
+                          "request",
+                          "result"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "leftToday",
+                    "dailyCap",
+                    "jobs"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "A student asks the tutor a question; returns the queued job",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 600
+                  }
+                },
+                "required": [
+                  "question"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "done",
+                        "failed"
+                      ]
+                    },
+                    "position": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "error": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    },
+                    "finishedAt": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "tutor"
+                      ]
+                    },
+                    "request": {
+                      "type": "object",
+                      "properties": {
+                        "question": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 600
+                        }
+                      },
+                      "required": [
+                        "question"
+                      ]
+                    },
+                    "result": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "answer": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "answer"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "position",
+                    "error",
+                    "createdAt",
+                    "finishedAt",
+                    "kind",
+                    "request",
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/tutor/{id}": {
+      "get": {
+        "summary": "One of the student's own questions, with the answer when done",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "done",
+                        "failed"
+                      ]
+                    },
+                    "position": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "error": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    },
+                    "finishedAt": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "tutor"
+                      ]
+                    },
+                    "request": {
+                      "type": "object",
+                      "properties": {
+                        "question": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 600
+                        }
+                      },
+                      "required": [
+                        "question"
+                      ]
+                    },
+                    "result": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "answer": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "answer"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "position",
+                    "error",
+                    "createdAt",
+                    "finishedAt",
+                    "kind",
+                    "request",
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ai/jobs": {
       "get": {
-        "summary": "Your last 10 AI requests, newest first",
+        "summary": "Your last 10 AI requests, newest first; ?kind= keeps to one kind",
         "x-access": {
           "kind": "staff",
           "permission": "ai.teacher"
@@ -6560,6 +6965,16 @@
         "security": [
           {
             "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -6783,6 +7198,80 @@
                                   "en",
                                   "hi"
                                 ]
+                              }
+                            },
+                            "required": [
+                              "question"
+                            ]
+                          },
+                          "result": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "answer": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "answer"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "position",
+                          "error",
+                          "createdAt",
+                          "finishedAt",
+                          "kind",
+                          "request",
+                          "result"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "queued",
+                              "running",
+                              "done",
+                              "failed"
+                            ]
+                          },
+                          "position": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "error": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "finishedAt": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "tutor"
+                            ]
+                          },
+                          "request": {
+                            "type": "object",
+                            "properties": {
+                              "question": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 600
                               }
                             },
                             "required": [
@@ -7116,8 +7605,5530 @@
                         "request",
                         "result"
                       ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "done",
+                            "failed"
+                          ]
+                        },
+                        "position": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "error": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "finishedAt": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "tutor"
+                          ]
+                        },
+                        "request": {
+                          "type": "object",
+                          "properties": {
+                            "question": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 600
+                            }
+                          },
+                          "required": [
+                            "question"
+                          ]
+                        },
+                        "result": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "answer": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "answer"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "position",
+                        "error",
+                        "createdAt",
+                        "finishedAt",
+                        "kind",
+                        "request",
+                        "result"
+                      ]
                     }
                   ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "summary": "School name, AI switch and the periods of the day",
+        "x-access": {
+          "kind": "staff"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schoolName": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "aiEnabled": {
+                      "type": "boolean"
+                    },
+                    "periods": {
+                      "maxItems": 12,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 40
+                          },
+                          "start": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "end": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "start",
+                          "end"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "schoolName",
+                    "aiEnabled",
+                    "periods"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Change the school settings",
+        "x-access": {
+          "kind": "staff",
+          "permission": "settings.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "schoolName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "aiEnabled": {
+                    "type": "boolean"
+                  },
+                  "periods": {
+                    "maxItems": 12,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 40
+                        },
+                        "start": {
+                          "type": "string",
+                          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                        },
+                        "end": {
+                          "type": "string",
+                          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "start",
+                        "end"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "schoolName",
+                  "aiEnabled",
+                  "periods"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schoolName": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "aiEnabled": {
+                      "type": "boolean"
+                    },
+                    "periods": {
+                      "maxItems": 12,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 40
+                          },
+                          "start": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "end": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "start",
+                          "end"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "schoolName",
+                    "aiEnabled",
+                    "periods"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/progress": {
+      "get": {
+        "summary": "The student's own quiz results, work and what to try next",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "quizzes": {
+                      "type": "object",
+                      "properties": {
+                        "taken": {
+                          "type": "number"
+                        },
+                        "average": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "grade": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "taken",
+                        "average",
+                        "grade"
+                      ]
+                    },
+                    "subjects": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "subject": {
+                            "type": "string"
+                          },
+                          "attempts": {
+                            "type": "number"
+                          },
+                          "average": {
+                            "type": "number"
+                          },
+                          "grade": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "subject",
+                          "attempts",
+                          "average",
+                          "grade"
+                        ]
+                      }
+                    },
+                    "recent": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "runId": {
+                            "type": "string"
+                          },
+                          "quizTitle": {
+                            "type": "string"
+                          },
+                          "subject": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "topic": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "at": {
+                            "type": "number"
+                          },
+                          "score": {
+                            "type": "number"
+                          },
+                          "totalMarks": {
+                            "type": "number"
+                          },
+                          "percent": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "runId",
+                          "quizTitle",
+                          "subject",
+                          "topic",
+                          "at",
+                          "score",
+                          "totalMarks",
+                          "percent"
+                        ]
+                      }
+                    },
+                    "work": {
+                      "type": "object",
+                      "properties": {
+                        "set": {
+                          "type": "number"
+                        },
+                        "handedIn": {
+                          "type": "number"
+                        },
+                        "onTime": {
+                          "type": "number"
+                        },
+                        "marked": {
+                          "type": "number"
+                        },
+                        "marksPercent": {
+                          "nullable": true,
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "set",
+                        "handedIn",
+                        "onTime",
+                        "marked",
+                        "marksPercent"
+                      ]
+                    },
+                    "tryNext": {
+                      "nullable": true,
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "work"
+                              ]
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "title"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "subject"
+                              ]
+                            },
+                            "subject": {
+                              "type": "string"
+                            },
+                            "average": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "subject",
+                            "average"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "quizzes",
+                    "subjects",
+                    "recent",
+                    "work",
+                    "tryNext"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/prefs": {
+      "get": {
+        "summary": "The student's own text size, contrast and font",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "textSize": {
+                      "default": "normal",
+                      "type": "string",
+                      "enum": [
+                        "normal",
+                        "large",
+                        "xlarge"
+                      ]
+                    },
+                    "highContrast": {
+                      "default": false,
+                      "type": "boolean"
+                    },
+                    "easyFont": {
+                      "default": false,
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Save the student's own text size, contrast and font",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "textSize": {
+                    "default": "normal",
+                    "type": "string",
+                    "enum": [
+                      "normal",
+                      "large",
+                      "xlarge"
+                    ]
+                  },
+                  "highContrast": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "easyFont": {
+                    "default": false,
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "textSize": {
+                      "default": "normal",
+                      "type": "string",
+                      "enum": [
+                        "normal",
+                        "large",
+                        "xlarge"
+                      ]
+                    },
+                    "highContrast": {
+                      "default": false,
+                      "type": "boolean"
+                    },
+                    "easyFont": {
+                      "default": false,
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/timetable": {
+      "get": {
+        "summary": "The whole weekly lab grid with its periods",
+        "x-access": {
+          "kind": "staff"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "periods": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 40
+                          },
+                          "start": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "end": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "start",
+                          "end"
+                        ]
+                      }
+                    },
+                    "slots": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "number"
+                          },
+                          "periodId": {
+                            "type": "string"
+                          },
+                          "classId": {
+                            "type": "string"
+                          },
+                          "className": {
+                            "type": "string"
+                          },
+                          "sectionId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sectionName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "subject": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "day",
+                          "periodId",
+                          "classId",
+                          "className",
+                          "sectionId",
+                          "sectionName",
+                          "subject"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "periods",
+                    "slots"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/timetable/slot": {
+      "put": {
+        "summary": "Give a class the lab for one period of one day",
+        "x-access": {
+          "kind": "staff",
+          "permission": "setup.timetable"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "day": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 6
+                  },
+                  "periodId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "classId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "sectionId": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "subject": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 60
+                  }
+                },
+                "required": [
+                  "day",
+                  "periodId",
+                  "classId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "periods": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 40
+                          },
+                          "start": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "end": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "start",
+                          "end"
+                        ]
+                      }
+                    },
+                    "slots": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "number"
+                          },
+                          "periodId": {
+                            "type": "string"
+                          },
+                          "classId": {
+                            "type": "string"
+                          },
+                          "className": {
+                            "type": "string"
+                          },
+                          "sectionId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sectionName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "subject": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "day",
+                          "periodId",
+                          "classId",
+                          "className",
+                          "sectionId",
+                          "sectionName",
+                          "subject"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "periods",
+                    "slots"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Free the lab for one period of one day",
+        "x-access": {
+          "kind": "staff",
+          "permission": "setup.timetable"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "day",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "periodId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "periods": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 40
+                          },
+                          "start": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "end": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "start",
+                          "end"
+                        ]
+                      }
+                    },
+                    "slots": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "number"
+                          },
+                          "periodId": {
+                            "type": "string"
+                          },
+                          "classId": {
+                            "type": "string"
+                          },
+                          "className": {
+                            "type": "string"
+                          },
+                          "sectionId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sectionName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "subject": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "day",
+                          "periodId",
+                          "classId",
+                          "className",
+                          "sectionId",
+                          "sectionName",
+                          "subject"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "periods",
+                    "slots"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/timetable/today": {
+      "get": {
+        "summary": "The student's own lab periods today",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dayName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "periods": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "periodName": {
+                            "type": "string"
+                          },
+                          "start": {
+                            "type": "string"
+                          },
+                          "end": {
+                            "type": "string"
+                          },
+                          "subject": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "periodName",
+                          "start",
+                          "end",
+                          "subject"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "dayName",
+                    "periods"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content": {
+      "get": {
+        "summary": "The library, optionally for one class",
+        "x-access": {
+          "kind": "staff"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "classId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "pdf",
+                          "image",
+                          "video",
+                          "audio",
+                          "link"
+                        ]
+                      },
+                      "classId": {
+                        "type": "string"
+                      },
+                      "className": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "chapter": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "fileHash": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "fileName": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "size": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "mime": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "url": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "needsInternet": {
+                        "type": "boolean"
+                      },
+                      "byName": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "kind",
+                      "classId",
+                      "className",
+                      "subject",
+                      "chapter",
+                      "fileHash",
+                      "fileName",
+                      "size",
+                      "mime",
+                      "url",
+                      "needsInternet",
+                      "byName",
+                      "createdAt"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content/mine": {
+      "get": {
+        "summary": "The library of the student's own class (My books)",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "pdf",
+                          "image",
+                          "video",
+                          "audio",
+                          "link"
+                        ]
+                      },
+                      "classId": {
+                        "type": "string"
+                      },
+                      "className": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "chapter": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "fileHash": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "fileName": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "size": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "mime": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "url": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "needsInternet": {
+                        "type": "boolean"
+                      },
+                      "byName": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "kind",
+                      "classId",
+                      "className",
+                      "subject",
+                      "chapter",
+                      "fileHash",
+                      "fileName",
+                      "size",
+                      "mime",
+                      "url",
+                      "needsInternet",
+                      "byName",
+                      "createdAt"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content/links": {
+      "post": {
+        "summary": "Add a web link to the library",
+        "x-access": {
+          "kind": "staff",
+          "permission": "setup.content"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "classId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "subject": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "chapter": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "url": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "title",
+                  "classId",
+                  "url"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "pdf",
+                        "image",
+                        "video",
+                        "audio",
+                        "link"
+                      ]
+                    },
+                    "classId": {
+                      "type": "string"
+                    },
+                    "className": {
+                      "type": "string"
+                    },
+                    "subject": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "chapter": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "fileHash": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "fileName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "size": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "mime": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "url": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "needsInternet": {
+                      "type": "boolean"
+                    },
+                    "byName": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "kind",
+                    "classId",
+                    "className",
+                    "subject",
+                    "chapter",
+                    "fileHash",
+                    "fileName",
+                    "size",
+                    "mime",
+                    "url",
+                    "needsInternet",
+                    "byName",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content/uploads": {
+      "post": {
+        "summary": "Start sending a file; says how many pieces to send",
+        "x-access": {
+          "kind": "staff",
+          "permission": "setup.content"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fileName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "size": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 536870912
+                  }
+                },
+                "required": [
+                  "fileName",
+                  "size"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uploadId": {
+                      "type": "string"
+                    },
+                    "chunkBytes": {
+                      "type": "number"
+                    },
+                    "chunks": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "uploadId",
+                    "chunkBytes",
+                    "chunks"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content/uploads/{id}/chunks": {
+      "put": {
+        "summary": "Send the next piece of the file",
+        "x-access": {
+          "kind": "staff",
+          "permission": "setup.content"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "data": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 699059
+                  }
+                },
+                "required": [
+                  "index",
+                  "data"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content/uploads/{id}/finish": {
+      "post": {
+        "summary": "All pieces sent: check the file and file it in the library",
+        "x-access": {
+          "kind": "staff",
+          "permission": "setup.content"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "classId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "subject": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "chapter": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 80
+                  }
+                },
+                "required": [
+                  "title",
+                  "classId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "pdf",
+                        "image",
+                        "video",
+                        "audio",
+                        "link"
+                      ]
+                    },
+                    "classId": {
+                      "type": "string"
+                    },
+                    "className": {
+                      "type": "string"
+                    },
+                    "subject": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "chapter": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "fileHash": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "fileName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "size": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "mime": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "url": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "needsInternet": {
+                      "type": "boolean"
+                    },
+                    "byName": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "kind",
+                    "classId",
+                    "className",
+                    "subject",
+                    "chapter",
+                    "fileHash",
+                    "fileName",
+                    "size",
+                    "mime",
+                    "url",
+                    "needsInternet",
+                    "byName",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content/{id}": {
+      "delete": {
+        "summary": "Remove a library item; its file goes when nothing else uses it",
+        "x-access": {
+          "kind": "staff",
+          "permission": "setup.content"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{hash}/chunks/{index}": {
+      "get": {
+        "summary": "One piece of a library file, for someone who may open it",
+        "x-access": {
+          "kind": "signed-in"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "string"
+                    },
+                    "last": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "last"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sequences": {
+      "get": {
+        "summary": "Playlists and learning paths you may see, newest first",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "playlist",
+                          "path"
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "classId": {
+                        "type": "string"
+                      },
+                      "className": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "byName": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "number"
+                      },
+                      "steps": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "content",
+                                "work"
+                              ]
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "content": {
+                              "nullable": true,
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pdf",
+                                    "image",
+                                    "video",
+                                    "audio",
+                                    "link"
+                                  ]
+                                },
+                                "classId": {
+                                  "type": "string"
+                                },
+                                "className": {
+                                  "type": "string"
+                                },
+                                "subject": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "chapter": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "fileHash": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "fileName": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "size": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "mime": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "url": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "needsInternet": {
+                                  "type": "boolean"
+                                },
+                                "byName": {
+                                  "type": "string"
+                                },
+                                "createdAt": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "title",
+                                "kind",
+                                "classId",
+                                "className",
+                                "subject",
+                                "chapter",
+                                "fileHash",
+                                "fileName",
+                                "size",
+                                "mime",
+                                "url",
+                                "needsInternet",
+                                "byName",
+                                "createdAt"
+                              ]
+                            },
+                            "workId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "available": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "title",
+                            "content",
+                            "workId",
+                            "available"
+                          ]
+                        }
+                      },
+                      "students": {
+                        "type": "number"
+                      },
+                      "finished": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "type",
+                      "title",
+                      "classId",
+                      "className",
+                      "subject",
+                      "byName",
+                      "createdAt",
+                      "steps",
+                      "students",
+                      "finished"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Make a playlist or a learning path for a class",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "playlist",
+                      "path"
+                    ]
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "classId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "subject": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "steps": {
+                    "minItems": 1,
+                    "maxItems": 30,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "content",
+                            "work"
+                          ]
+                        },
+                        "refId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "refId"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "title",
+                  "classId",
+                  "steps"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "playlist",
+                        "path"
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "classId": {
+                      "type": "string"
+                    },
+                    "className": {
+                      "type": "string"
+                    },
+                    "subject": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "byName": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    },
+                    "steps": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "content",
+                              "work"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "content": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "pdf",
+                                  "image",
+                                  "video",
+                                  "audio",
+                                  "link"
+                                ]
+                              },
+                              "classId": {
+                                "type": "string"
+                              },
+                              "className": {
+                                "type": "string"
+                              },
+                              "subject": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "chapter": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "fileHash": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "fileName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "size": {
+                                "nullable": true,
+                                "type": "number"
+                              },
+                              "mime": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "url": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "needsInternet": {
+                                "type": "boolean"
+                              },
+                              "byName": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "kind",
+                              "classId",
+                              "className",
+                              "subject",
+                              "chapter",
+                              "fileHash",
+                              "fileName",
+                              "size",
+                              "mime",
+                              "url",
+                              "needsInternet",
+                              "byName",
+                              "createdAt"
+                            ]
+                          },
+                          "workId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "available": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "title",
+                          "content",
+                          "workId",
+                          "available"
+                        ]
+                      }
+                    },
+                    "students": {
+                      "type": "number"
+                    },
+                    "finished": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type",
+                    "title",
+                    "classId",
+                    "className",
+                    "subject",
+                    "byName",
+                    "createdAt",
+                    "steps",
+                    "students",
+                    "finished"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sequences/{id}": {
+      "delete": {
+        "summary": "Remove a playlist or learning path",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/todo": {
+      "get": {
+        "summary": "The student's class's playlists and paths, with done ticks and the next step",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "playlist",
+                          "path"
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "byName": {
+                        "type": "string"
+                      },
+                      "steps": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "content",
+                                "work"
+                              ]
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "content": {
+                              "nullable": true,
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pdf",
+                                    "image",
+                                    "video",
+                                    "audio",
+                                    "link"
+                                  ]
+                                },
+                                "classId": {
+                                  "type": "string"
+                                },
+                                "className": {
+                                  "type": "string"
+                                },
+                                "subject": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "chapter": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "fileHash": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "fileName": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "size": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "mime": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "url": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "needsInternet": {
+                                  "type": "boolean"
+                                },
+                                "byName": {
+                                  "type": "string"
+                                },
+                                "createdAt": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "title",
+                                "kind",
+                                "classId",
+                                "className",
+                                "subject",
+                                "chapter",
+                                "fileHash",
+                                "fileName",
+                                "size",
+                                "mime",
+                                "url",
+                                "needsInternet",
+                                "byName",
+                                "createdAt"
+                              ]
+                            },
+                            "workId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "available": {
+                              "type": "boolean"
+                            },
+                            "done": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "title",
+                            "content",
+                            "workId",
+                            "available",
+                            "done"
+                          ]
+                        }
+                      },
+                      "doneSteps": {
+                        "type": "number"
+                      },
+                      "nextStepId": {
+                        "nullable": true,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "type",
+                      "title",
+                      "subject",
+                      "byName",
+                      "steps",
+                      "doneSteps",
+                      "nextStepId"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/todo/steps/{id}/done": {
+      "post": {
+        "summary": "The student opened a library step; it is ticked",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/report-cards/make": {
+      "post": {
+        "summary": "Make draft report cards for a class and term, and refresh the drafts that exist",
+        "x-access": {
+          "kind": "staff",
+          "permission": "results.view"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "classId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "term": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  }
+                },
+                "required": [
+                  "classId",
+                  "term"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "made": {
+                      "type": "number"
+                    },
+                    "refreshed": {
+                      "type": "number"
+                    },
+                    "kept": {
+                      "type": "number"
+                    },
+                    "cards": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "term": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "draft",
+                              "published",
+                              "frozen"
+                            ]
+                          },
+                          "remarks": {
+                            "type": "string"
+                          },
+                          "student": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "rollNo": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "className": {
+                                "type": "string"
+                              },
+                              "sectionName": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "rollNo",
+                              "className",
+                              "sectionName"
+                            ]
+                          },
+                          "marks": {
+                            "type": "object",
+                            "properties": {
+                              "quizzes": {
+                                "type": "object",
+                                "properties": {
+                                  "taken": {
+                                    "type": "number"
+                                  },
+                                  "average": {
+                                    "nullable": true,
+                                    "type": "number"
+                                  },
+                                  "grade": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "taken",
+                                  "average",
+                                  "grade"
+                                ]
+                              },
+                              "subjects": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "subject": {
+                                      "type": "string"
+                                    },
+                                    "attempts": {
+                                      "type": "number"
+                                    },
+                                    "average": {
+                                      "type": "number"
+                                    },
+                                    "grade": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "subject",
+                                    "attempts",
+                                    "average",
+                                    "grade"
+                                  ]
+                                }
+                              },
+                              "work": {
+                                "type": "object",
+                                "properties": {
+                                  "marked": {
+                                    "type": "number"
+                                  },
+                                  "marksPercent": {
+                                    "nullable": true,
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "marked",
+                                  "marksPercent"
+                                ]
+                              },
+                              "takenAt": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "quizzes",
+                              "subjects",
+                              "work",
+                              "takenAt"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "term",
+                          "status",
+                          "remarks",
+                          "student",
+                          "marks"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "made",
+                    "refreshed",
+                    "kept",
+                    "cards"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/report-cards": {
+      "get": {
+        "summary": "Report cards of a class for one term, in roll order",
+        "x-access": {
+          "kind": "staff",
+          "permission": "results.view"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "classId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "term",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "term": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "draft",
+                          "published",
+                          "frozen"
+                        ]
+                      },
+                      "remarks": {
+                        "type": "string"
+                      },
+                      "student": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "rollNo": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "className": {
+                            "type": "string"
+                          },
+                          "sectionName": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "rollNo",
+                          "className",
+                          "sectionName"
+                        ]
+                      },
+                      "marks": {
+                        "type": "object",
+                        "properties": {
+                          "quizzes": {
+                            "type": "object",
+                            "properties": {
+                              "taken": {
+                                "type": "number"
+                              },
+                              "average": {
+                                "nullable": true,
+                                "type": "number"
+                              },
+                              "grade": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "taken",
+                              "average",
+                              "grade"
+                            ]
+                          },
+                          "subjects": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "subject": {
+                                  "type": "string"
+                                },
+                                "attempts": {
+                                  "type": "number"
+                                },
+                                "average": {
+                                  "type": "number"
+                                },
+                                "grade": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "subject",
+                                "attempts",
+                                "average",
+                                "grade"
+                              ]
+                            }
+                          },
+                          "work": {
+                            "type": "object",
+                            "properties": {
+                              "marked": {
+                                "type": "number"
+                              },
+                              "marksPercent": {
+                                "nullable": true,
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "marked",
+                              "marksPercent"
+                            ]
+                          },
+                          "takenAt": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "quizzes",
+                          "subjects",
+                          "work",
+                          "takenAt"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "term",
+                      "status",
+                      "remarks",
+                      "student",
+                      "marks"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/report-cards/terms": {
+      "get": {
+        "summary": "Terms a class has report cards for, newest first",
+        "x-access": {
+          "kind": "staff",
+          "permission": "results.view"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "classId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/report-cards/{id}/remarks": {
+      "put": {
+        "summary": "Write the teacher's remarks; refused once frozen",
+        "x-access": {
+          "kind": "staff",
+          "permission": "results.view"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "remarks": {
+                    "type": "string",
+                    "maxLength": 600
+                  }
+                },
+                "required": [
+                  "remarks"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "term": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "draft",
+                        "published",
+                        "frozen"
+                      ]
+                    },
+                    "remarks": {
+                      "type": "string"
+                    },
+                    "student": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "rollNo": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "className": {
+                          "type": "string"
+                        },
+                        "sectionName": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "rollNo",
+                        "className",
+                        "sectionName"
+                      ]
+                    },
+                    "marks": {
+                      "type": "object",
+                      "properties": {
+                        "quizzes": {
+                          "type": "object",
+                          "properties": {
+                            "taken": {
+                              "type": "number"
+                            },
+                            "average": {
+                              "nullable": true,
+                              "type": "number"
+                            },
+                            "grade": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "taken",
+                            "average",
+                            "grade"
+                          ]
+                        },
+                        "subjects": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "subject": {
+                                "type": "string"
+                              },
+                              "attempts": {
+                                "type": "number"
+                              },
+                              "average": {
+                                "type": "number"
+                              },
+                              "grade": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "subject",
+                              "attempts",
+                              "average",
+                              "grade"
+                            ]
+                          }
+                        },
+                        "work": {
+                          "type": "object",
+                          "properties": {
+                            "marked": {
+                              "type": "number"
+                            },
+                            "marksPercent": {
+                              "nullable": true,
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "marked",
+                            "marksPercent"
+                          ]
+                        },
+                        "takenAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "quizzes",
+                        "subjects",
+                        "work",
+                        "takenAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "term",
+                    "status",
+                    "remarks",
+                    "student",
+                    "marks"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/report-cards/{id}/status": {
+      "put": {
+        "summary": "Publish, take back to draft, or freeze for good",
+        "x-access": {
+          "kind": "staff",
+          "permission": "results.view"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "published",
+                      "frozen"
+                    ]
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "term": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "draft",
+                        "published",
+                        "frozen"
+                      ]
+                    },
+                    "remarks": {
+                      "type": "string"
+                    },
+                    "student": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "rollNo": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "className": {
+                          "type": "string"
+                        },
+                        "sectionName": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "rollNo",
+                        "className",
+                        "sectionName"
+                      ]
+                    },
+                    "marks": {
+                      "type": "object",
+                      "properties": {
+                        "quizzes": {
+                          "type": "object",
+                          "properties": {
+                            "taken": {
+                              "type": "number"
+                            },
+                            "average": {
+                              "nullable": true,
+                              "type": "number"
+                            },
+                            "grade": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "taken",
+                            "average",
+                            "grade"
+                          ]
+                        },
+                        "subjects": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "subject": {
+                                "type": "string"
+                              },
+                              "attempts": {
+                                "type": "number"
+                              },
+                              "average": {
+                                "type": "number"
+                              },
+                              "grade": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "subject",
+                              "attempts",
+                              "average",
+                              "grade"
+                            ]
+                          }
+                        },
+                        "work": {
+                          "type": "object",
+                          "properties": {
+                            "marked": {
+                              "type": "number"
+                            },
+                            "marksPercent": {
+                              "nullable": true,
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "marked",
+                            "marksPercent"
+                          ]
+                        },
+                        "takenAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "quizzes",
+                        "subjects",
+                        "work",
+                        "takenAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "term",
+                    "status",
+                    "remarks",
+                    "student",
+                    "marks"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assignments": {
+      "get": {
+        "summary": "Work you set or may mark, newest first",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "instructions": {
+                        "type": "string"
+                      },
+                      "classId": {
+                        "type": "string"
+                      },
+                      "className": {
+                        "type": "string"
+                      },
+                      "sectionId": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "sectionName": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "subject": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "dueAt": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "maxMarks": {
+                        "type": "number"
+                      },
+                      "byName": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "number"
+                      },
+                      "students": {
+                        "type": "number"
+                      },
+                      "handedIn": {
+                        "type": "number"
+                      },
+                      "marked": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "instructions",
+                      "classId",
+                      "className",
+                      "sectionId",
+                      "sectionName",
+                      "subject",
+                      "dueAt",
+                      "maxMarks",
+                      "byName",
+                      "createdAt",
+                      "students",
+                      "handedIn",
+                      "marked"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Set a piece of work for a class",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "instructions": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "classId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "sectionId": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "subject": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 60
+                  },
+                  "dueAt": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "maxMarks": {
+                    "default": 10,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                },
+                "required": [
+                  "title",
+                  "classId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "instructions": {
+                      "type": "string"
+                    },
+                    "classId": {
+                      "type": "string"
+                    },
+                    "className": {
+                      "type": "string"
+                    },
+                    "sectionId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "sectionName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "subject": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "dueAt": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "maxMarks": {
+                      "type": "number"
+                    },
+                    "byName": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    },
+                    "students": {
+                      "type": "number"
+                    },
+                    "handedIn": {
+                      "type": "number"
+                    },
+                    "marked": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "instructions",
+                    "classId",
+                    "className",
+                    "sectionId",
+                    "sectionName",
+                    "subject",
+                    "dueAt",
+                    "maxMarks",
+                    "byName",
+                    "createdAt",
+                    "students",
+                    "handedIn",
+                    "marked"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assignments/{id}": {
+      "get": {
+        "summary": "One piece of work with every student's latest answer and mark",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "assignment": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "instructions": {
+                          "type": "string"
+                        },
+                        "classId": {
+                          "type": "string"
+                        },
+                        "className": {
+                          "type": "string"
+                        },
+                        "sectionId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "sectionName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "subject": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "dueAt": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "maxMarks": {
+                          "type": "number"
+                        },
+                        "byName": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "students": {
+                          "type": "number"
+                        },
+                        "handedIn": {
+                          "type": "number"
+                        },
+                        "marked": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "instructions",
+                        "classId",
+                        "className",
+                        "sectionId",
+                        "sectionName",
+                        "subject",
+                        "dueAt",
+                        "maxMarks",
+                        "byName",
+                        "createdAt",
+                        "students",
+                        "handedIn",
+                        "marked"
+                      ]
+                    },
+                    "answers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "rollNo": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "answer": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "body": {
+                                "type": "string"
+                              },
+                              "submittedAt": {
+                                "type": "number"
+                              },
+                              "late": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "body",
+                              "submittedAt",
+                              "late"
+                            ]
+                          },
+                          "tries": {
+                            "type": "number"
+                          },
+                          "mark": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "marks": {
+                                "type": "number"
+                              },
+                              "comment": {
+                                "type": "string"
+                              },
+                              "markedAt": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "marks",
+                              "comment",
+                              "markedAt"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name",
+                          "rollNo",
+                          "answer",
+                          "tries",
+                          "mark"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "assignment",
+                    "answers"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Take a piece of work away; students no longer see it",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assignments/{id}/marks/{studentId}": {
+      "put": {
+        "summary": "Give or change one student's marks and comment",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "marks": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "comment": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "marks"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "assignment": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "instructions": {
+                          "type": "string"
+                        },
+                        "classId": {
+                          "type": "string"
+                        },
+                        "className": {
+                          "type": "string"
+                        },
+                        "sectionId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "sectionName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "subject": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "dueAt": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "maxMarks": {
+                          "type": "number"
+                        },
+                        "byName": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "students": {
+                          "type": "number"
+                        },
+                        "handedIn": {
+                          "type": "number"
+                        },
+                        "marked": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "instructions",
+                        "classId",
+                        "className",
+                        "sectionId",
+                        "sectionName",
+                        "subject",
+                        "dueAt",
+                        "maxMarks",
+                        "byName",
+                        "createdAt",
+                        "students",
+                        "handedIn",
+                        "marked"
+                      ]
+                    },
+                    "answers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "rollNo": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "answer": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "body": {
+                                "type": "string"
+                              },
+                              "submittedAt": {
+                                "type": "number"
+                              },
+                              "late": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "body",
+                              "submittedAt",
+                              "late"
+                            ]
+                          },
+                          "tries": {
+                            "type": "number"
+                          },
+                          "mark": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "marks": {
+                                "type": "number"
+                              },
+                              "comment": {
+                                "type": "string"
+                              },
+                              "markedAt": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "marks",
+                              "comment",
+                              "markedAt"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name",
+                          "rollNo",
+                          "answer",
+                          "tries",
+                          "mark"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "assignment",
+                    "answers"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/work": {
+      "get": {
+        "summary": "The student's own work: to do, handed in and marked",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "instructions": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "dueAt": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "maxMarks": {
+                        "type": "number"
+                      },
+                      "byName": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "todo",
+                          "submitted",
+                          "marked"
+                        ]
+                      },
+                      "overdue": {
+                        "type": "boolean"
+                      },
+                      "answer": {
+                        "nullable": true,
+                        "type": "object",
+                        "properties": {
+                          "body": {
+                            "type": "string"
+                          },
+                          "submittedAt": {
+                            "type": "number"
+                          },
+                          "late": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "body",
+                          "submittedAt",
+                          "late"
+                        ]
+                      },
+                      "mark": {
+                        "nullable": true,
+                        "type": "object",
+                        "properties": {
+                          "marks": {
+                            "type": "number"
+                          },
+                          "comment": {
+                            "type": "string"
+                          },
+                          "markedAt": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "marks",
+                          "comment",
+                          "markedAt"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "instructions",
+                      "subject",
+                      "dueAt",
+                      "maxMarks",
+                      "byName",
+                      "status",
+                      "overdue",
+                      "answer",
+                      "mark"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/work/{id}/answers": {
+      "post": {
+        "summary": "Hand in an answer; handing in again adds a new one",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 10000
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "instructions": {
+                      "type": "string"
+                    },
+                    "subject": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "dueAt": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "maxMarks": {
+                      "type": "number"
+                    },
+                    "byName": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "todo",
+                        "submitted",
+                        "marked"
+                      ]
+                    },
+                    "overdue": {
+                      "type": "boolean"
+                    },
+                    "answer": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "body": {
+                          "type": "string"
+                        },
+                        "submittedAt": {
+                          "type": "number"
+                        },
+                        "late": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "body",
+                        "submittedAt",
+                        "late"
+                      ]
+                    },
+                    "mark": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "marks": {
+                          "type": "number"
+                        },
+                        "comment": {
+                          "type": "string"
+                        },
+                        "markedAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "marks",
+                        "comment",
+                        "markedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "instructions",
+                    "subject",
+                    "dueAt",
+                    "maxMarks",
+                    "byName",
+                    "status",
+                    "overdue",
+                    "answer",
+                    "mark"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notices": {
+      "get": {
+        "summary": "Notices you may manage, pinned first, then newest",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "body": {
+                        "type": "string"
+                      },
+                      "classId": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "className": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "sectionId": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "sectionName": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "pinned": {
+                        "type": "boolean"
+                      },
+                      "expiresAt": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "expired": {
+                        "type": "boolean"
+                      },
+                      "byName": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "body",
+                      "classId",
+                      "className",
+                      "sectionId",
+                      "sectionName",
+                      "pinned",
+                      "expiresAt",
+                      "expired",
+                      "byName",
+                      "createdAt"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Put up a notice",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "body": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "classId": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "sectionId": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "pinned": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "expiresAt": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "body": {
+                      "type": "string"
+                    },
+                    "classId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "className": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "sectionId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "sectionName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "pinned": {
+                      "type": "boolean"
+                    },
+                    "expiresAt": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "expired": {
+                      "type": "boolean"
+                    },
+                    "byName": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "body",
+                    "classId",
+                    "className",
+                    "sectionId",
+                    "sectionName",
+                    "pinned",
+                    "expiresAt",
+                    "expired",
+                    "byName",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notices/{id}": {
+      "put": {
+        "summary": "Change a notice",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "body": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "classId": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "sectionId": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "pinned": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "expiresAt": {
+                    "default": null,
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "body": {
+                      "type": "string"
+                    },
+                    "classId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "className": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "sectionId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "sectionName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "pinned": {
+                      "type": "boolean"
+                    },
+                    "expiresAt": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "expired": {
+                      "type": "boolean"
+                    },
+                    "byName": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "body",
+                    "classId",
+                    "className",
+                    "sectionId",
+                    "sectionName",
+                    "pinned",
+                    "expiresAt",
+                    "expired",
+                    "byName",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Take a notice down for good",
+        "x-access": {
+          "kind": "staff",
+          "permission": "teaching.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notices/mine": {
+      "get": {
+        "summary": "Notices for the student's school, class and section that have not expired",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "body": {
+                        "type": "string"
+                      },
+                      "classId": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "className": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "sectionId": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "sectionName": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "pinned": {
+                        "type": "boolean"
+                      },
+                      "expiresAt": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "expired": {
+                        "type": "boolean"
+                      },
+                      "byName": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "body",
+                      "classId",
+                      "className",
+                      "sectionId",
+                      "sectionName",
+                      "pinned",
+                      "expiresAt",
+                      "expired",
+                      "byName",
+                      "createdAt"
+                    ]
+                  }
                 }
               }
             }

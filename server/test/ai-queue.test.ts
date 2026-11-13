@@ -28,7 +28,7 @@ function setup(
     return id;
   };
   const repo = new JobRepository(db);
-  const queue = new JobQueue(() => clock.t, repo, { quiz: run, ask }, timeoutMs, prepare);
+  const queue = new JobQueue(() => clock.t, repo, { quiz: run, ask, tutor: async (r) => ({ answer: `Hint: ${r.question}` }) }, timeoutMs, prepare);
   return { db, clock, repo, queue, user };
 }
 

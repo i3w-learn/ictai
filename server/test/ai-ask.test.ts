@@ -57,6 +57,20 @@ describe('AI ask', () => {
     expect(log[0]).toMatchObject({ action: 'ai.ask.request', detail: { question: 'Why is the sky blue?' } });
   });
 
+  it('lists only one kind of request when asked for it', async () => {
+    const { ask, inject, teacher, c } = await setup({ llm: echoLlm, installed: true });
+    const c7 = (await inject('POST', '/api/v1/classes', teacher, { name: '7' })).json();
+    await ask(teacher, 'What is a noun?');
+    await c.aiQueue.idle();
+    await inject('POST', '/api/v1/ai/quiz', teacher, { classId: c7.id, subject: 'Maths', topic: 'Adding', count: 1 });
+    await c.aiQueue.idle();
+    const all = (await inject('GET', '/api/v1/ai/jobs', teacher)).json();
+    expect(all.map((j: { kind: string }) => j.kind)).toEqual(['quiz', 'ask']);
+    const asks = (await inject('GET', '/api/v1/ai/jobs?kind=ask', teacher)).json();
+    expect(asks.map((j: { kind: string }) => j.kind)).toEqual(['ask']);
+    expect((await inject('GET', '/api/v1/ai/jobs?kind=essay', teacher)).statusCode).toBe(400);
+  });
+
   it('a signed-in student cannot ask', async () => {
     const { inject, teacher, enrolDevice, auth } = await setup({ llm: echoLlm, installed: true });
     const c7 = (await inject('POST', '/api/v1/classes', teacher, { name: '7' })).json();

@@ -45,3 +45,15 @@ export function answerPrompt(questions: { text: string; options: string[] }[]) {
     ...questions.map((q, i) => [`Question ${i + 1}: ${q.text}`, ...q.options.map((o, k) => `  ${k}. ${o}`)].join('\n')),
   ].join('\n');
 }
+
+// The student tutor. It explains and nudges; it is told not to do the child's work for them.
+export function tutorSystem(className: string | null) {
+  return [
+    `You are a kind, patient tutor for a student in Class ${className ?? '5'} of an Indian school.`,
+    'Explain the idea in very simple words and short sentences, with one everyday example.',
+    'Give a hint or the first step, then ask the student to try the rest. Do not write out the finished answer to a piece of homework, a worksheet or an essay.',
+    'For a plain fact (a meaning, a date, a spelling) just say it.',
+    'Answer in the language the student wrote in. Plain text only: no markdown, no LaTeX, no special symbols. At most 120 words.',
+    'If the question is not about school learning, or is unkind or unsafe, say gently that you can only help with school work.',
+  ].join(' ');
+}

@@ -65,3 +65,30 @@ export const TeacherActivity = z.object({
   lastSignInAt: z.number().nullable(),
 });
 export type TeacherActivity = z.infer<typeof TeacherActivity>;
+
+// PRD student app "How I am doing": the student's own picture, and only their own.
+// (Attendance, lessons joined and learning paths are not counted yet: those features do not exist yet.)
+export const TryNext = z.discriminatedUnion('kind', [
+  // Work past its due date comes first.
+  z.object({ kind: z.literal('work'), title: z.string() }),
+  // Otherwise the subject the student finds hardest, if it is below "doing great".
+  z.object({ kind: z.literal('subject'), subject: z.string(), average: z.number() }),
+]);
+export type TryNext = z.infer<typeof TryNext>;
+
+export const MyProgress = z.object({
+  quizzes: z.object({ taken: z.number(), average: z.number().nullable(), grade: z.string().nullable() }),
+  subjects: z.array(SubjectRow),
+  recent: z.array(AttemptRow),
+  work: z.object({
+    set: z.number(),
+    handedIn: z.number(),
+    // Handed in and not late.
+    onTime: z.number(),
+    marked: z.number(),
+    // Marks earned over marks possible on marked work, as a percent.
+    marksPercent: z.number().nullable(),
+  }),
+  tryNext: TryNext.nullable(),
+});
+export type MyProgress = z.infer<typeof MyProgress>;

@@ -58,6 +58,14 @@ export class JobQueue {
     return this.repo.listFor(userId, limit);
   }
 
+  countSince(ownerId: string, kind: AiJobKind, since: number) {
+    return this.repo.countSince(ownerId, kind, since);
+  }
+
+  listKindFor(ownerId: string, kind: AiJobKind, limit = 10) {
+    return this.repo.listKindFor(ownerId, kind, limit);
+  }
+
   queued() {
     return this.repo.queuedCount();
   }

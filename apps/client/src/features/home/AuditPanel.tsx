@@ -28,7 +28,28 @@ const ACTION: Record<string, string> = {
   'quiz.end': 'ended the quiz',
   'ai.quiz.request': 'asked the AI for a quiz',
   'ai.ask.request': 'asked the AI a question',
+  'ai.tutor.request': 'asked the AI tutor a question',
+  'settings.change': 'changed the school settings',
+  'playlist.create': 'made the playlist',
+  'playlist.delete': 'removed the playlist',
+  'path.create': 'made the learning path',
+  'path.delete': 'removed the learning path',
+  'content.add': 'added to the library',
+  'content.delete': 'removed from the library',
+  'report_cards.make': 'made report cards',
+  'report_card.published': 'published the report card of',
+  'report_card.draft': 'took back to draft the report card of',
+  'report_card.frozen': 'froze the report card of',
+  'work.set': 'set work for a class',
+  'work.delete': 'took away a piece of work',
+  'timetable.set': 'booked the lab in the timetable',
+  'timetable.clear': 'freed a lab period in the timetable',
+  'notice.create': 'put up a notice',
+  'notice.delete': 'took down a notice',
 };
+
+// A long question is cut so one line of the log stays one line.
+const shorten = (text: string, max = 80) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
 
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -57,6 +78,7 @@ export function AuditPanel() {
               {e.targetName && e.actorName !== e.targetName && <>{e.action === 'signin' ? ' on' : e.action === 'student.signin.failed' ? ' for' : ''} <b className="font-semibold">{e.targetName}</b></>}
               {/* The topic is forgotten after 90 days; the line then just says a quiz was asked for. */}
               {e.action === 'ai.quiz.request' && (e.detail as { topic?: string } | null)?.topic && <> on <b className="font-semibold">{(e.detail as { topic: string }).topic}</b></>}
+              {e.action === 'ai.ask.request' && (e.detail as { question?: string } | null)?.question && <>: <i>“{shorten((e.detail as { question: string }).question)}”</i></>}
               {e.action === 'signin.failed' && e.target && <span className="text-muted-foreground"> as “{e.target}”</span>}
             </span>
           </li>

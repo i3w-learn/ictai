@@ -7,7 +7,8 @@ import { toImportRows } from './import';
 import { StudentRow } from './StudentRow';
 
 // Classes, sections and students, managed by teachers.
-export function StudentsPanel({ onClassAdded }: { onClassAdded: () => void }) {
+// onChanged: other panels (results, report cards, teachers' classes) list what is changed here.
+export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
   const { call, state } = useApp();
   // Only the Super Admin (or a teacher with no classes set) adds classes.
   const p = state.session?.principal;
@@ -49,13 +50,14 @@ export function StudentsPanel({ onClassAdded }: { onClassAdded: () => void }) {
     setNewClass('');
     await loadClasses.run();
     setClassId(c.id);
-    onClassAdded();
+    onChanged();
   });
 
   const addSection = useAction(async () => {
     await call('POST /api/v1/sections', { body: { classId, name: newSection } });
     setNewSection('');
     await loadClass.run(classId);
+    onChanged();
   });
 
   const addStudent = useAction(async () => {
@@ -70,6 +72,7 @@ export function StudentsPanel({ onClassAdded }: { onClassAdded: () => void }) {
     });
     setForm({ name: '', rollNo: '', sectionId: form.sectionId, pin: '' });
     await loadClass.run(classId);
+    onChanged();
   });
 
   // Reads a class list saved from Excel as CSV and adds every good row.
@@ -80,6 +83,7 @@ export function StudentsPanel({ onClassAdded }: { onClassAdded: () => void }) {
     const result = await call('POST /api/v1/classes/:id/students/import', { params: { id: classId }, body: { rows: read.rows } });
     setImported({ ...result, firstLine: read.firstLine });
     await loadClass.run(classId);
+    onChanged();
   });
 
   const makeCodes = useAction(async () => {
@@ -97,6 +101,7 @@ export function StudentsPanel({ onClassAdded }: { onClassAdded: () => void }) {
     setPromoted(`Moved ${moved} students from Class ${className} to Class ${to.name}.`);
     setPromoteTo('');
     await loadClass.run(classId);
+    onChanged();
   });
 
   return (
@@ -177,7 +182,7 @@ export function StudentsPanel({ onClassAdded }: { onClassAdded: () => void }) {
           {promoted && <Note>{promoted} Promote the top class first (8 → 9 before 7 → 8) so classes don't mix.</Note>}
           <ul className="grid gap-2">
             {students.map((s) => (
-              <StudentRow key={s.id} student={s} className={className} sections={sections} onChanged={() => loadClass.run(classId)} />
+              <StudentRow key={s.id} student={s} className={className} sections={sections} onChanged={async () => { await loadClass.run(classId); onChanged(); }} />
             ))}
           </ul>
         </>

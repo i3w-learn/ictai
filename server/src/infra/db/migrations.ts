@@ -265,4 +265,218 @@ export const migrations: Migration[] = [
       CREATE INDEX student_notes_owner ON student_notes(student_id, updated_at);
     `,
   },
+  {
+    version: 9,
+    name: 'notices',
+    sql: `
+      -- One-way notices. class_id NULL = whole school; section_id NULL = the whole class.
+      -- Taking a notice down removes the row for good.
+      CREATE TABLE notices (
+        id         TEXT PRIMARY KEY,
+        title      TEXT NOT NULL,
+        body       TEXT NOT NULL,
+        class_id   TEXT REFERENCES classes(id),
+        section_id TEXT REFERENCES sections(id),
+        pinned     INTEGER NOT NULL DEFAULT 0,
+        expires_at INTEGER,
+        created_by TEXT NOT NULL REFERENCES users(id),
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE INDEX notices_class ON notices(class_id, created_at);
+    `,
+  },
+  {
+    version: 10,
+    name: 'settings_periods_and_student_prefs',
+    sql: `
+      -- The periods of the school day, as the Super Admin types them. Times are "HH:MM" on the school's clock.
+      CREATE TABLE periods (
+        id        TEXT PRIMARY KEY,
+        name      TEXT NOT NULL,
+        starts_at TEXT NOT NULL,
+        ends_at   TEXT NOT NULL
+      );
+      -- How one student likes their screens; follows the student to any lab PC.
+      CREATE TABLE student_prefs (
+        student_id    TEXT PRIMARY KEY REFERENCES students(id),
+        text_size     TEXT NOT NULL CHECK (text_size IN ('normal','large','xlarge')),
+        high_contrast INTEGER NOT NULL DEFAULT 0,
+        easy_font     INTEGER NOT NULL DEFAULT 0,
+        updated_at    INTEGER NOT NULL
+      );
+    `,
+  },
+  {
+    version: 11,
+    name: 'timetable',
+    sql: `
+      -- One lab, so one class per period per day. day: 1 = Monday ... 6 = Saturday.
+      CREATE TABLE timetable_slots (
+        day        INTEGER NOT NULL CHECK (day BETWEEN 1 AND 6),
+        period_id  TEXT NOT NULL REFERENCES periods(id),
+        class_id   TEXT NOT NULL REFERENCES classes(id),
+        section_id TEXT REFERENCES sections(id),
+        subject    TEXT,
+        updated_at INTEGER NOT NULL,
+        PRIMARY KEY (day, period_id)
+      );
+      CREATE INDEX timetable_class ON timetable_slots(class_id, day);
+    `,
+  },
+  {
+    version: 12,
+    name: 'work',
+    sql: `
+      -- Work a teacher sets for a class (or one section). Taking it away keeps the row (deleted_at) so
+      -- the answers and marks already given are not lost.
+      CREATE TABLE assignments (
+        id           TEXT PRIMARY KEY,
+        title        TEXT NOT NULL,
+        instructions TEXT NOT NULL,
+        class_id     TEXT NOT NULL REFERENCES classes(id),
+        section_id   TEXT REFERENCES sections(id),
+        subject      TEXT,
+        due_at       INTEGER,
+        max_marks    INTEGER NOT NULL,
+        created_by   TEXT NOT NULL REFERENCES users(id),
+        created_at   INTEGER NOT NULL,
+        deleted_at   INTEGER
+      );
+      CREATE INDEX assignments_class ON assignments(class_id, created_at);
+      -- Append-only: handing in again adds a row. The newest row is the answer that counts.
+      CREATE TABLE submissions (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        assignment_id TEXT NOT NULL REFERENCES assignments(id),
+        student_id    TEXT NOT NULL REFERENCES students(id),
+        body          TEXT NOT NULL,
+        submitted_at  INTEGER NOT NULL,
+        late          INTEGER NOT NULL
+      );
+      CREATE INDEX submissions_work ON submissions(assignment_id, student_id, id);
+      CREATE TABLE work_marks (
+        assignment_id TEXT NOT NULL REFERENCES assignments(id),
+        student_id    TEXT NOT NULL REFERENCES students(id),
+        marks         INTEGER NOT NULL,
+        comment       TEXT NOT NULL,
+        marked_by     TEXT NOT NULL REFERENCES users(id),
+        marked_at     INTEGER NOT NULL,
+        PRIMARY KEY (assignment_id, student_id)
+      );
+    `,
+  },
+  {
+    version: 13,
+    name: 'report_cards',
+    sql: `
+      -- One card per student per term. marks_json is the marks as they stood when the card was made;
+      -- once the status is 'frozen' the row is never written again.
+      CREATE TABLE report_cards (
+        id         TEXT PRIMARY KEY,
+        student_id TEXT NOT NULL REFERENCES students(id),
+        class_id   TEXT NOT NULL REFERENCES classes(id),
+        term       TEXT NOT NULL,
+        status     TEXT NOT NULL CHECK (status IN ('draft','published','frozen')),
+        remarks    TEXT NOT NULL,
+        marks_json TEXT NOT NULL,
+        created_by TEXT NOT NULL REFERENCES users(id),
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        UNIQUE (student_id, term)
+      );
+      CREATE INDEX report_cards_class ON report_cards(class_id, term);
+    `,
+  },
+  {
+    version: 14,
+    name: 'ai_jobs_tutor',
+    sql: `
+      -- Students can now ask the AI tutor. A job's owner is then a student, not a staff account, so
+      -- requested_by no longer points at the users table. SQLite cannot change a CHECK or drop a
+      -- reference, so the table is rebuilt.
+      CREATE TABLE ai_jobs_new (
+        id           TEXT PRIMARY KEY,
+        kind         TEXT NOT NULL CHECK (kind IN ('quiz','ask','tutor')),
+        requested_by TEXT NOT NULL,
+        request_json TEXT NOT NULL,
+        status       TEXT NOT NULL CHECK (status IN ('queued','running','done','failed')),
+        result_json  TEXT,
+        error        TEXT,
+        created_at   INTEGER NOT NULL,
+        started_at   INTEGER,
+        finished_at  INTEGER
+      );
+      INSERT INTO ai_jobs_new (id, kind, requested_by, request_json, status, result_json, error, created_at, started_at, finished_at)
+        SELECT id, kind, requested_by, request_json, status, result_json, error, created_at, started_at, finished_at FROM ai_jobs ORDER BY rowid;
+      DROP TABLE ai_jobs;
+      ALTER TABLE ai_jobs_new RENAME TO ai_jobs;
+      CREATE INDEX ai_jobs_queue ON ai_jobs(status, created_at);
+      CREATE INDEX ai_jobs_user ON ai_jobs(requested_by, created_at);
+    `,
+  },
+  {
+    version: 15,
+    name: 'content_library',
+    sql: `
+      -- A file is kept once under its fingerprint; many library items may point at it.
+      CREATE TABLE files (
+        sha256     TEXT PRIMARY KEY,
+        size       INTEGER NOT NULL,
+        mime       TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+      -- A library item: a file or a web link, filed under a class, a subject and a chapter.
+      CREATE TABLE content_items (
+        id             TEXT PRIMARY KEY,
+        title          TEXT NOT NULL,
+        kind           TEXT NOT NULL CHECK (kind IN ('pdf','image','video','audio','link')),
+        class_id       TEXT NOT NULL REFERENCES classes(id),
+        subject        TEXT,
+        chapter        TEXT,
+        file_hash      TEXT REFERENCES files(sha256),
+        file_name      TEXT,
+        url            TEXT,
+        needs_internet INTEGER NOT NULL DEFAULT 0,
+        created_by     TEXT NOT NULL REFERENCES users(id),
+        created_at     INTEGER NOT NULL,
+        deleted_at     INTEGER
+      );
+      CREATE INDEX content_class ON content_items(class_id, subject, chapter);
+      CREATE INDEX content_file ON content_items(file_hash);
+    `,
+  },
+  {
+    version: 16,
+    name: 'playlists_and_paths',
+    sql: `
+      -- A playlist or a learning path: an ordered list of steps for one class.
+      CREATE TABLE sequences (
+        id         TEXT PRIMARY KEY,
+        type       TEXT NOT NULL CHECK (type IN ('playlist','path')),
+        title      TEXT NOT NULL,
+        class_id   TEXT NOT NULL REFERENCES classes(id),
+        subject    TEXT,
+        created_by TEXT NOT NULL REFERENCES users(id),
+        created_at INTEGER NOT NULL,
+        deleted_at INTEGER
+      );
+      CREATE INDEX sequences_class ON sequences(class_id, created_at);
+      CREATE TABLE sequence_steps (
+        id            TEXT PRIMARY KEY,
+        sequence_id   TEXT NOT NULL REFERENCES sequences(id),
+        position      INTEGER NOT NULL,
+        kind          TEXT NOT NULL CHECK (kind IN ('content','work')),
+        content_id    TEXT REFERENCES content_items(id),
+        assignment_id TEXT REFERENCES assignments(id)
+      );
+      CREATE INDEX sequence_steps_order ON sequence_steps(sequence_id, position);
+      -- A student opened a library step. (A work step is done when its work is handed in.)
+      CREATE TABLE step_done (
+        step_id    TEXT NOT NULL REFERENCES sequence_steps(id),
+        student_id TEXT NOT NULL REFERENCES students(id),
+        done_at    INTEGER NOT NULL,
+        PRIMARY KEY (step_id, student_id)
+      );
+    `,
+  },
 ];

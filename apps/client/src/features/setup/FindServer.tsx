@@ -39,7 +39,12 @@ export function FindServer() {
 
   return (
     <Centered>
-      <PageTitle eyebrow="Setup" sub="Looking on the school network…">Find the school server</PageTitle>
+      <PageTitle
+        eyebrow="Setup"
+        sub={search.busy ? 'Looking on the school network…' : found && found.length > 0 ? 'Pick your server.' : 'Nothing found yet. Search again, or type the address shown on the server PC.'}
+      >
+        Find the school server
+      </PageTitle>
 
       {search.busy && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
