@@ -6,7 +6,8 @@ import { Id } from './common.js';
 // same safe channel the rest of the app uses carries it. That sets today's size limit: a big video
 // needs a streaming path the app does not have yet.
 export const CHUNK_BYTES = 512 * 1024;
-export const MAX_FILE_BYTES = 100 * 1024 * 1024;
+// PRD 4.2: up to 512 MB per upload, streamed to disk in pieces.
+export const MAX_FILE_BYTES = 512 * 1024 * 1024;
 
 export const ContentKind = z.enum(['pdf', 'image', 'video', 'audio', 'link']);
 export type ContentKind = z.infer<typeof ContentKind>;

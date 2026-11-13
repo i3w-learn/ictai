@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link2, Upload } from 'lucide-react';
-import type { ContentItem, SchoolClass } from '@ict/contracts';
+import { MAX_FILE_BYTES, type ContentItem, type SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, useAction } from '../../ui/ui';
 import { SubjectField } from '../quizzes/SubjectField';
@@ -85,7 +85,7 @@ export function ContentPanel({ onOpen, refresh, onChanged }: { onOpen: (item: Co
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <label className="grid gap-1.5" htmlFor="content-file">
-              <span className="text-[13px] font-medium text-muted-foreground">A file: PDF, picture, video or sound (up to 100 MB)</span>
+              <span className="text-[13px] font-medium text-muted-foreground">A file: PDF, picture, video or sound (up to {sizeWords(MAX_FILE_BYTES)})</span>
               <input
                 id="content-file" ref={picker} type="file" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.mp4,.webm,.mp3,.wav,.ogg,.m4a"
                 className="h-11 rounded-xl border border-border bg-card px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-3 file:py-1"

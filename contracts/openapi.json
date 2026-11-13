@@ -6957,7 +6957,7 @@
     },
     "/api/v1/ai/jobs": {
       "get": {
-        "summary": "Your last 10 AI requests, newest first",
+        "summary": "Your last 10 AI requests, newest first; ?kind= keeps to one kind",
         "x-access": {
           "kind": "staff",
           "permission": "ai.teacher"
@@ -6965,6 +6965,16 @@
         "security": [
           {
             "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -9307,7 +9317,7 @@
                   "size": {
                     "type": "integer",
                     "minimum": 1,
-                    "maximum": 104857600
+                    "maximum": 536870912
                   }
                 },
                 "required": [
