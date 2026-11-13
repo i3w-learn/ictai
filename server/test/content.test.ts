@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { CHUNK_BYTES } from '@ict/contracts';
+import { MAX_FILE_BYTES, CHUNK_BYTES } from '@ict/contracts';
 import { testServer } from './helpers.js';
 
 const pdf = (size: number, fill = 0x20) => Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(size - 9, fill)]);
@@ -132,7 +132,7 @@ describe('Content library', () => {
     expect((await inject('POST', `/api/v1/content/uploads/${c.uploadId}/finish`, admin, { title: 'Short', classId: c7.id })).statusCode).toBe(400);
 
     expect((await inject('POST', '/api/v1/content/uploads', admin, { fileName: 'a.pdf', size: 0 })).statusCode).toBe(400);
-    expect((await inject('POST', '/api/v1/content/uploads', admin, { fileName: 'a.pdf', size: 101 * 1024 * 1024 })).statusCode).toBe(400);
+    expect((await inject('POST', '/api/v1/content/uploads', admin, { fileName: 'a.pdf', size: MAX_FILE_BYTES + 1 })).statusCode).toBe(400);
   });
 
   it('keeps a teacher to her own classes and subjects, and one teacher out of another upload', async () => {
