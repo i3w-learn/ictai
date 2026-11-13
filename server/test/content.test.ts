@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { MAX_FILE_BYTES, CHUNK_BYTES } from '@ict/contracts';
+import { MAX_FILE_BYTES, CHUNK_BYTES, STREAM_WINDOW_BYTES, rangeOf } from '@ict/contracts';
+import { DISK_RESERVE_BYTES } from '../src/modules/content/content.service.js';
 import { testServer } from './helpers.js';
 
 const pdf = (size: number, fill = 0x20) => Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(size - 9, fill)]);
@@ -165,5 +166,61 @@ describe('Content library', () => {
     expect((await inject('DELETE', `/api/v1/content/${item.id}`, asha)).statusCode).toBe(403);
     expect((await inject('GET', '/api/v1/content', asha)).statusCode).toBe(403);
     expect((await inject('GET', '/api/v1/content/mine', admin)).statusCode).toBe(403);
+  });
+
+  it('streams a file: the whole of it, or only the part a Range header asks for', async () => {
+    const { inject, admin, c7, asha, kabir, upload } = await school();
+    const bytes = Buffer.concat([png(1000), Buffer.from('the tail of the file')]);
+    const hash = sha(bytes);
+    await upload(admin, bytes, { title: 'Picture', classId: c7.id });
+    const get = (who: object, range?: string) => inject('GET', `/api/v1/files/${hash}/raw`, { ...who, ...(range ? { range } : {}) });
+
+    const whole = await get(asha);
+    expect(whole.statusCode).toBe(200);
+    expect(whole.headers).toMatchObject({ 'content-type': 'image/png', 'accept-ranges': 'bytes', 'content-length': String(bytes.length) });
+    expect(whole.rawPayload.equals(bytes)).toBe(true);
+
+    const part = await get(asha, 'bytes=10-19');
+    expect(part.statusCode).toBe(206);
+    expect(part.headers['content-range']).toBe(`bytes 10-19/${bytes.length}`);
+    expect(part.rawPayload.equals(bytes.subarray(10, 20))).toBe(true);
+    expect((await get(asha, 'bytes=1000-')).rawPayload.toString()).toBe('the tail of the file');
+    expect((await get(asha, 'bytes=-4')).rawPayload.toString()).toBe('file');
+
+    const past = await get(asha, `bytes=${bytes.length}-`);
+    expect(past.statusCode).toBe(416);
+    expect(past.headers['content-range']).toBe(`bytes */${bytes.length}`);
+    // The same rules as the piece-by-piece route: another class's student, and nobody signed in, get nothing.
+    expect((await get(kabir)).statusCode).toBe(404);
+    expect((await get({})).statusCode).toBe(401);
+  });
+
+  it('answers an open-ended range with one window, so a big video is never sent in one go', () => {
+    const size = STREAM_WINDOW_BYTES * 3;
+    expect(rangeOf('bytes=0-', size)).toEqual({ start: 0, end: STREAM_WINDOW_BYTES - 1 });
+    expect(rangeOf(`bytes=${size - 10}-`, size)).toEqual({ start: size - 10, end: size - 1 });
+    expect(rangeOf('bytes=5-2', size)).toBe('bad');
+    expect(rangeOf(undefined, size)).toBeNull();
+    expect(rangeOf('lines=1-2', size)).toBeNull();
+  });
+
+  it('lets one person send two files at once, not more, and refuses a file the disk has no room for', async () => {
+    const { inject, admin, ravi, c } = await school();
+    const start = (who: object, size = 50) => inject('POST', '/api/v1/content/uploads', who, { fileName: 'a.pdf', size });
+    expect((await start(admin)).statusCode).toBe(201);
+    expect((await start(admin)).statusCode).toBe(201);
+    const third = await start(admin);
+    expect(third.statusCode).toBe(429);
+    expect(third.json().message).toBe('You are already sending 2 files. Wait for one to finish.');
+    expect((await start(ravi)).statusCode).toBe(201);
+
+    // A disk with just under the reserve plus this file left over.
+    const store = (c.content as unknown as { store: { freeBytes(): number } }).store;
+    store.freeBytes = () => DISK_RESERVE_BYTES + 1000;
+    const full = await start(ravi, 1000);
+    expect(full.statusCode).toBe(507);
+    expect(full.json()).toMatchObject({ code: 'DISK_FULL' });
+    store.freeBytes = () => DISK_RESERVE_BYTES + 1000 + 150; // room for this file and the three under way
+    expect((await start(ravi, 1000)).statusCode).toBe(201);
   });
 });

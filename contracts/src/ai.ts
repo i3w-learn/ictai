@@ -46,6 +46,9 @@ export type AiAskResult = z.infer<typeof AiAskResult>;
 // The tutor explains the idea; it is told not to hand over the finished answer to a piece of work.
 // It answers from the model alone for now: answering from the school's books needs the content library.
 export const TUTOR_DAILY_CAP = 10;
+// The AI answers one request at a time. When this many student questions are already waiting, a new one
+// is refused (the student tries again in a few minutes) instead of joining a line that takes all day.
+export const TUTOR_QUEUE_MAX = 10;
 export const AiTutorRequest = z.object({ question: z.string().trim().min(1, 'Type your question').max(600) });
 export type AiTutorRequest = z.infer<typeof AiTutorRequest>;
 export const AiTutorResult = z.object({ answer: z.string() });

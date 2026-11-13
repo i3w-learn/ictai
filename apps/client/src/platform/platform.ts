@@ -45,6 +45,13 @@ export interface Platform {
   relaySend(text: string): Promise<void>;
   relayClose(): Promise<void>;
   onRelay(listener: (e: RelayEvent) => void): () => void;
+  /**
+   * Library files as a stream. `setFileSource` says which server and signed-in person files are fetched
+   * for (null = nobody). `fileUrl` is then an address a picture, video or sound player can be pointed at.
+   * Left out where there is no native side (tests, the browser harness): screens then fetch in pieces.
+   */
+  setFileSource?(source: { baseUrl: string; certFp: string; token: string } | null): Promise<void>;
+  fileUrl?(hash: string): string;
   /** The role chosen in the Windows installer, if any. */
   installRole(): Promise<AppKind | null>;
 }

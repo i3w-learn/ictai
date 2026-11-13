@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Assignment, AssignmentDetail, AssignmentInput, MarkInput, MyWork, StaffPrincipal, StudentPrincipal } from '@ict/contracts';
+import { MAX_TRIES, type Assignment, type AssignmentDetail, type AssignmentInput, type MarkInput, type MyWork, type StaffPrincipal, type StudentPrincipal } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import type { Clock } from '../../core/clock.js';
 import { AppError, notFound } from '../../core/errors.js';
@@ -66,6 +66,11 @@ export class WorkService {
     if (this.work.isMarked(id, me.studentId)) throw new AppError(409, 'ALREADY_MARKED', 'Your teacher has already marked this. You cannot change your answer now.');
     const a = this.work.get(id)!;
     const now = this.now();
+    // The same answer sent again changes nothing, so nothing new is stored.
+    if (this.work.latestAnswer(id, me.studentId) === body) return this.work.forStudent(me.studentId, now, id)[0]!;
+    if (this.work.tries(id, me.studentId) >= MAX_TRIES) {
+      throw new AppError(409, 'TOO_MANY_TRIES', `You have handed this in ${MAX_TRIES} times. Your teacher has your last answer.`);
+    }
     this.work.addAnswer(id, me.studentId, body, now, a.dueAt !== null && now > a.dueAt);
     return this.work.forStudent(me.studentId, now, id)[0]!;
   }

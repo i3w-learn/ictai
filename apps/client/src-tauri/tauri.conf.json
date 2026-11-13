@@ -14,7 +14,7 @@
       { "title": "ICT App", "width": 1100, "height": 760, "minWidth": 800, "minHeight": 600 }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: ictfile: http://ictfile.localhost; media-src 'self' blob: ictfile: http://ictfile.localhost; frame-src 'self' blob: ictfile: http://ictfile.localhost"
     }
   },
   "bundle": {

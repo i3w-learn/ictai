@@ -8,6 +8,10 @@ export type JobRunner<K extends AiJobKind> = (request: AiRequestOf<K>, signal: A
 // One runner per kind of job. A new kind means a new runner here; the queue itself does not change.
 export type JobRunners = { [K in AiJobKind]: JobRunner<K> };
 
+// A tutor answer is short (a hint of about 120 words), so it gets a much shorter time limit than a quiz.
+// One stuck question then holds the line for minutes, not a quarter of an hour.
+const TUTOR_TIMEOUT_MS = 3 * 60_000;
+
 const TIMED_OUT = 'The AI took too long. Try a smaller request.';
 const CRASHED = 'The AI stopped unexpectedly. Try again.';
 const RESTARTED = 'The server restarted. Try again.';
@@ -70,6 +74,10 @@ export class JobQueue {
     return this.repo.queuedCount();
   }
 
+  queuedOf(kind: AiJobKind) {
+    return this.repo.queuedCountOf(kind);
+  }
+
   // Resolves with the job once it is done or failed, or as it stands when maxMs runs out.
   waitFor(id: string, maxMs: number): Promise<AiJob> {
     const job = this.repo.get(id);
@@ -129,7 +137,7 @@ export class JobQueue {
       timer = setTimeout(() => {
         ctl.abort();
         reject(new Error(TIMED_OUT));
-      }, this.timeoutMs);
+      }, job.kind === 'tutor' ? Math.min(this.timeoutMs, TUTOR_TIMEOUT_MS) : this.timeoutMs);
     });
     return Promise.race([this.runFor(job, ctl.signal), timedOut]).finally(() => clearTimeout(timer));
   }

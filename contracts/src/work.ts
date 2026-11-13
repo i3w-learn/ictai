@@ -5,6 +5,8 @@ import { Id } from './common.js';
 // a written answer, the teacher gives marks and a comment. Handing in again adds a new answer (the old
 // ones are kept); the newest is the one that is marked. Files, drawings and photos are not here yet.
 export const ANSWER_MAX = 10_000;
+// Every hand-in is kept, so there is a limit on how many times one student can hand in one piece of work.
+export const MAX_TRIES = 20;
 
 export const AssignmentInput = z
   .object({

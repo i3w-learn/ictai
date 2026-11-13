@@ -2,10 +2,13 @@ import { z } from 'zod';
 import { Id } from './common.js';
 
 // PRD 4.2 "Content" and student app "My books": the school's library of files and links, filed by
-// class, subject and chapter. A file travels between the app and the server in small pieces, so the
-// same safe channel the rest of the app uses carries it. That sets today's size limit: a big video
-// needs a streaming path the app does not have yet.
+// class, subject and chapter. A file is sent to the server in small pieces, so the same safe channel
+// the rest of the app uses carries it. It is read back as a stream (GET /files/:hash/raw): the screen
+// asks for the part it needs, so a big video starts at once, can be skipped through, and is never
+// held whole in a lab PC's memory.
 export const CHUNK_BYTES = 512 * 1024;
+// The most bytes one streaming request is answered with. The player simply asks again for the next part.
+export const STREAM_WINDOW_BYTES = 4 * 1024 * 1024;
 // PRD 4.2: up to 512 MB per upload, streamed to disk in pieces.
 export const MAX_FILE_BYTES = 512 * 1024 * 1024;
 
@@ -61,5 +64,17 @@ export const ContentQuery = z.object({ classId: Id.optional() });
 export const FileChunkParams = z.object({ hash: z.string().regex(/^[0-9a-f]{64}$/), index: z.coerce.number().int().min(0) });
 export const FileChunk = z.object({ data: z.string(), last: z.boolean() });
 export type FileChunk = z.infer<typeof FileChunk>;
+
+// Which bytes of a file a "Range: bytes=..." header asks for, kept to one window.
+// null = no usable range was asked for (send from the start); 'bad' = a range outside the file.
+export function rangeOf(header: string | undefined, size: number): { start: number; end: number } | null | 'bad' {
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header?.trim() ?? '');
+  if (!m || (m[1] === '' && m[2] === '')) return null;
+  // "bytes=-500" means the last 500 bytes.
+  const start = m[1] === '' ? Math.max(0, size - Number(m[2])) : Number(m[1]);
+  const asked = m[1] === '' || m[2] === '' ? size - 1 : Number(m[2]);
+  if (start >= size || asked < start) return 'bad';
+  return { start, end: Math.min(asked, size - 1, start + STREAM_WINDOW_BYTES - 1) };
+}
 
 export const chunksOf = (size: number) => Math.max(1, Math.ceil(size / CHUNK_BYTES));
