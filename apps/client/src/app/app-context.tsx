@@ -3,7 +3,7 @@ import { DEVICE_PING_MS, type RouteKey } from '@ict/contracts';
 import { ApiCallError, ApiClient, type CallInput, type CallOutput } from '../core/api-client';
 import { RelayClient, type RelayStatus } from '../core/relay-client';
 import { ServerLocator } from '../core/server-locator';
-import { SettingsStore, type ServerTarget } from '../core/settings';
+import { SettingsStore, baseUrl, type ServerTarget } from '../core/settings';
 import type { Platform } from '../platform/platform';
 import { initialState, phaseOf, reducer, type Action, type AppState, type Role } from './app-state';
 
@@ -104,6 +104,13 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
     const t = setInterval(() => void refreshMe(), 60_000);
     return () => clearInterval(t);
   }, [sessionToken, refreshMe]);
+
+  // The native side fetches library files for the signed-in person. Tell it who that is, and tell it
+  // "nobody" on sign-out, so the next person at this PC can never open files as the last one.
+  const server = state.settings.server;
+  useEffect(() => {
+    void platform.setFileSource?.(server && sessionToken ? { baseUrl: baseUrl(server), certFp: server.certFp, token: sessionToken } : null)?.catch(() => undefined);
+  }, [platform, server, sessionToken]);
 
   const value = useMemo<AppContextValue>(() => {
     const call: AppContextValue['call'] = async (key, input, credential = 'session') => {

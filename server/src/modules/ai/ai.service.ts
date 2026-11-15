@@ -1,4 +1,4 @@
-import { TUTOR_DAILY_CAP, type AiAskJob, type AiAskRequest, type AiJob, type AiJobKind, type AiQuizJob, type AiQuizRequest, type AiStatus, type AiTutorJob, type AiTutorRequest, type MyTutor, type StaffPrincipal, type StudentPrincipal } from '@ict/contracts';
+import { TUTOR_DAILY_CAP, TUTOR_QUEUE_MAX, type AiAskJob, type AiAskRequest, type AiJob, type AiJobKind, type AiQuizJob, type AiQuizRequest, type AiStatus, type AiTutorJob, type AiTutorRequest, type MyTutor, type StaffPrincipal, type StudentPrincipal } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import type { Clock } from '../../core/clock.js';
 import { AppError, aiNotInstalled, aiSwitchedOff, notFound } from '../../core/errors.js';
@@ -75,6 +75,9 @@ export class AiService {
     if (!this.runtime.installed()) throw aiNotInstalled();
     if (this.queue.countSince(me.studentId, 'tutor', startOfDay(this.now())) >= TUTOR_DAILY_CAP) {
       throw new AppError(429, 'DAILY_CAP', `You have asked ${TUTOR_DAILY_CAP} questions today. You can ask more tomorrow.`);
+    }
+    if (this.queue.queuedOf('tutor') >= TUTOR_QUEUE_MAX) {
+      throw new AppError(429, 'TUTOR_BUSY', 'The helper is busy with other questions right now. Try again in a few minutes.');
     }
     // The class comes from who is signed in, so the tutor pitches its words for that class.
     const job = this.queue.enqueue(me.studentId, 'tutor', { ...req, className: this.classes.name(me.classId) ?? null } as AiTutorRequest);

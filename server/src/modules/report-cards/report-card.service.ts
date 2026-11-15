@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { CARD_MOVES, type CardMarks, type CardStatus, type MakeCardsResult, type ReportCard, type StaffPrincipal } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import type { Clock } from '../../core/clock.js';
-import { AppError, notFound } from '../../core/errors.js';
+import { AppError, forbidden, notFound } from '../../core/errors.js';
 import { checkMyClass, scopeOf, seesClass } from '../../core/scope.js';
 import type { ResultsService } from '../results/results.service.js';
 import type { ClassRepository } from '../students/class.repository.js';
@@ -37,7 +37,7 @@ export class ReportCardService {
       if (!existing) {
         this.cards.insert({ id: randomUUID(), studentId: s.id, classId, term, marks, by: actor.userId, now });
         count.made++;
-      } else if (existing.status === 'draft' && this.cards.setMarks(existing.id, marks, now)) count.refreshed++;
+      } else if (existing.status === 'draft' && this.cards.setMarks(existing.id, classId, marks, now)) count.refreshed++;
       else count.kept++;
     }
     this.audit.record({ kind: 'staff', id: actor.userId }, 'report_cards.make', classId, { term, ...count });
@@ -64,6 +64,8 @@ export class ReportCardService {
     const card = this.mine(actor, id);
     if (card.status === to) return this.card(id);
     if (card.status === 'frozen') throw frozen();
+    // Freezing can never be undone, so it is the Super Admin's step. A teacher publishes and takes back.
+    if (to === 'frozen' && !actor.permissions.includes('settings.manage')) throw forbidden('Only the Super Admin can freeze a report card.');
     if (!CARD_MOVES[card.status].includes(to)) {
       throw new AppError(409, 'BAD_MOVE', to === 'frozen' ? 'Publish the report card before you freeze it.' : `A ${card.status} report card cannot become ${to}.`);
     }

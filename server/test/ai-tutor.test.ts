@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TUTOR_DAILY_CAP } from '@ict/contracts';
+import { TUTOR_DAILY_CAP, TUTOR_QUEUE_MAX } from '@ict/contracts';
 import type { Llm } from '../src/modules/ai/llm-client.js';
 import { testServer } from './helpers.js';
 
@@ -111,5 +111,53 @@ describe('AI tutor for students', () => {
     expect((await ask(admin)).statusCode).toBe(403);
     expect((await inject('GET', '/api/v1/ai/tutor', admin)).statusCode).toBe(403);
     expect((await ask({})).statusCode).toBe(401);
+  });
+
+  it("runs a teacher's request before the students' questions that were waiting first", async () => {
+    // The model holds the first question until the test lets go, so the others pile up behind it.
+    const order: string[] = [];
+    let letGo = () => {};
+    const held = new Promise<void>((r) => { letGo = r; });
+    const slow: Llm = {
+      json: async ({ user, schema }) => {
+        order.push(user.split('\n').pop()!); // a teacher's question arrives with a language line on top
+        if (order.length === 1) await held;
+        return schema.parse({ answer: 'ok' });
+      },
+    };
+    const { inject, admin, asha, student, ask, c } = await setup({ llm: slow, installed: true });
+    const bina = await student('Bina', '2');
+    const chetan = await student('Chetan', '3');
+    await ask(asha, 'first');
+    await ask(bina, 'second');
+    const waiting = await ask(chetan, 'third');
+    expect(waiting.json().position).toBe(2);
+    expect((await inject('POST', '/api/v1/ai/ask', admin, { question: 'teacher' })).json().position).toBe(1);
+    // The teacher went in front, so the student who was second in line is now third.
+    expect((await inject('GET', `/api/v1/ai/tutor/${waiting.json().id}`, chetan)).json().position).toBe(3);
+    letGo();
+    await c.aiQueue.idle();
+    expect(order).toEqual(['first', 'teacher', 'second', 'third']);
+  });
+
+  it('refuses a new question when too many are already waiting, and lets teachers through', async () => {
+    const never: Llm = { json: () => new Promise(() => {}) };
+    const { inject, admin, student, ask } = await setup({ llm: never, installed: true });
+    // One question is being answered and TUTOR_QUEUE_MAX wait behind it.
+    for (let i = 0; i <= TUTOR_QUEUE_MAX; i++) expect((await ask(await student(`S${i}`, String(10 + i)))).statusCode).toBe(202);
+    const refused = await ask(await student('Late', '99'));
+    expect(refused.statusCode).toBe(429);
+    expect(refused.json()).toMatchObject({ code: 'TUTOR_BUSY' });
+    expect((await inject('POST', '/api/v1/ai/ask', admin, { question: 'teacher' })).statusCode).toBe(202);
+  });
+
+  it('does not count a question that failed against the daily number', async () => {
+    const broken: Llm = { json: async () => { throw new Error('boom'); } };
+    const { inject, asha, ask, c } = await setup({ llm: broken, installed: true });
+    await ask(asha);
+    await c.aiQueue.idle();
+    const mine = (await inject('GET', '/api/v1/ai/tutor', asha)).json();
+    expect(mine.jobs[0].status).toBe('failed');
+    expect(mine.leftToday).toBe(TUTOR_DAILY_CAP);
   });
 });

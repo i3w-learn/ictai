@@ -3,6 +3,7 @@
 
 mod discovery;
 mod error;
+mod files;
 mod http;
 mod pinning;
 mod relay;
@@ -15,6 +16,7 @@ use tauri::{AppHandle, Manager, State};
 
 use crate::discovery::Found;
 use crate::error::AppError;
+use crate::files::{FileSource, Source};
 use crate::http::{ApiRequest, ApiResponse, HttpClients, ProbeResult};
 use crate::relay::RelayState;
 
@@ -59,6 +61,16 @@ async fn relay_close(state: State<'_, RelayState>) -> Result<(), AppError> {
     Ok(())
 }
 
+/// The page says which server and which signed-in person library files are fetched for.
+/// Called with nothing when that person signs out, so the next person cannot open files as them.
+#[tauri::command]
+fn set_file_source(state: State<'_, FileSource>, base_url: Option<String>, cert_fp: Option<String>, token: Option<String>) {
+    *state.0.lock().unwrap() = match (base_url, cert_fp, token) {
+        (Some(base_url), Some(cert_fp), Some(token)) => Some(Source { base_url, cert_fp, token }),
+        _ => None,
+    };
+}
+
 #[tauri::command]
 fn load_settings(app: AppHandle) -> Result<Option<Value>, AppError> {
     storage::load(config_dir(&app)?)
@@ -89,6 +101,15 @@ pub fn run() {
     tauri::Builder::default()
         .manage(HttpClients::default())
         .manage(RelayState::default())
+        .manage(FileSource::default())
+        // Library files for the page's players: see files.rs.
+        .register_asynchronous_uri_scheme_protocol("ictfile", |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let source = app.state::<FileSource>().0.lock().unwrap().clone();
+                responder.respond(files::serve(&app.state::<HttpClients>(), source, request).await);
+            });
+        })
         .invoke_handler(tauri::generate_handler![
             discover_servers,
             api_request,
@@ -99,6 +120,7 @@ pub fn run() {
             load_settings,
             save_settings,
             clear_settings,
+            set_file_source,
             install_role
         ])
         .run(tauri::generate_context!())

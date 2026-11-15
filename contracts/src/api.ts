@@ -151,7 +151,7 @@ export const API = {
   'GET /api/v1/report-cards': { summary: 'Report cards of a class for one term, in roll order', access: staff('results.view'), query: CardsQuery, status: 200, response: z.array(ReportCard) },
   'GET /api/v1/report-cards/terms': { summary: 'Terms a class has report cards for, newest first', access: staff('results.view'), query: ClassQuery, status: 200, response: z.array(z.string()) },
   'PUT /api/v1/report-cards/:id/remarks': { summary: "Write the teacher's remarks; refused once frozen", access: staff('results.view'), params: IdParams, body: CardRemarks, status: 200, response: ReportCard },
-  'PUT /api/v1/report-cards/:id/status': { summary: 'Publish, take back to draft, or freeze for good', access: staff('results.view'), params: IdParams, body: CardStatusChange, status: 200, response: ReportCard },
+  'PUT /api/v1/report-cards/:id/status': { summary: 'Publish, take back to draft, or (Super Admin only) freeze for good', access: staff('results.view'), params: IdParams, body: CardStatusChange, status: 200, response: ReportCard },
 
   // Work: a teacher sets written work for a class, students hand in, the teacher marks.
   'GET /api/v1/assignments': { summary: 'Work you set or may mark, newest first', access: staff('teaching.manage'), status: 200, response: z.array(Assignment) },

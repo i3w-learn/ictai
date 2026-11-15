@@ -14,10 +14,14 @@ interface JobRow {
   position: number | null;
 }
 
-// Place in line = queued jobs inserted at or before this one (rowid follows insert order).
+// Staff requests run before students' tutor questions, so a lab full of questions never makes a teacher
+// wait. Inside each group the oldest goes first (rowid follows insert order).
+const TUTOR_LAST = (alias: string) => `(${alias}.kind = 'tutor')`;
+// Place in line = queued jobs that will run before this one, plus itself.
 const SELECT = `
   SELECT j.*, CASE WHEN j.status = 'queued'
-    THEN (SELECT COUNT(*) FROM ai_jobs q WHERE q.status = 'queued' AND q.rowid <= j.rowid) END AS position
+    THEN (SELECT COUNT(*) FROM ai_jobs q WHERE q.status = 'queued'
+          AND (${TUTOR_LAST('q')} < ${TUTOR_LAST('j')} OR (${TUTOR_LAST('q')} = ${TUTOR_LAST('j')} AND q.rowid <= j.rowid))) END AS position
   FROM ai_jobs j`;
 
 // kind decides the shape of request and result; both passed the contract before they were stored.
@@ -62,8 +66,13 @@ export class JobRepository {
   }
 
   // How many requests of one kind this person has made since a moment (used for the students' daily cap).
+  // A request that failed (the AI took too long, the server restarted) gave them nothing, so it is not counted.
   countSince(ownerId: string, kind: AiJobKind, since: number): number {
-    return this.db.prepare('SELECT COUNT(*) FROM ai_jobs WHERE requested_by = ? AND kind = ? AND created_at >= ?').pluck().get(ownerId, kind, since) as number;
+    return this.db.prepare(`SELECT COUNT(*) FROM ai_jobs WHERE requested_by = ? AND kind = ? AND created_at >= ? AND status != 'failed'`).pluck().get(ownerId, kind, since) as number;
+  }
+
+  queuedCountOf(kind: AiJobKind): number {
+    return this.db.prepare(`SELECT COUNT(*) FROM ai_jobs WHERE status = 'queued' AND kind = ?`).pluck().get(kind) as number;
   }
 
   listKindFor(ownerId: string, kind: AiJobKind, limit: number): AiJob[] {
@@ -76,7 +85,7 @@ export class JobRepository {
   }
 
   nextQueued(): AiJob | null {
-    const row = this.db.prepare(`${SELECT} WHERE j.status = 'queued' ORDER BY j.rowid LIMIT 1`).get() as JobRow | undefined;
+    const row = this.db.prepare(`${SELECT} WHERE j.status = 'queued' ORDER BY ${TUTOR_LAST('j')}, j.rowid LIMIT 1`).get() as JobRow | undefined;
     return row ? toJob(row) : null;
   }
 

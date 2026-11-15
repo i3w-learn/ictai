@@ -124,4 +124,32 @@ describe('Report cards', () => {
     expect((await make(asha)).statusCode).toBe(403);
     expect((await inject('POST', '/api/v1/report-cards/make', admin, { classId: c7.id, term: '  ' })).statusCode).toBe(400);
   });
+
+  it('lets only the Super Admin freeze; a teacher publishes and takes back', async () => {
+    const { ravi, admin, make, status } = await school();
+    const card = (await make(ravi)).json().cards[0];
+    expect((await status(ravi, card.id, 'published')).statusCode).toBe(200);
+    const refused = await status(ravi, card.id, 'frozen');
+    expect(refused.statusCode).toBe(403);
+    expect(refused.json().message).toBe('Only the Super Admin can freeze a report card.');
+    expect((await status(ravi, card.id, 'draft')).json().status).toBe('draft');
+    await status(ravi, card.id, 'published');
+    expect((await status(admin, card.id, 'frozen')).json().status).toBe('frozen');
+  });
+
+  it('moves a draft card with a student who changed class, and leaves a published one where it was', async () => {
+    const { inject, admin, c7, c8, make, status, db } = await school();
+    const cards7 = (await make(admin)).json().cards;
+    const bina = cards7.find((c: { student: { name: string } }) => c.student.name === 'Bina');
+    const asha = cards7.find((c: { student: { name: string } }) => c.student.name === 'Asha');
+    await status(admin, asha.id, 'published');
+    db.prepare('UPDATE students SET class_id = ? WHERE class_id = ?').run(c8.id, c7.id);
+
+    const res = (await make(admin, c8.id)).json();
+    expect(res).toMatchObject({ made: 1, refreshed: 1, kept: 1 }); // Kabir new, Bina's draft moved, Asha's published card kept
+    expect(res.cards.map((c: { student: { name: string } }) => c.student.name).sort()).toEqual(['Bina', 'Kabir']);
+    const old = (await inject('GET', `/api/v1/report-cards?classId=${c7.id}&term=Term%201`, admin)).json();
+    expect(old.map((c: { id: string }) => c.id)).toEqual([asha.id]);
+    expect(res.cards.find((c: { id: string }) => c.id === bina.id).student.className).toBe('8');
+  });
 });

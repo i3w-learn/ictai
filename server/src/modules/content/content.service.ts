@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { CHUNK_BYTES, chunksOf, type ContentItem, type FileChunk, type FinishUpload, type LinkInput, type Principal, type StaffPrincipal, type StudentPrincipal, type UploadTicket } from '@ict/contracts';
+import { CHUNK_BYTES, chunksOf, rangeOf, type ContentItem, type FileChunk, type FinishUpload, type LinkInput, type Principal, type StaffPrincipal, type StudentPrincipal, type UploadTicket } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import type { Clock } from '../../core/clock.js';
 import { AppError, forbidden, notFound } from '../../core/errors.js';
@@ -14,6 +14,11 @@ interface Upload { by: string; fileName: string; size: number; received: number;
 // An upload nobody has added to for this long is dropped, so abandoned files do not pile up.
 const UPLOAD_IDLE_MS = 30 * 60_000;
 const MAX_OPEN_UPLOADS = 20;
+// One person sends at most this many files at once, so one teacher cannot take every upload place.
+const MAX_OPEN_UPLOADS_EACH = 2;
+// The database lives on the same disk as the library. This much always stays free, so a full
+// library can never stop quizzes, sign-in or the activity log from being written.
+export const DISK_RESERVE_BYTES = 1024 * 1024 * 1024;
 
 // PRD "Content" (library) and "My books". Staff file things under a class, subject and chapter;
 // a teacher only for her own classes and subjects. A student sees and opens only their own class's items.
@@ -41,6 +46,15 @@ export class ContentService {
   startUpload(actor: StaffPrincipal, fileName: string, size: number): UploadTicket {
     this.dropStale();
     if (this.uploads.size >= MAX_OPEN_UPLOADS) throw new AppError(429, 'BUSY', 'Too many uploads are in progress. Wait a minute and try again.');
+    const open = [...this.uploads.values()];
+    if (open.filter((u) => u.by === actor.userId).length >= MAX_OPEN_UPLOADS_EACH) {
+      throw new AppError(429, 'BUSY', `You are already sending ${MAX_OPEN_UPLOADS_EACH} files. Wait for one to finish.`);
+    }
+    // Room is counted for this file and for what the uploads already under way still have to send.
+    const promised = open.reduce((n, u) => n + (u.size - u.received), 0);
+    if (this.store.freeBytes() - promised - size < DISK_RESERVE_BYTES) {
+      throw new AppError(507, 'DISK_FULL', "The server's disk is almost full. Remove library files that are no longer needed, then try again.");
+    }
     const id = this.store.newPart();
     this.uploads.set(id, { by: actor.userId, fileName, size, received: 0, next: 0, startedAt: this.now() });
     return { uploadId: id, chunkBytes: CHUNK_BYTES, chunks: chunksOf(size) };
@@ -108,15 +122,33 @@ export class ContentService {
   // A file is read by its fingerprint. Knowing a fingerprint is not enough: a student must have the file
   // in their own class's library, and a teacher in one of her classes.
   fileChunk(who: Principal, hash: string, index: number): FileChunk {
+    this.checkMayOpen(who, hash);
+    const piece = this.store.chunk(hash, index);
+    if (!piece) throw notFound('File');
+    return { data: piece.bytes.toString('base64'), last: piece.last };
+  }
+
+  // The same file as a stream, for the screen's own picture, PDF, video and sound players. With a
+  // Range header it answers with that part only (at most one window), which is how a video starts
+  // before it has all arrived and how skipping ahead works.
+  fileStream(who: Principal, hash: string, range: string | undefined) {
+    this.checkMayOpen(who, hash);
+    const size = this.store.size(hash);
+    const mime = this.content.fileMime(hash);
+    if (size === null || !mime) throw notFound('File');
+    const part = rangeOf(range, size);
+    if (part === 'bad') return { status: 416 as const, size, mime, start: 0, end: -1, body: null };
+    const { start, end } = part ?? { start: 0, end: size - 1 };
+    return { status: part ? (206 as const) : (200 as const), size, mime, start, end, body: size === 0 ? null : this.store.stream(hash, start, end) };
+  }
+
+  private checkMayOpen(who: Principal, hash: string) {
     if (who.kind === 'student') {
       if (!this.content.fileForClass(hash, who.classId)) throw notFound('File');
     } else if (who.kind === 'staff') {
       const scope = scopeOf(who);
       if (!this.content.classesOfFile(hash).some((c) => seesClass(scope, c))) throw notFound('File');
     } else throw forbidden('Sign in to open this file.');
-    const piece = this.store.chunk(hash, index);
-    if (!piece) throw notFound('File');
-    return { data: piece.bytes.toString('base64'), last: piece.last };
   }
 
   private checkFiling(scope: Scope, f: { classId: string; subject: string | null }) {

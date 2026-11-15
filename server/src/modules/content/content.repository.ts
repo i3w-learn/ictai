@@ -62,6 +62,10 @@ export class ContentRepository {
     return !!this.db.prepare('SELECT 1 FROM content_items WHERE file_hash = ? AND class_id = ? AND deleted_at IS NULL').get(hash, classId);
   }
 
+  fileMime(hash: string): string | undefined {
+    return this.db.prepare('SELECT mime FROM files WHERE sha256 = ?').pluck().get(hash) as string | undefined;
+  }
+
   classesOfFile(hash: string): string[] {
     return this.db.prepare('SELECT DISTINCT class_id FROM content_items WHERE file_hash = ? AND deleted_at IS NULL').pluck().all(hash) as string[];
   }

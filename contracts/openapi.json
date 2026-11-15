@@ -11276,7 +11276,7 @@
     },
     "/api/v1/report-cards/{id}/status": {
       "put": {
-        "summary": "Publish, take back to draft, or freeze for good",
+        "summary": "Publish, take back to draft, or (Super Admin only) freeze for good",
         "x-access": {
           "kind": "staff",
           "permission": "results.view"

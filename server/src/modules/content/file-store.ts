@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { appendFileSync, closeSync, createReadStream, existsSync, mkdirSync, openSync, readSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
+import { appendFileSync, closeSync, createReadStream, existsSync, mkdirSync, openSync, readSync, readdirSync, renameSync, rmSync, statSync, statfsSync } from 'node:fs';
 import { join } from 'node:path';
 import { CHUNK_BYTES } from '@ict/contracts';
 
@@ -79,8 +79,24 @@ export class FileStore {
     }
   }
 
+  size(hash: string): number | null {
+    const path = this.path(hash);
+    return existsSync(path) ? statSync(path).size : null;
+  }
+
+  // Bytes start..end (both counted in) of a stored file, read as they are sent, never all at once.
+  stream(hash: string, start: number, end: number) {
+    return createReadStream(this.path(hash), { start, end });
+  }
+
   remove(hash: string) {
     rmSync(this.path(hash), { force: true });
+  }
+
+  // Bytes still free on the disk the files live on.
+  freeBytes(): number {
+    const s = statfsSync(this.files);
+    return s.bavail * s.bsize;
   }
 
   pendingParts(): number {

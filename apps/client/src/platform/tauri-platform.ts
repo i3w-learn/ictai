@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { PlatformError, type AppKind, type FoundServer, type Platform, type RawRequest, type RawResponse, type RelayEvent } from './platform';
 
@@ -57,6 +57,15 @@ export class TauriPlatform implements Platform {
       listen<{ conn: number; code: number | null; reason: string }>('relay://closed', (e) => listener({ kind: 'closed', ...e.payload })),
     ];
     return () => stops.forEach((p) => void p.then((stop) => stop()));
+  }
+
+  setFileSource(source: { baseUrl: string; certFp: string; token: string } | null) {
+    return call<void>('set_file_source', source ?? {});
+  }
+
+  // ictfile://localhost/<hash> on macOS and Linux, http://ictfile.localhost/<hash> on Windows.
+  fileUrl(hash: string) {
+    return convertFileSrc(hash, 'ictfile');
   }
 
   installRole() {

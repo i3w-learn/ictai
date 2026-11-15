@@ -65,7 +65,7 @@ fn build_client(verifier: Arc<FingerprintVerifier>) -> Result<reqwest::Client, A
 pub struct HttpClients(Mutex<HashMap<String, reqwest::Client>>);
 
 impl HttpClients {
-    async fn for_fingerprint(&self, fp: &str) -> Result<reqwest::Client, AppError> {
+    pub(crate) async fn for_fingerprint(&self, fp: &str) -> Result<reqwest::Client, AppError> {
         let mut map = self.0.lock().await;
         if let Some(c) = map.get(fp) {
             return Ok(c.clone());

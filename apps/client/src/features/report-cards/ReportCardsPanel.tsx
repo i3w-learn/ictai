@@ -71,7 +71,10 @@ export function ReportCardsPanel({ refresh }: { refresh: number }) {
 }
 
 function CardRow({ card: c, onChange }: { card: ReportCard; onChange: (c: ReportCard) => void }) {
-  const { call } = useApp();
+  const { call, state } = useApp();
+  const me = state.session?.principal;
+  // Freezing can never be undone, so only the Super Admin is offered it (the server refuses anyone else).
+  const canFreeze = me?.kind === 'staff' && me.permissions.includes('settings.manage');
   const [remarks, setRemarks] = useState(c.remarks);
   useEffect(() => setRemarks(c.remarks), [c.remarks]);
   const save = useAction(async () => onChange(await call('PUT /api/v1/report-cards/:id/remarks', { params: { id: c.id }, body: { remarks } })));
@@ -91,7 +94,7 @@ function CardRow({ card: c, onChange }: { card: ReportCard; onChange: (c: Report
         {c.status === 'published' && (
           <>
             <Button variant="quiet" disabled={move.busy} onClick={() => move.run('draft')}>Back to draft</Button>
-            <ConfirmButton question="Freeze for good? It can never be changed again." onConfirm={() => void move.run('frozen')}>Freeze</ConfirmButton>
+            {canFreeze && <ConfirmButton question="Freeze for good? It can never be changed again." onConfirm={() => void move.run('frozen')}>Freeze</ConfirmButton>}
           </>
         )}
       </div>

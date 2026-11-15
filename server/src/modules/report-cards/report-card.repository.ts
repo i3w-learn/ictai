@@ -41,8 +41,10 @@ export class ReportCardRepository {
   }
 
   // Every change names the status it expects, so a card frozen a moment ago is never touched.
-  setMarks(id: string, marks: CardMarks, now: number): boolean {
-    return this.db.prepare(`UPDATE report_cards SET marks_json = ?, updated_at = ? WHERE id = ? AND status = 'draft'`).run(JSON.stringify(marks), now, id).changes > 0;
+  // A draft also follows the student to the class they are in now: a student who changed class after
+  // the draft was made shows up in the new class's cards, not the old one's.
+  setMarks(id: string, classId: string, marks: CardMarks, now: number): boolean {
+    return this.db.prepare(`UPDATE report_cards SET marks_json = ?, class_id = ?, updated_at = ? WHERE id = ? AND status = 'draft'`).run(JSON.stringify(marks), classId, now, id).changes > 0;
   }
 
   setRemarks(id: string, remarks: string, now: number): boolean {

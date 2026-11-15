@@ -5,16 +5,25 @@ import { useApp } from '../../app/app-context';
 import { Button, Card, ErrorNote, Note } from '../../ui/ui';
 import { fetchFile, KIND_WORDS, sizeWords } from './files';
 
-// Opens one library item. A file is fetched from the server in pieces, then shown in the page:
-// a picture as a picture, a PDF in the built-in reader, video and sound with their own players.
+// Opens one library item: a picture as a picture, a PDF in the built-in reader, video and sound with
+// their own players.
+// A picture, video or sound is streamed: the player asks the server for the part it needs, so a big
+// video starts at once and is never held whole in this PC's memory. If streaming does not work on this
+// PC (or there is no native side, as in tests), the file is fetched in pieces and shown from memory,
+// which is also how a PDF is always opened.
 export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void }) {
-  const { call } = useApp();
-  const [url, setUrl] = useState<string | null>(null);
+  const { call, platform } = useApp();
+  const [streamFailed, setStreamFailed] = useState(false);
+  const stream = item.fileHash && streams(item.kind) && !streamFailed ? (platform.fileUrl?.(item.fileHash) ?? null) : null;
+  const [fetched, setFetched] = useState<string | null>(null);
   const [progress, setProgress] = useState<[number, number]>([0, 1]);
   const [error, setError] = useState<string | null>(null);
+  const url = stream ?? fetched;
+  const setUrl = setFetched;
+  const onError = stream ? () => setStreamFailed(true) : undefined;
 
   useEffect(() => {
-    if (!item.fileHash) return;
+    if (!item.fileHash || stream) return;
     let stopped = false;
     let made: string | null = null;
     const api = { chunk: (hash: string, index: number) => call('GET /api/v1/files/:hash/chunks/:index', { params: { hash, index } }) };
@@ -24,7 +33,7 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
     );
     // Leaving the screen stops the fetch and frees the memory the file took.
     return () => { stopped = true; if (made) URL.revokeObjectURL(made); };
-  }, [item.id]);
+  }, [item.id, stream]);
 
   const percent = Math.round((progress[0] / progress[1]) * 100);
   return (
@@ -50,12 +59,15 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
         </Card>
       ) : url && (
         <>
-          {item.kind === 'image' && <img src={url} alt={item.title} className="mx-auto max-h-[75vh] max-w-full rounded-xl border border-border bg-card" />}
+          {item.kind === 'image' && <img src={url} alt={item.title} onError={onError} className="mx-auto max-h-[75vh] max-w-full rounded-xl border border-border bg-card" />}
           {item.kind === 'pdf' && <iframe src={url} title={item.title} className="h-[78vh] w-full rounded-xl border border-border bg-card" />}
-          {item.kind === 'video' && <video src={url} controls className="mx-auto max-h-[75vh] w-full rounded-xl bg-black" />}
-          {item.kind === 'audio' && <Card className="p-8"><audio src={url} controls className="w-full" /></Card>}
+          {item.kind === 'video' && <video src={url} controls onError={onError} className="mx-auto max-h-[75vh] w-full rounded-xl bg-black" />}
+          {item.kind === 'audio' && <Card className="p-8"><audio src={url} controls onError={onError} className="w-full" /></Card>}
         </>
       )}
     </div>
   );
 }
+
+// The kinds whose players can ask for a file part by part and say when that fails.
+const streams = (kind: ContentItem['kind']) => kind === 'image' || kind === 'video' || kind === 'audio';
