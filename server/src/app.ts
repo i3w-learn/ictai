@@ -16,6 +16,7 @@ import { workRoutes } from './modules/work/work.routes.js';
 import { reportCardRoutes } from './modules/report-cards/report-cards.routes.js';
 import { contentRoutes } from './modules/content/content.routes.js';
 import { sequenceRoutes } from './modules/sequences/sequences.routes.js';
+import { showRoutes } from './modules/shows/shows.routes.js';
 import { relayRoutes } from './relay/relay.routes.js';
 import { systemRoutes } from './modules/system/system.routes.js';
 
@@ -59,5 +60,6 @@ export function buildApp(c: Container, opts: AppOptions = {}) {
   reportCardRoutes(app, { reportCards: c.reportCards });
   contentRoutes(app, { content: c.content });
   sequenceRoutes(app, { sequences: c.sequences });
+  showRoutes(app, { shows: c.shows });
   return app;
 }
