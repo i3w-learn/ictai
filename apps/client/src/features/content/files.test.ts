@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CHUNK_BYTES, MAX_FILE_BYTES, type ContentItem } from '@ict/contracts';
-import { fetchFile, fileProblem, fromBase64, sendFile, shelve, sizeWords, toBase64 } from './files';
+import { clock, fetchFile, fileProblem, fromBase64, sendFile, shelve, sizeWords, toBase64 } from './files';
 
 const bytesOf = (n: number) => Uint8Array.from({ length: n }, (_, i) => (i * 31 + 7) % 256);
 
@@ -54,5 +54,20 @@ describe('library files', () => {
     const item = (title: string, subject: string | null, chapter: string | null) => ({ title, subject, chapter }) as ContentItem;
     const shelves = shelve([item('Decimals', 'Maths', 'Numbers'), item('Fractions', 'Maths', 'Numbers'), item('Shapes', 'Maths', null), item('Poster', null, null)]);
     expect(shelves.map((s) => [s.subject, s.chapters.map((c) => `${c.chapter}:${c.items.length}`)])).toEqual([['Maths', ['Numbers:2', 'General:1']], ['Other', ['General:1']]]);
+  });
+});
+
+describe('clock', () => {
+  it('writes seconds the way a video player shows them', () => {
+    expect(clock(0)).toBe('0:00');
+    expect(clock(9.9)).toBe('0:09');
+    expect(clock(75)).toBe('1:15');
+    expect(clock(179.28)).toBe('2:59');
+    expect(clock(3723)).toBe('1:02:03');
+  });
+  it('shows 0:00 for a time that is not known yet', () => {
+    expect(clock(NaN)).toBe('0:00');
+    expect(clock(Infinity)).toBe('0:00');
+    expect(clock(-3)).toBe('0:00');
   });
 });

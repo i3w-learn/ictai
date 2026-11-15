@@ -121,3 +121,24 @@ html[data-font='easy'] body, html[data-font='easy'] body * {
   word-spacing: 0.12em;
 }
 html[data-font='easy'] main p, html[data-font='easy'] main li { line-height: 1.7; }
+
+/* The video player's position bar: a thin line showing what has played and what has loaded, with a
+   round handle. Drawn here because a range input cannot be styled with utility classes alone. */
+.player-seek {
+  -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 22px; margin: 0;
+  background: transparent; cursor: pointer;
+}
+.player-seek:disabled { cursor: default; }
+.player-seek::-webkit-slider-runnable-track {
+  height: 5px; border-radius: 999px;
+  background: linear-gradient(to right, #fff var(--played), rgb(255 255 255 / 0.5) var(--played), rgb(255 255 255 / 0.5) var(--loaded), rgb(255 255 255 / 0.22) var(--loaded));
+}
+.player-seek::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 15px; height: 15px; margin-top: -5px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 0.5); transition: transform 0.12s;
+}
+.player-seek:hover::-webkit-slider-thumb, .player-seek:focus-visible::-webkit-slider-thumb { transform: scale(1.3); }
+.player-seek:focus-visible { outline: none; }
+.player-seek::-moz-range-track { height: 5px; border-radius: 999px; background: rgb(255 255 255 / 0.22); }
+.player-seek::-moz-range-progress { height: 5px; border-radius: 999px; background: #fff; }
+.player-seek::-moz-range-thumb { width: 15px; height: 15px; border: 0; border-radius: 50%; background: #fff; }

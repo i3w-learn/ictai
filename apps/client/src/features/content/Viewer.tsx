@@ -1,41 +1,68 @@
-import { useEffect, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
-import type { ContentItem } from '@ict/contracts';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, MonitorPlay } from 'lucide-react';
+import { SHOW_BEAT_MS, type ContentItem } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, Card, ErrorNote, Note } from '../../ui/ui';
-import { fetchFile, KIND_WORDS, sizeWords } from './files';
+import { ApiCallError } from '../../core/api-client';
+import { Button, Card, ErrorNote, Note, useAction } from '../../ui/ui';
+import { KIND_WORDS, sizeWords } from './files';
+import { useFileUrl } from './useFileUrl';
+import { VideoPlayer, type PlayerState } from './VideoPlayer';
 
 // Opens one library item: a picture as a picture, a PDF in the built-in reader, video and sound with
-// their own players.
-// A picture, video or sound is streamed: the player asks the server for the part it needs, so a big
-// video starts at once and is never held whole in this PC's memory. If streaming does not work on this
-// PC (or there is no native side, as in tests), the file is fetched in pieces and shown from memory,
-// which is also how a PDF is always opened.
+// their own players. A teacher who may host lessons can also show a video to its class: it then plays
+// on the class's screens too, following whatever she does here.
 export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void }) {
-  const { call, platform } = useApp();
-  const [streamFailed, setStreamFailed] = useState(false);
-  const stream = item.fileHash && streams(item.kind) && !streamFailed ? (platform.fileUrl?.(item.fileHash) ?? null) : null;
-  const [fetched, setFetched] = useState<string | null>(null);
-  const [progress, setProgress] = useState<[number, number]>([0, 1]);
-  const [error, setError] = useState<string | null>(null);
-  const url = stream ?? fetched;
-  const setUrl = setFetched;
-  const onError = stream ? () => setStreamFailed(true) : undefined;
+  const { call, state } = useApp();
+  const { url, percent, error, onError } = useFileUrl(item);
 
+  // --- Show to class ---
+  const me = state.session?.principal;
+  const canShow = item.kind === 'video' && me?.kind === 'staff' && me.permissions.includes('lesson.present');
+  const [showing, setShowing] = useState(false);
+  const showId = useRef<string | null>(null);
+  // Asks the player where it is right now.
+  const peek = useRef<(() => PlayerState) | null>(null);
+  const tell = (s: PlayerState) => {
+    const id = showId.current;
+    if (!id) return;
+    call('PUT /api/v1/shows/:id', { params: { id }, body: s }).catch((e) => {
+      if (!(e instanceof ApiCallError) || showId.current !== id) return;
+      // Someone else is now showing this class something: stop saying this show is on.
+      if (e.status === 410) { showId.current = null; setShowing(false); }
+      // The server no longer knows the show (the Server PC was away for a while, or restarted) but the
+      // teacher never stopped it: start it again, at the place her video is now.
+      if (e.status === 404) {
+        showId.current = null;
+        call('POST /api/v1/shows', { body: { contentId: item.id } }).then(
+          (again) => { showId.current = again.id; const now = peek.current?.(); if (now) tell(now); },
+          () => setShowing(false),
+        );
+      }
+    });
+  };
+  const startShow = useAction(async () => {
+    const s = await call('POST /api/v1/shows', { body: { contentId: item.id } });
+    showId.current = s.id;
+    setShowing(true);
+    const now = peek.current?.();
+    if (now) tell(now);
+  });
+  const stopShow = useAction(async () => {
+    const id = showId.current;
+    showId.current = null;
+    setShowing(false);
+    if (id) await call('DELETE /api/v1/shows/:id', { params: { id } });
+  });
+  // While showing, the server hears from this screen every few seconds, so it knows the teacher is
+  // still here; and the class's screens are put right if one has drifted.
   useEffect(() => {
-    if (!item.fileHash || stream) return;
-    let stopped = false;
-    let made: string | null = null;
-    const api = { chunk: (hash: string, index: number) => call('GET /api/v1/files/:hash/chunks/:index', { params: { hash, index } }) };
-    fetchFile(api, item, (d, t) => { if (!stopped) setProgress([d, t]); }, () => stopped).then(
-      (blob) => { if (blob && !stopped) { made = URL.createObjectURL(blob); setUrl(made); } },
-      (e) => { if (!stopped) setError(e instanceof Error ? e.message : 'Could not open this file.'); },
-    );
-    // Leaving the screen stops the fetch and frees the memory the file took.
-    return () => { stopped = true; if (made) URL.revokeObjectURL(made); };
-  }, [item.id, stream]);
+    if (!showing) return;
+    const t = setInterval(() => { const s = peek.current?.(); if (s) tell(s); }, SHOW_BEAT_MS);
+    return () => clearInterval(t);
+  }, [showing]);
+  // Leaving the video ends the show.
+  useEffect(() => () => { const id = showId.current; if (id) void call('DELETE /api/v1/shows/:id', { params: { id } }).catch(() => undefined); }, []);
 
-  const percent = Math.round((progress[0] / progress[1]) * 100);
   return (
     <div className="mx-auto grid w-full max-w-5xl gap-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -44,6 +71,21 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
         <span className="text-sm text-muted-foreground">{[KIND_WORDS[item.kind], item.subject, item.chapter, item.size ? sizeWords(item.size) : null].filter(Boolean).join(' · ')}</span>
       </div>
       <ErrorNote message={error} />
+      {canShow && url && (
+        showing ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3" role="status">
+            <MonitorPlay className="size-5 shrink-0 text-primary" />
+            <p className="min-w-56 flex-1"><b>Class {item.className} can see this now.</b> When you play, pause or skip, their screens do the same.</p>
+            <Button variant="quiet" disabled={stopShow.busy} onClick={() => stopShow.run()}>Stop showing</Button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <Button disabled={startShow.busy} onClick={() => startShow.run()}><MonitorPlay className="size-4" /> Show to Class {item.className}</Button>
+            <span className="text-sm text-muted-foreground">The video opens on every student PC of the class and follows what you do here.</span>
+          </div>
+        )
+      )}
+      <ErrorNote message={startShow.error ?? stopShow.error} />
 
       {item.kind === 'link' ? (
         <Card className="grid gap-3 p-6">
@@ -61,13 +103,10 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
         <>
           {item.kind === 'image' && <img src={url} alt={item.title} onError={onError} className="mx-auto max-h-[75vh] max-w-full rounded-xl border border-border bg-card" />}
           {item.kind === 'pdf' && <iframe src={url} title={item.title} className="h-[78vh] w-full rounded-xl border border-border bg-card" />}
-          {item.kind === 'video' && <video src={url} controls onError={onError} className="mx-auto max-h-[75vh] w-full rounded-xl bg-black" />}
+          {item.kind === 'video' && <VideoPlayer key={url} src={url} title={item.title} onError={onError} peek={peek} onState={showing ? tell : undefined} />}
           {item.kind === 'audio' && <Card className="p-8"><audio src={url} controls onError={onError} className="w-full" /></Card>}
         </>
       )}
     </div>
   );
 }
-
-// The kinds whose players can ask for a file part by part and say when that fails.
-const streams = (kind: ContentItem['kind']) => kind === 'image' || kind === 'video' || kind === 'audio';

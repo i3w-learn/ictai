@@ -26,6 +26,8 @@ async function main() {
   const runtime = new AiRuntime(config.ai, nodeSpawner(join(config.dataDir, 'ai.log')));
   const c = createContainer({ db, now: systemClock, version: config.version, dataDir: config.dataDir, ai: { runtime, llm: new LlamaServerLlm(runtime) } });
   c.aiQueue.start();
+  // A class is told within seconds when the teacher showing them a video has gone quiet.
+  setInterval(() => c.shows.sweep(), 5_000).unref();
   // However Node ends (crash included), take llama-server and its memory with it.
   process.on('exit', () => runtime.stop());
   if (config.devAdmin) await c.staffAuth.upsertAccount({ ...config.devAdmin, role: 'super_admin' });

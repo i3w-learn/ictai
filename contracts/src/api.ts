@@ -18,6 +18,7 @@ import { SchoolSettings, StudentPrefs } from './settings.js';
 import { SlotInput, SlotQuery, StudentToday, Timetable } from './timetable.js';
 import { ContentItem, ContentQuery, FileChunk, FileChunkParams, FinishUpload, LinkInput, StartUpload, UploadChunk, UploadTicket } from './content.js';
 import { Sequence, SequenceInput, Todo } from './sequences.js';
+import { Show, ShowStart, ShowUpdate } from './shows.js';
 import { CardRemarks, CardStatusChange, CardsQuery, MakeCards, MakeCardsResult, ReportCard } from './report-cards.js';
 import { Assignment, AssignmentDetail, AssignmentInput, MarkInput, MarkParams, MyWork, WorkAnswer } from './work.js';
 import { NewTeacher, SetPassword, StaffMember, UpdateTeacher } from './staff.js';
@@ -138,6 +139,12 @@ export const API = {
   'POST /api/v1/content/uploads/:id/finish': { summary: 'All pieces sent: check the file and file it in the library', access: staff('setup.content'), params: IdParams, body: FinishUpload, status: 201, response: ContentItem },
   'DELETE /api/v1/content/:id': { summary: 'Remove a library item; its file goes when nothing else uses it', access: staff('setup.content'), params: IdParams, status: 204 },
   'GET /api/v1/files/:hash/chunks/:index': { summary: 'One piece of a library file, for someone who may open it', access: { kind: 'signed-in' }, params: FileChunkParams, status: 200, response: FileChunk },
+
+  // Show to class: the teacher plays a library video and it plays on the class's screens too.
+  'POST /api/v1/shows': { summary: 'Start showing a library video to its class; it opens on their screens', access: staff('lesson.present'), body: ShowStart, status: 201, response: Show },
+  'PUT /api/v1/shows/:id': { summary: "Say where the teacher's player is: playing or paused, and the place in the video", access: staff('lesson.present'), params: IdParams, body: ShowUpdate, status: 200, response: Show },
+  'DELETE /api/v1/shows/:id': { summary: "Stop showing; the video leaves the class's screens", access: staff('lesson.present'), params: IdParams, status: 204 },
+  'GET /api/v1/shows/mine': { summary: "What the teacher is showing the student's class right now, if anything", access: student, status: 200, response: Show.nullable() },
 
   // Playlists and learning paths (staff), and the student's "Things to do".
   'GET /api/v1/sequences': { summary: 'Playlists and learning paths you may see, newest first', access: staff('teaching.manage'), status: 200, response: z.array(Sequence) },

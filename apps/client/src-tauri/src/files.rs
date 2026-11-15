@@ -11,6 +11,11 @@ use tauri::http::{header, Request, Response, StatusCode};
 
 use crate::http::HttpClients;
 
+/// A player that asks for a file without saying which part (a picture always does) gets it whole,
+/// but only up to this size. Anything bigger is answered with its first part instead, and the
+/// player asks for the rest part by part. So a big video is never held whole in this PC's memory.
+const WHOLE_FILE_LIMIT: u64 = 32 * 1024 * 1024;
+
 /// Where files come from and who is asking: set by the page each time a file is opened.
 #[derive(Clone)]
 pub struct Source {
@@ -37,14 +42,28 @@ pub async fn serve(clients: &HttpClients, source: Option<Source>, request: Reque
     let Some(src) = source else { return plain(StatusCode::UNAUTHORIZED) };
     let Ok(client) = clients.for_fingerprint(&src.cert_fp).await else { return plain(StatusCode::BAD_GATEWAY) };
 
-    let mut rb = client
-        .get(format!("{}/api/v1/files/{hash}/raw", src.base_url))
-        .bearer_auth(&src.token)
-        .timeout(Duration::from_secs(60));
-    if let Some(range) = request.headers().get(header::RANGE).and_then(|v| v.to_str().ok()) {
-        rb = rb.header("range", range);
+    let ask = |range: Option<&str>| {
+        let rb = client
+            .get(format!("{}/api/v1/files/{hash}/raw", src.base_url))
+            .bearer_auth(&src.token)
+            // One part is 4 MB at most, which takes well under a second in a lab. A Server PC that has
+            // not answered in this long has gone away; saying so quickly lets the player tell the student.
+            .timeout(Duration::from_secs(20));
+        match range {
+            Some(r) => rb.header("range", r).send(),
+            None => rb.send(),
+        }
+    };
+    let range = request.headers().get(header::RANGE).and_then(|v| v.to_str().ok());
+    let Ok(mut res) = ask(range).await else { return plain(StatusCode::BAD_GATEWAY) };
+    if range.is_none() && res.content_length().is_some_and(|n| n > WHOLE_FILE_LIMIT) {
+        // Dropping the answer stops the download; ask again for the first part only.
+        drop(res);
+        res = match ask(Some("bytes=0-")).await {
+            Ok(r) => r,
+            Err(_) => return plain(StatusCode::BAD_GATEWAY),
+        };
     }
-    let Ok(res) = rb.send().await else { return plain(StatusCode::BAD_GATEWAY) };
 
     let status = StatusCode::from_u16(res.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     let mut out = Response::builder().status(status);
@@ -118,6 +137,16 @@ mod tests {
         assert_eq!(part.status(), 206);
         assert_eq!(part.headers()["content-range"], "bytes 8-17/18");
         assert_eq!(part.body().as_slice(), b"0123456789");
+
+        // A file over the limit, asked for with no part named, comes back as its first part only.
+        // Needs such a file on the server: ICT_E2E_BIG_HASH=<its fingerprint> (skipped without it).
+        if let Ok(big) = std::env::var("ICT_E2E_BIG_HASH") {
+            let req = tauri::http::Request::builder().uri(format!("ictfile://localhost/{big}")).body(Vec::new()).unwrap();
+            let first = super::serve(&clients, source(), req).await;
+            assert_eq!(first.status(), 206);
+            assert_eq!(first.body().len(), 4 * 1024 * 1024);
+            assert!(first.headers()["content-range"].to_str().unwrap().starts_with("bytes 0-4194303/"));
+        }
 
         // Nobody signed in, or a token the server does not know: no file.
         assert_eq!(super::serve(&clients, None, ask(None)).await.status(), 401);

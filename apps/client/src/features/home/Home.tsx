@@ -8,6 +8,7 @@ import { DevicesPanel } from './DevicesPanel';
 import { StaffPanel } from './StaffPanel';
 import { StudentsPanel } from './StudentsPanel';
 import { QuizPopup, QuizWaiting, useOpenQuiz } from '../quizzes/QuizInvite';
+import { ClassShow, useClassShow } from '../shows/ClassShow';
 import { LabSession } from '../quizzes/LabSession';
 import { PlayQuiz } from '../quizzes/PlayQuiz';
 import { QuizEditor } from '../quizzes/QuizEditor';
@@ -117,6 +118,8 @@ function StudentHome({ name }: { name: string }) {
   // The quiz the student said "Not now" to; a different quiz pops up again.
   const [later, setLater] = useState<string | null>(null);
   const { quiz, clear: clearQuiz } = useOpenQuiz();
+  // A video the teacher is showing the class right now. It lies over every screen below.
+  const classShow = useClassShow();
   const { call } = useApp();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [workOpen, setWorkOpen] = useState(false);
@@ -142,7 +145,7 @@ function StudentHome({ name }: { name: string }) {
   // "Back to home" after a quiz means home, not the screen the quiz popped up over.
   const goHome = () => { setNotesOpen(false); setSettingsOpen(false); setWorkOpen(false); setProgressOpen(false); setTutorOpen(false); setBooksOpen(false); setTodoOpen(false); };
   if (playing) return <PlayQuiz initial={playing} onExit={() => { setPlaying(null); clearQuiz(); goHome(); }} />;
-  const popup = quiz && quiz.runId !== later && <QuizPopup quiz={quiz} onJoined={setPlaying} onLater={() => setLater(quiz.runId)} />;
+  const popup = <>{classShow && <ClassShow live={classShow} />}{quiz && quiz.runId !== later && <QuizPopup quiz={quiz} onJoined={setPlaying} onLater={() => setLater(quiz.runId)} />}</>;
   if (notesOpen) return <>{popup}<MyNotes onBack={() => setNotesOpen(false)} /></>;
   if (progressOpen) return <>{popup}<HowIAmDoing onBack={() => setProgressOpen(false)} onWork={() => { setProgressOpen(false); setWorkOpen(true); }} /></>;
   if (todoOpen) return <>{popup}<ThingsToDo onBack={() => setTodoOpen(false)} onWork={() => { setTodoOpen(false); setWorkOpen(true); }} /></>;

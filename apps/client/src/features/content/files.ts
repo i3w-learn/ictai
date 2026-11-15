@@ -25,6 +25,14 @@ export function fileProblem(file: { size: number }): string | null {
   return null;
 }
 
+// Seconds as a clock: 75 -> "1:15", 3723 -> "1:02:03". Anything that is not a time yet shows as 0:00.
+export function clock(seconds: number): string {
+  const s = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  const two = (n: number) => String(n).padStart(2, '0');
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}:${two(m)}:${two(s % 60)}` : `${m}:${two(s % 60)}`;
+}
+
 export const KIND_WORDS: Record<ContentKind, string> = { pdf: 'PDF', image: 'Picture', video: 'Video', audio: 'Sound', link: 'Web link' };
 
 type Call = (key: never, input?: never) => Promise<never>;

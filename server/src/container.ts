@@ -41,6 +41,7 @@ import { ContentService } from './modules/content/content.service.js';
 import { FileStore } from './modules/content/file-store.js';
 import { SequenceRepository } from './modules/sequences/sequence.repository.js';
 import { SequenceService } from './modules/sequences/sequence.service.js';
+import { ShowService } from './modules/shows/show.service.js';
 import { Relay } from './relay/relay.js';
 import { aiNotInstalled } from './core/errors.js';
 import { AiService, type AiRuntimeInfo } from './modules/ai/ai.service.js';
@@ -126,6 +127,7 @@ export function createContainer(opts: {
     timetable,
     work: new WorkService(now, repos.work, repos.classes, audit),
     content: new ContentService(now, repos.content, new FileStore(opts.dataDir ?? mkdtempSync(join(tmpdir(), 'ict-files-'))), repos.classes, audit),
+    shows: new ShowService(now, repos.content, relay, audit),
     sequences: new SequenceService(now, repos.sequences, repos.content, repos.work, repos.classes, audit),
     reportCards: new ReportCardService(now, repos.reportCards, repos.classes, repos.students, results, repos.work, audit),
     staffAuth: new StaffAuthService(now, repos.staff, sessions, new FailureLimiter(now), audit),

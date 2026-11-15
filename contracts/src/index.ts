@@ -15,6 +15,7 @@ export * from './work.js';
 export * from './report-cards.js';
 export * from './content.js';
 export * from './sequences.js';
+export * from './shows.js';
 export * from './relay.js';
 export * from './discovery.js';
 export * from './api.js';
