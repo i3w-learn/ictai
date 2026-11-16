@@ -6,6 +6,7 @@ export function showRoutes(app: FastifyInstance, deps: { shows: ShowService }) {
   const { shows } = deps;
   route(app, 'POST /api/v1/shows', ({ body, principal }) => shows.start(asStaff(principal), body.contentId));
   route(app, 'PUT /api/v1/shows/:id', ({ params, body, principal }) => shows.update(asStaff(principal), params.id, body));
+  route(app, 'POST /api/v1/shows/:id/beat', ({ params, principal }) => shows.beat(asStaff(principal), params.id));
   route(app, 'DELETE /api/v1/shows/:id', ({ params, principal }) => shows.stop(asStaff(principal), params.id));
   route(app, 'POST /api/v1/shows/:id/screen', ({ params, body, principal }) => shows.screen(asStudent(principal), params.id, body));
   route(app, 'GET /api/v1/shows/:id/ink', ({ params, principal }) => shows.ink(principal!, params.id));

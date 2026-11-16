@@ -12,7 +12,7 @@ use tokio::sync::Mutex;
 use crate::error::AppError;
 use crate::pinning::{parse_fingerprint, FingerprintVerifier};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiRequest {
     pub base_url: String,
@@ -98,6 +98,29 @@ pub async fn send(clients: &HttpClients, req: ApiRequest) -> Result<ApiResponse,
 
 /// Used for a typed-in address, where we have no fingerprint yet:
 /// accept the certificate once, report its fingerprint, and pin it from then on.
+/// One request said again and again on the app's own clock, e.g. "this teacher is still showing her
+/// video". The page cannot be trusted with this: a window that is hidden or covered has its timers
+/// slowed down by the computer, sometimes to once a minute.
+#[derive(Default)]
+pub struct KeepAlive(pub std::sync::Mutex<Option<tauri::async_runtime::JoinHandle<()>>>);
+
+/// Is there still a point in saying it again? Not once the server says the thing is gone or over, or
+/// that this person is no longer signed in. A server that cannot be reached may well come back.
+pub(crate) fn worth_repeating(result: &Result<ApiResponse, AppError>) -> bool {
+    !matches!(result, Ok(r) if matches!(r.status, 401 | 403 | 404 | 410))
+}
+
+/// Says `request` every `every` until the server says there is no point. Runs as a task of its own,
+/// which is simply dropped to stop it.
+pub async fn repeat(clients: &HttpClients, request: ApiRequest, every: Duration) {
+    loop {
+        tokio::time::sleep(every).await;
+        if !worth_repeating(&send(clients, request.clone()).await) {
+            break;
+        }
+    }
+}
+
 pub async fn probe(base_url: &str) -> Result<ProbeResult, AppError> {
     let verifier = Arc::new(FingerprintVerifier::new(None, provider()));
     let seen = verifier.seen();
@@ -115,6 +138,22 @@ pub async fn probe(base_url: &str) -> Result<ProbeResult, AppError> {
 
 /// Live checks against a running school server. Skipped unless ICT_E2E=1.
 /// Run: ICT_E2E=1 cargo test e2e -- --nocapture  (with the server on its default ports)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stops_repeating_only_when_the_server_says_there_is_no_point() {
+        let said = |status| Ok(ApiResponse { status, body: None });
+        assert!(worth_repeating(&said(204)));
+        assert!(worth_repeating(&said(500)));
+        assert!(worth_repeating(&Err(AppError::Network("cable out".into()))));
+        for gone in [401, 403, 404, 410] {
+            assert!(!worth_repeating(&said(gone)));
+        }
+    }
+}
+
 #[cfg(test)]
 mod e2e {
     use super::*;
@@ -152,5 +191,42 @@ mod e2e {
         let wrong = "00:".repeat(31) + "00";
         let err = send(&clients, req(&wrong)).await.unwrap_err();
         assert!(matches!(err, AppError::PinMismatch), "got {err:?}");
+    }
+
+    /// A teacher shows a video and then her page says nothing at all, as when its window is hidden.
+    /// The app's own "still here" keeps the show on well past the 20 seconds after which a silent
+    /// show ends; once that stops too, the show ends, and the repeating gives up by itself.
+    /// Needs a server at ICT_E2E_BASE with a staff sign-in (ICT_E2E_USER / ICT_E2E_PASSWORD) and a
+    /// video in its library (skipped without them).
+    #[tokio::test]
+    async fn e2e_keep_alive_holds_a_show_while_the_page_is_silent() {
+        let (Ok(base), Ok(user), Ok(password)) = (std::env::var("ICT_E2E_BASE"), std::env::var("ICT_E2E_USER"), std::env::var("ICT_E2E_PASSWORD")) else { return };
+        if !enabled() {
+            return;
+        }
+        let fp = probe(&base).await.unwrap().cert_fp;
+        let clients = Arc::new(HttpClients::default());
+        let req = |method: &str, path: &str, body: Option<Value>, token: Option<&str>| ApiRequest {
+            base_url: base.clone(), cert_fp: fp.clone(), method: method.into(), path: path.into(), body, token: token.map(String::from), timeout_ms: None,
+        };
+        let signed_in = send(&clients, req("POST", "/api/v1/auth/staff", Some(serde_json::json!({ "username": user, "password": password })), None)).await.unwrap();
+        let token = signed_in.body.unwrap()["token"].as_str().unwrap().to_string();
+        let library = send(&clients, req("GET", "/api/v1/content", None, Some(&token))).await.unwrap().body.unwrap();
+        let video = library.as_array().unwrap().iter().find(|c| c["kind"] == "video").expect("a video in the library")["id"].clone();
+        let show = send(&clients, req("POST", "/api/v1/shows", Some(serde_json::json!({ "contentId": video })), Some(&token))).await.unwrap();
+        assert_eq!(show.status, 201);
+        let beat_path = format!("/api/v1/shows/{}/beat", show.body.unwrap()["id"].as_str().unwrap());
+        let beat = req("POST", &beat_path, None, Some(&token));
+
+        let task = tokio::spawn({ let (clients, beat) = (clients.clone(), beat.clone()); async move { repeat(&clients, beat, Duration::from_secs(2)).await } });
+        tokio::time::sleep(Duration::from_secs(30)).await;
+        assert!(!task.is_finished(), "the show should still be on, so the repeating should still be going");
+        task.abort();
+        assert_eq!(send(&clients, beat.clone()).await.unwrap().status, 204, "the show outlived 30 silent seconds");
+
+        // With nobody saying "still here", it ends; and a repeat started now stops at the first answer.
+        tokio::time::sleep(Duration::from_secs(27)).await;
+        assert_eq!(send(&clients, beat.clone()).await.unwrap().status, 404);
+        tokio::time::timeout(Duration::from_secs(5), repeat(&clients, beat, Duration::from_secs(1))).await.expect("gives up once the show is gone");
     }
 }

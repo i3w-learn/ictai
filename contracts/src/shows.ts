@@ -10,6 +10,9 @@ import { ContentItem } from './content.js';
 // A show lives in the server's memory only: it is about this lesson, right now. It ends when the
 // teacher stops it or leaves the video, and also by itself when the teacher's app goes quiet
 // (closed, crashed, cable pulled), so a class is never left with a video stuck on their screens.
+// The teacher's app says "still here" every SHOW_BEAT_MS. The app itself says it, not its page: a
+// page whose window is hidden or covered is slowed down by the computer and may say nothing for a
+// long time, which must not end a show the teacher is still giving.
 export const SHOW_BEAT_MS = 5_000;
 export const SHOW_STALE_MS = 20_000;
 

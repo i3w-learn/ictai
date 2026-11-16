@@ -52,6 +52,12 @@ export interface Platform {
    */
   setFileSource?(source: { baseUrl: string; certFp: string; token: string } | null): Promise<void>;
   fileUrl?(hash: string): string;
+  /**
+   * Says `req` again every `everyMs` on the app's own clock, until called again (null stops it) or
+   * the server says the thing is gone. For "this teacher is still showing her video": a page's own
+   * timers are slowed down when its window is hidden. Left out where there is no native side.
+   */
+  keepAlive?(req: RawRequest | null, everyMs?: number): Promise<void>;
   /** The role chosen in the Windows installer, if any. */
   installRole(): Promise<AppKind | null>;
 }

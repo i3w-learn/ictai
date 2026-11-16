@@ -10291,6 +10291,57 @@
         }
       }
     },
+    "/api/v1/shows/{id}/beat": {
+      "post": {
+        "summary": "The teacher's app says it is still here, and nothing else. Sent by the app itself, also while its window is hidden",
+        "x-access": {
+          "kind": "staff",
+          "permission": "lesson.present"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/shows/{id}/screen": {
       "post": {
         "summary": "A student's screen says how the video is going there (opened, waiting, failed…), for the server's diary",

@@ -143,6 +143,7 @@ export const API = {
   // Show to class: the teacher plays a library video and it plays on the class's screens too.
   'POST /api/v1/shows': { summary: 'Start showing a library video to its class; it opens on their screens', access: staff('lesson.present'), body: ShowStart, status: 201, response: Show },
   'PUT /api/v1/shows/:id': { summary: "Say where the teacher's player is: playing or paused, and the place in the video", access: staff('lesson.present'), params: IdParams, body: ShowUpdate, status: 200, response: Show },
+  'POST /api/v1/shows/:id/beat': { summary: "The teacher's app says it is still here, and nothing else. Sent by the app itself, also while its window is hidden", access: staff('lesson.present'), params: IdParams, status: 204 },
   'DELETE /api/v1/shows/:id': { summary: "Stop showing; the video leaves the class's screens", access: staff('lesson.present'), params: IdParams, status: 204 },
   'POST /api/v1/shows/:id/screen': { summary: "A student's screen says how the video is going there (opened, waiting, failed…), for the server's diary", access: student, params: IdParams, body: ScreenReport, status: 204 },
   'GET /api/v1/shows/:id/ink': { summary: 'All the writing on the video right now', access: { kind: 'signed-in' }, params: IdParams, status: 200, response: Ink },
