@@ -1121,271 +1121,6 @@
         }
       }
     },
-    "/api/v1/auth/student/pin": {
-      "post": {
-        "summary": "Student sign-in with PIN",
-        "x-access": {
-          "kind": "device",
-          "deviceKind": "lab_pc"
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "studentId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  },
-                  "pin": {
-                    "type": "string",
-                    "pattern": "^\\d{4}$"
-                  }
-                },
-                "required": [
-                  "studentId",
-                  "pin"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string"
-                    },
-                    "expiresAt": {
-                      "type": "number"
-                    },
-                    "principal": {
-                      "oneOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "enum": [
-                                "staff"
-                              ]
-                            },
-                            "userId": {
-                              "type": "string"
-                            },
-                            "role": {
-                              "type": "string",
-                              "enum": [
-                                "super_admin",
-                                "teacher"
-                              ]
-                            },
-                            "username": {
-                              "type": "string"
-                            },
-                            "displayName": {
-                              "type": "string"
-                            },
-                            "permissions": {
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "enum": [
-                                  "staff.manage",
-                                  "students.manage",
-                                  "setup.devices",
-                                  "setup.master",
-                                  "setup.content",
-                                  "setup.timetable",
-                                  "teaching.manage",
-                                  "lesson.start",
-                                  "lesson.control",
-                                  "lesson.present",
-                                  "screen.watch",
-                                  "results.view",
-                                  "results.view.own",
-                                  "ai.teacher",
-                                  "ai.tutor",
-                                  "licence.view",
-                                  "updates.view",
-                                  "licence.renew",
-                                  "updates.install",
-                                  "settings.manage",
-                                  "server.manage"
-                                ]
-                              }
-                            },
-                            "classIds": {
-                              "nullable": true,
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            },
-                            "subjects": {
-                              "nullable": true,
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "userId",
-                            "role",
-                            "username",
-                            "displayName",
-                            "permissions",
-                            "classIds",
-                            "subjects"
-                          ]
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "enum": [
-                                "student"
-                              ]
-                            },
-                            "studentId": {
-                              "type": "string"
-                            },
-                            "name": {
-                              "type": "string"
-                            },
-                            "classId": {
-                              "type": "string"
-                            },
-                            "sectionId": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "deviceId": {
-                              "type": "string"
-                            },
-                            "permissions": {
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "enum": [
-                                  "staff.manage",
-                                  "students.manage",
-                                  "setup.devices",
-                                  "setup.master",
-                                  "setup.content",
-                                  "setup.timetable",
-                                  "teaching.manage",
-                                  "lesson.start",
-                                  "lesson.control",
-                                  "lesson.present",
-                                  "screen.watch",
-                                  "results.view",
-                                  "results.view.own",
-                                  "ai.teacher",
-                                  "ai.tutor",
-                                  "licence.view",
-                                  "updates.view",
-                                  "licence.renew",
-                                  "updates.install",
-                                  "settings.manage",
-                                  "server.manage"
-                                ]
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "studentId",
-                            "name",
-                            "classId",
-                            "sectionId",
-                            "deviceId",
-                            "permissions"
-                          ]
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "enum": [
-                                "device"
-                              ]
-                            },
-                            "deviceId": {
-                              "type": "string"
-                            },
-                            "deviceKind": {
-                              "type": "string",
-                              "enum": [
-                                "lab_pc",
-                                "board"
-                              ]
-                            },
-                            "name": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "deviceId",
-                            "deviceKind",
-                            "name"
-                          ]
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "token",
-                    "expiresAt",
-                    "principal"
-                  ]
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/auth/student/qr": {
       "post": {
         "summary": "Student sign-in with QR card",
@@ -1413,270 +1148,6 @@
                 },
                 "required": [
                   "qrToken"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string"
-                    },
-                    "expiresAt": {
-                      "type": "number"
-                    },
-                    "principal": {
-                      "oneOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "enum": [
-                                "staff"
-                              ]
-                            },
-                            "userId": {
-                              "type": "string"
-                            },
-                            "role": {
-                              "type": "string",
-                              "enum": [
-                                "super_admin",
-                                "teacher"
-                              ]
-                            },
-                            "username": {
-                              "type": "string"
-                            },
-                            "displayName": {
-                              "type": "string"
-                            },
-                            "permissions": {
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "enum": [
-                                  "staff.manage",
-                                  "students.manage",
-                                  "setup.devices",
-                                  "setup.master",
-                                  "setup.content",
-                                  "setup.timetable",
-                                  "teaching.manage",
-                                  "lesson.start",
-                                  "lesson.control",
-                                  "lesson.present",
-                                  "screen.watch",
-                                  "results.view",
-                                  "results.view.own",
-                                  "ai.teacher",
-                                  "ai.tutor",
-                                  "licence.view",
-                                  "updates.view",
-                                  "licence.renew",
-                                  "updates.install",
-                                  "settings.manage",
-                                  "server.manage"
-                                ]
-                              }
-                            },
-                            "classIds": {
-                              "nullable": true,
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            },
-                            "subjects": {
-                              "nullable": true,
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "userId",
-                            "role",
-                            "username",
-                            "displayName",
-                            "permissions",
-                            "classIds",
-                            "subjects"
-                          ]
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "enum": [
-                                "student"
-                              ]
-                            },
-                            "studentId": {
-                              "type": "string"
-                            },
-                            "name": {
-                              "type": "string"
-                            },
-                            "classId": {
-                              "type": "string"
-                            },
-                            "sectionId": {
-                              "nullable": true,
-                              "type": "string"
-                            },
-                            "deviceId": {
-                              "type": "string"
-                            },
-                            "permissions": {
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "enum": [
-                                  "staff.manage",
-                                  "students.manage",
-                                  "setup.devices",
-                                  "setup.master",
-                                  "setup.content",
-                                  "setup.timetable",
-                                  "teaching.manage",
-                                  "lesson.start",
-                                  "lesson.control",
-                                  "lesson.present",
-                                  "screen.watch",
-                                  "results.view",
-                                  "results.view.own",
-                                  "ai.teacher",
-                                  "ai.tutor",
-                                  "licence.view",
-                                  "updates.view",
-                                  "licence.renew",
-                                  "updates.install",
-                                  "settings.manage",
-                                  "server.manage"
-                                ]
-                              }
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "studentId",
-                            "name",
-                            "classId",
-                            "sectionId",
-                            "deviceId",
-                            "permissions"
-                          ]
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "enum": [
-                                "device"
-                              ]
-                            },
-                            "deviceId": {
-                              "type": "string"
-                            },
-                            "deviceKind": {
-                              "type": "string",
-                              "enum": [
-                                "lab_pc",
-                                "board"
-                              ]
-                            },
-                            "name": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "deviceId",
-                            "deviceKind",
-                            "name"
-                          ]
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "token",
-                    "expiresAt",
-                    "principal"
-                  ]
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/auth/student/enrol": {
-      "post": {
-        "summary": "First sign-in with an enrolment code; sets the PIN",
-        "x-access": {
-          "kind": "device",
-          "deviceKind": "lab_pc"
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "code": {
-                    "type": "string",
-                    "pattern": "^\\d{6}$"
-                  },
-                  "pin": {
-                    "type": "string",
-                    "pattern": "^\\d{4}$"
-                  }
-                },
-                "required": [
-                  "code",
-                  "pin"
                 ]
               }
             }
@@ -3105,96 +2576,9 @@
         }
       }
     },
-    "/api/v1/classes/{id}/enrolment-codes": {
-      "post": {
-        "summary": "First sign-in codes for every student in a class",
-        "x-access": {
-          "kind": "staff",
-          "permission": "students.manage"
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "studentId": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "rollNo": {
-                        "nullable": true,
-                        "type": "string"
-                      },
-                      "code": {
-                        "type": "string",
-                        "pattern": "^\\d{6}$"
-                      },
-                      "expiresAt": {
-                        "type": "number"
-                      }
-                    },
-                    "required": [
-                      "studentId",
-                      "name",
-                      "rollNo",
-                      "code",
-                      "expiresAt"
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/classes/{id}/cards": {
       "post": {
-        "summary": "Printable sign-in cards (new QR + first sign-in code) for a class",
+        "summary": "Printable sign-in cards (a new QR code each) for a class",
         "x-access": {
           "kind": "staff",
           "permission": "students.manage"
@@ -3233,13 +2617,6 @@
                       "rollNo": {
                         "nullable": true,
                         "type": "string"
-                      },
-                      "code": {
-                        "type": "string",
-                        "pattern": "^\\d{6}$"
-                      },
-                      "expiresAt": {
-                        "type": "number"
                       },
                       "qrToken": {
                         "type": "string"
@@ -3249,8 +2626,6 @@
                       "studentId",
                       "name",
                       "rollNo",
-                      "code",
-                      "expiresAt",
                       "qrToken"
                     ]
                   }
@@ -3628,9 +3003,6 @@
                       "rollNo": {
                         "nullable": true,
                         "type": "string"
-                      },
-                      "hasPin": {
-                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -3638,8 +3010,7 @@
                       "name",
                       "classId",
                       "sectionId",
-                      "rollNo",
-                      "hasPin"
+                      "rollNo"
                     ]
                   }
                 }
@@ -3710,10 +3081,6 @@
                     "nullable": true,
                     "type": "string",
                     "maxLength": 16
-                  },
-                  "pin": {
-                    "type": "string",
-                    "pattern": "^\\d{4}$"
                   }
                 },
                 "required": [
@@ -3749,9 +3116,6 @@
                       "nullable": true,
                       "type": "string"
                     },
-                    "hasPin": {
-                      "type": "boolean"
-                    },
                     "qrToken": {
                       "type": "string"
                     }
@@ -3762,7 +3126,6 @@
                     "classId",
                     "sectionId",
                     "rollNo",
-                    "hasPin",
                     "qrToken"
                   ]
                 }
@@ -3868,9 +3231,6 @@
                     "rollNo": {
                       "nullable": true,
                       "type": "string"
-                    },
-                    "hasPin": {
-                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -3878,8 +3238,7 @@
                     "name",
                     "classId",
                     "sectionId",
-                    "rollNo",
-                    "hasPin"
+                    "rollNo"
                   ]
                 }
               }
@@ -3933,147 +3292,6 @@
         "responses": {
           "204": {
             "description": "No content"
-          },
-          "default": {
-            "description": "Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/students/{id}/pin": {
-      "put": {
-        "summary": "Reset a student PIN",
-        "x-access": {
-          "kind": "staff",
-          "permission": "students.manage"
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "pin": {
-                    "type": "string",
-                    "pattern": "^\\d{4}$"
-                  }
-                },
-                "required": [
-                  "pin"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "No content"
-          },
-          "default": {
-            "description": "Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "string"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/students/{id}/enrolment-code": {
-      "post": {
-        "summary": "One-time first sign-in code",
-        "x-access": {
-          "kind": "staff",
-          "permission": "students.manage"
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "string",
-                      "pattern": "^\\d{6}$"
-                    },
-                    "expiresAt": {
-                      "type": "number"
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "expiresAt"
-                  ]
-                }
-              }
-            }
           },
           "default": {
             "description": "Error",

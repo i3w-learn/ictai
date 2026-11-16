@@ -9,6 +9,9 @@ const PAINT: Record<InkColour, string> = { red: '#ff453a', yellow: '#ffd60a', gr
 // How thick a line is, as a share of the picture's width, at a middling press.
 const THICK: Record<InkWidth, number> = { thin: 0.003, medium: 0.006, thick: 0.012 };
 const WIDTH_WORDS: Record<InkWidth, string> = { thin: 'Thin', medium: 'Medium', thick: 'Thick' };
+// The dark rim round every line, so that it shows on any colour of video.
+// Solid, not see-through: a line is many short parts, and see-through parts would darken where they meet.
+const RIM = '#1a1a1a';
 // A mouse cannot say how hard it is pressed.
 const EVEN_PRESS = INK_SCALE / 2;
 // How near the rubber must come to a line, as a share of the picture.
@@ -85,29 +88,35 @@ function paint(ctx: CanvasRenderingContext2D, strokes: Iterable<InkStroke>, w: n
     const base = THICK[s.width] * w;
     // Pressed lightly the line is thin, pressed hard it is thick, as with a real pen.
     const thick = (i: number) => base * (0.4 + 1.2 * (p[i + 2]! / INK_SCALE));
-    ctx.strokeStyle = ctx.fillStyle = PAINT[s.colour];
-    if (p.length === 3) {
-      ctx.beginPath();
-      ctx.arc(px(p[0]!), py(p[1]!), thick(0) / 2, 0, Math.PI * 2);
-      ctx.fill();
-      continue;
-    }
-    // Each part is a gentle curve from the middle of one step to the middle of the next, so a line
-    // drawn fast does not come out as straight bits with corners.
-    let fromX = px(p[0]!);
-    let fromY = py(p[1]!);
-    for (let i = 3; i < p.length; i += 3) {
-      const x0 = px(p[i - 3]!), y0 = py(p[i - 2]!), x1 = px(p[i]!), y1 = py(p[i + 1]!);
-      const last = i + 3 >= p.length;
-      const toX = last ? x1 : (x0 + x1) / 2;
-      const toY = last ? y1 : (y0 + y1) / 2;
-      ctx.lineWidth = (thick(i - 3) + thick(i)) / 2;
-      ctx.beginPath();
-      ctx.moveTo(fromX, fromY);
-      ctx.quadraticCurveTo(x0, y0, toX, toY);
-      ctx.stroke();
-      fromX = toX;
-      fromY = toY;
+    // Each line is drawn twice: first a little wider in a dark shade, then in its own
+    // colour on top. The dark rim keeps a red line readable on a red part of the video, a white line
+    // on a white page, and so on. It is all of one line before the colour, so no rim cuts across it.
+    const rim = Math.max(1.5, base * 0.3);
+    for (const edge of [rim, 0]) {
+      ctx.strokeStyle = ctx.fillStyle = edge ? RIM : PAINT[s.colour];
+      if (p.length === 3) {
+        ctx.beginPath();
+        ctx.arc(px(p[0]!), py(p[1]!), thick(0) / 2 + edge, 0, Math.PI * 2);
+        ctx.fill();
+        continue;
+      }
+      // Each part is a gentle curve from the middle of one step to the middle of the next, so a
+      // line drawn fast does not come out as straight bits with corners.
+      let fromX = px(p[0]!);
+      let fromY = py(p[1]!);
+      for (let i = 3; i < p.length; i += 3) {
+        const x0 = px(p[i - 3]!), y0 = py(p[i - 2]!), x1 = px(p[i]!), y1 = py(p[i + 1]!);
+        const last = i + 3 >= p.length;
+        const toX = last ? x1 : (x0 + x1) / 2;
+        const toY = last ? y1 : (y0 + y1) / 2;
+        ctx.lineWidth = (thick(i - 3) + thick(i)) / 2 + edge * 2;
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.quadraticCurveTo(x0, y0, toX, toY);
+        ctx.stroke();
+        fromX = toX;
+        fromY = toY;
+      }
     }
   }
   const letters = Math.max(11, w * 0.016);
@@ -154,10 +163,12 @@ export function InkLayer({ board, aspect, tools, onPenDown, own }: { board: InkB
   // Paint again whenever the writing changes or the picture changes size; at most once a frame.
   useEffect(() => {
     const c = canvas.current;
-    if (!c || !board || !pw || !ph) return;
+    if (!c || !pw || !ph) return;
     const sharp = window.devicePixelRatio || 1;
+    // Setting the size also wipes the sheet, so writing from a show that has ended does not stay behind.
     c.width = Math.round(pw * sharp);
     c.height = Math.round(ph * sharp);
+    if (!board) return;
     let frame = 0;
     const draw = () => { frame = 0; const ctx = c.getContext('2d'); if (ctx) paint(ctx, board.all(), c.width, c.height); };
     const ask = () => { frame ||= requestAnimationFrame(draw); };

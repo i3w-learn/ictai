@@ -10,16 +10,13 @@ async function withResults(subject: string | null = 'Maths') {
     t.app.inject({ method, url, headers: headers as Record<string, string>, ...(payload ? { payload } : {}) });
   const c7 = (await inject('POST', '/api/v1/classes', teacher, { name: '7' })).json();
   const c8 = (await inject('POST', '/api/v1/classes', teacher, { name: '8' })).json();
-  const add = async (name: string, classId: string, pin: string) =>
-    (await inject('POST', '/api/v1/students', teacher, { name, classId, pin })).json();
+  const add = async (name: string, classId: string, rollNo: string) =>
+    (await inject('POST', '/api/v1/students', teacher, { name, classId, rollNo })).json();
   const asha = await add('Asha', c7.id, '1111');
   const rohan = await add('Rohan', c7.id, '2222');
   const meera = await add('Meera', c7.id, '3333');
   const kabir = await add('Kabir', c8.id, '4444');
-  const studentOn = async (studentId: string, pin: string) => {
-    const device = t.auth(await t.enrolDevice('lab_pc'));
-    return t.auth((await inject('POST', '/api/v1/auth/student/pin', device, { studentId, pin })).json().token);
-  };
+  const studentOn = async (studentId: string) => t.auth(await t.studentToken(studentId));
 
   const questions = [
     { text: '2 + 2 = ?', options: ['3', '4'], correct: 1, marks: 2 },
@@ -27,8 +24,8 @@ async function withResults(subject: string | null = 'Maths') {
   ];
   const quiz = (await inject('POST', '/api/v1/quizzes', teacher, { title: 'Warm-up', classId: c7.id, subject, questions })).json();
   const run = (await inject('POST', '/api/v1/quiz-runs', teacher, { quizId: quiz.id })).json();
-  const a = await studentOn(asha.id, '1111');
-  const r = await studentOn(rohan.id, '2222');
+  const a = await studentOn(asha.id);
+  const r = await studentOn(rohan.id);
   await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, a);
   await inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, r);
   await inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, teacher);

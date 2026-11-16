@@ -35,7 +35,7 @@ export function StudentRow({ student: s, className, sections, onChanged }: { stu
         <span className="flex-1 font-medium">
           {s.name}
           <span className="ml-2 text-xs font-normal text-muted-foreground">
-            {[`Class ${className}${section ? section : ''}`, s.rollNo && `Roll ${s.rollNo}`].filter(Boolean).join(' · ')}
+            {[`Class ${className}${section ? section : ''}`, s.rollNo ? `Roll ${s.rollNo}` : 'No roll number: signs in with a card only'].filter(Boolean).join(' · ')}
           </span>
         </span>
         <Button variant="quiet" onClick={() => setMode(mode === 'edit' ? 'view' : 'edit')}>Edit</Button>
@@ -51,7 +51,7 @@ export function StudentRow({ student: s, className, sections, onChanged }: { stu
             {sections.map((x) => <option key={x.id} value={x.id}>Section {x.name}</option>)}
           </Select>
           <Button type="submit" disabled={!edit.name.trim() || save.busy}>Save</Button>
-          <Button type="button" variant="quiet" onClick={() => setMode('view')}>Cancel</Button>
+          <Button type="button" variant="quiet" onClick={() => { setMode('view'); setEdit({ name: s.name, rollNo: s.rollNo ?? '', sectionId: s.sectionId ?? '' }); save.clear(); }}>Cancel</Button>
         </form>
       )}
 

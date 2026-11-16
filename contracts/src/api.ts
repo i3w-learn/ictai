@@ -1,10 +1,10 @@
 import { z, type ZodType } from 'zod';
 import { AuditEntry, AuditQuery, Health } from './common.js';
-import { Principal, SessionResult, StaffLogin, StudentFirstLogin, StudentPinLogin, StudentQrLogin, StudentRollLogin } from './auth.js';
+import { Principal, SessionResult, StaffLogin, StudentQrLogin, StudentRollLogin } from './auth.js';
 import { Device, DeviceEnrol, DeviceEnrolResult, Joining } from './devices.js';
 import {
-  ClassCode, ClassQuery, CreatedStudent, ImportResult, ImportStudents, PromoteClass, PromoteResult, SignInCard, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
-  SchoolClass, Section, SetPin, Student, StudentEnrolmentCode, UpdateStudent,
+  ClassQuery, CreatedStudent, ImportResult, ImportStudents, PromoteClass, PromoteResult, SignInCard, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
+  SchoolClass, Section, Student, UpdateStudent,
 } from './students.js';
 import {
   AnswerResult, OpenRun, OpenRunForStudent, Quiz, QuizInput, QuizQuery, QuizSummary, RunQuery, RunSummary,
@@ -59,9 +59,7 @@ export const API = {
   'GET /api/v1/auth/student/roster': { summary: 'Student names in a class', access: labPc, query: ClassQuery, status: 200, response: z.array(RosterEntry) },
   'GET /api/v1/auth/student/sections': { summary: 'Sections of a class, for the sign-in screen', access: labPc, query: ClassQuery, status: 200, response: z.array(Section) },
   'POST /api/v1/auth/student/roll': { summary: 'Student sign-in with class and roll number; when two students share the roll number, also the one picked by name', access: labPc, body: StudentRollLogin, status: 201, response: SessionResult },
-  'POST /api/v1/auth/student/pin': { summary: 'Student sign-in with PIN', access: labPc, body: StudentPinLogin, status: 201, response: SessionResult },
   'POST /api/v1/auth/student/qr': { summary: 'Student sign-in with QR card', access: labPc, body: StudentQrLogin, status: 201, response: SessionResult },
-  'POST /api/v1/auth/student/enrol': { summary: 'First sign-in with an enrolment code; sets the PIN', access: labPc, body: StudentFirstLogin, status: 201, response: SessionResult },
 
   'POST /api/v1/auth/device/enrol': { summary: 'A lab PC or board joins the lab by itself, unless staff have locked the lab', access: pub, body: DeviceEnrol, status: 201, response: DeviceEnrolResult },
   'GET /api/v1/devices/joining': { summary: 'Whether new PCs and boards can still join', access: staff('setup.devices'), status: 200, response: Joining },
@@ -79,8 +77,7 @@ export const API = {
   'GET /api/v1/classes': { summary: 'List classes', access: staff(), status: 200, response: z.array(SchoolClass) },
   'POST /api/v1/classes': { summary: 'Add a class', access: staff('setup.master'), body: NewClass, status: 201, response: SchoolClass },
   'POST /api/v1/classes/:id/promote': { summary: 'Move every student to another class', access: staff('students.manage'), params: IdParams, body: PromoteClass, status: 200, response: PromoteResult },
-  'POST /api/v1/classes/:id/enrolment-codes': { summary: 'First sign-in codes for every student in a class', access: staff('students.manage'), params: IdParams, status: 201, response: z.array(ClassCode) },
-  'POST /api/v1/classes/:id/cards': { summary: 'Printable sign-in cards (new QR + first sign-in code) for a class', access: staff('students.manage'), params: IdParams, status: 201, response: z.array(SignInCard) },
+  'POST /api/v1/classes/:id/cards': { summary: 'Printable sign-in cards (a new QR code each) for a class', access: staff('students.manage'), params: IdParams, status: 201, response: z.array(SignInCard) },
   'POST /api/v1/classes/:id/students/import': { summary: 'Add many students from a spreadsheet file', access: staff('students.manage'), params: IdParams, body: ImportStudents, status: 200, response: ImportResult },
   'POST /api/v1/sections': { summary: 'Add a section', access: staff('setup.master'), body: NewSection, status: 201, response: Section },
   'GET /api/v1/sections': { summary: 'Sections in a class', access: staff(), query: ClassQuery, status: 200, response: z.array(Section) },
@@ -88,8 +85,6 @@ export const API = {
   'POST /api/v1/students': { summary: 'Add a student', access: staff('students.manage'), body: NewStudent, status: 201, response: CreatedStudent },
   'PATCH /api/v1/students/:id': { summary: 'Edit a student', access: staff('students.manage'), params: IdParams, body: UpdateStudent, status: 200, response: Student },
   'DELETE /api/v1/students/:id': { summary: 'Delete a student; ends their session', access: staff('students.manage'), params: IdParams, status: 204 },
-  'PUT /api/v1/students/:id/pin': { summary: 'Reset a student PIN', access: staff('students.manage'), params: IdParams, body: SetPin, status: 204 },
-  'POST /api/v1/students/:id/enrolment-code': { summary: 'One-time first sign-in code', access: staff('students.manage'), params: IdParams, status: 201, response: StudentEnrolmentCode },
 
   'GET /api/v1/quizzes': { summary: 'List quizzes, optionally for one class', access: staff(), query: QuizQuery, status: 200, response: z.array(QuizSummary) },
   'POST /api/v1/quizzes': { summary: 'Write a new quiz', access: staff('teaching.manage'), body: QuizInput, status: 201, response: Quiz },

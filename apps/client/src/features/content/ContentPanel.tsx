@@ -93,10 +93,10 @@ export function ContentPanel({ onOpen, refresh, onChanged }: { onOpen: (item: Co
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </label>
-            <Button type="button" disabled={!!problem || !file || !!tooBig || busy} onClick={() => addFile.run()}><Upload className="size-4" /> Add file</Button>
+            <Button type="button" disabled={!!problem || !file || !!tooBig || busy} onClick={() => { addLink.clear(); void addFile.run(); }}><Upload className="size-4" /> Add file</Button>
             <span className="pb-2.5 text-sm text-muted-foreground">or</span>
             <Field id="content-url" className="w-72" label="A web link" placeholder="https://…" maxLength={500} value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
-            <Button type="button" variant="quiet" disabled={!!problem || !form.url.trim() || busy} onClick={() => addLink.run()}><Link2 className="size-4" /> Add link</Button>
+            <Button type="button" variant="quiet" disabled={!!problem || !form.url.trim() || busy} onClick={() => { addFile.clear(); void addLink.run(); }}><Link2 className="size-4" /> Add link</Button>
           </div>
           {progress && (
             <div className="grid gap-1">

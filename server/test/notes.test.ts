@@ -10,11 +10,9 @@ async function withStudents() {
     t.app.inject({ method, url, headers: headers as Record<string, string>, ...(payload ? { payload } : {}) });
 
   const c7 = (await inject('POST', '/api/v1/classes', teacher, { name: '7' })).json();
-  async function student(name: string, pin: string) {
-    const s = (await inject('POST', '/api/v1/students', teacher, { name, classId: c7.id, pin })).json();
-    const device = t.auth(await t.enrolDevice('lab_pc'));
-    const { token } = (await inject('POST', '/api/v1/auth/student/pin', device, { studentId: s.id, pin })).json();
-    return t.auth(token);
+  async function student(name: string, rollNo: string) {
+    const s = (await inject('POST', '/api/v1/students', teacher, { name, classId: c7.id, rollNo })).json();
+    return t.auth(await t.studentToken(s.id));
   }
   const asha = await student('Asha', '1111');
   const kabir = await student('Kabir', '2222');
@@ -103,10 +101,11 @@ describe('My notes', () => {
   });
 
   it('follows the student to another lab PC', async () => {
-    const { inject, asha, enrolDevice, auth } = await withStudents();
+    const { inject, asha, studentToken, auth } = await withStudents();
     await inject('POST', '/api/v1/notes', asha, { title: 'From PC 1' });
     const ashaId = (await inject('GET', '/api/v1/auth/me', asha)).json().studentId;
-    const { token } = (await inject('POST', '/api/v1/auth/student/pin', auth(await enrolDevice('lab_pc')), { studentId: ashaId, pin: '1111' })).json();
+    await inject('POST', '/api/v1/auth/logout', asha); // one student, one lab PC at a time
+    const token = await studentToken(ashaId);
     expect((await inject('GET', '/api/v1/notes', auth(token))).json()).toEqual([expect.objectContaining({ title: 'From PC 1' })]);
   });
 

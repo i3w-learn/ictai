@@ -104,6 +104,10 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
     onChanged();
   });
 
+  // One line under the panel says what went wrong. It is wiped before each new thing the teacher
+  // does, so an old problem (say, from adding a class) is never read as the answer to the new one.
+  const fresh = () => [addClass, addSection, addStudent, importFile, makeCards, promote].forEach((a) => a.clear());
+
   return (
     <Panel title="Students">
       {sheet && <ClassSheet sheet={sheet} onClose={() => setSheet(null)} />}
@@ -113,13 +117,13 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
           {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
         </Select>
         {!limited && (
-          <form className="flex items-end gap-3" onSubmit={(e) => { e.preventDefault(); void addClass.run(); }}>
+          <form className="flex items-end gap-3" onSubmit={(e) => { e.preventDefault(); fresh(); void addClass.run(); }}>
             <Field id="new-class" className="w-32" label="New class" placeholder="7" value={newClass} onChange={(e) => setNewClass(e.target.value)} />
             <Button type="submit" variant="quiet" disabled={!newClass.trim()}>Add class</Button>
           </form>
         )}
         {classId && (
-          <form className="flex items-end gap-3" onSubmit={(e) => { e.preventDefault(); void addSection.run(); }}>
+          <form className="flex items-end gap-3" onSubmit={(e) => { e.preventDefault(); fresh(); void addSection.run(); }}>
             <Field id="new-section" className="w-32" label="New section" placeholder="A" value={newSection} onChange={(e) => setNewSection(e.target.value)} />
             <Button type="submit" variant="quiet" disabled={!newSection.trim()}>Add section</Button>
           </form>
@@ -128,7 +132,7 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
 
       {classId && (
         <>
-          <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); void addStudent.run(); }}>
+          <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); fresh(); void addStudent.run(); }}>
             <Field id="student-name" className="w-64" label="Student name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <Field id="student-roll" className="w-28" label="Roll no" value={form.rollNo} onChange={(e) => setForm({ ...form, rollNo: e.target.value })} />
             {sections.length > 0 && (
@@ -140,7 +144,7 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
             <Button type="submit" disabled={!form.name.trim()}>Add student</Button>
             <input
               ref={filePicker} type="file" accept=".csv,text/csv" className="hidden" aria-label="Class list file"
-              onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void importFile.run(f); }}
+              onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) { fresh(); void importFile.run(f); } }}
             />
             <Button type="button" variant="quiet" disabled={importFile.busy} onClick={() => filePicker.current?.click()}>Add from a file</Button>
           </form>
@@ -161,7 +165,7 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
           {students.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-xl bg-secondary px-3 py-2">
               <span className="text-sm font-medium text-secondary-foreground">Whole class</span>
-              <ConfirmButton question="New cards stop old ones working. Go ahead?" onConfirm={() => void makeCards.run()}>Print sign-in cards</ConfirmButton>
+              <ConfirmButton question="New cards stop old ones working. Go ahead?" onConfirm={() => { fresh(); void makeCards.run(); }}>Print sign-in cards</ConfirmButton>
               <span className="flex-1" />
               <Select aria-label="Move all to class" value={promoteTo} onChange={(e) => setPromoteTo(e.target.value)}>
                 <option value="">Move all to class…</option>
@@ -170,7 +174,7 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
               {promoteTo && (
                 <ConfirmButton
                   question={`Move all ${students.length} to Class ${classes.find((c) => c.id === promoteTo)?.name}?`}
-                  onConfirm={() => void promote.run()}
+                  onConfirm={() => { fresh(); void promote.run(); }}
                 >
                   Move
                 </ConfirmButton>

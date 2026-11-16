@@ -1,4 +1,4 @@
-import type { RosterEntry, Student } from '@ict/contracts';
+import { rollKey, type RosterEntry, type Student } from '@ict/contracts';
 import type { Db } from '../../infra/db/index.js';
 
 export interface StudentAuthRow {
@@ -6,7 +6,6 @@ export interface StudentAuthRow {
   name: string;
   class_id: string;
   section_id: string | null;
-  pin_hash: string | null;
 }
 
 interface StudentRow extends StudentAuthRow {
@@ -14,25 +13,25 @@ interface StudentRow extends StudentAuthRow {
 }
 
 const toStudent = (r: StudentRow): Student => ({
-  id: r.id, name: r.name, classId: r.class_id, sectionId: r.section_id, rollNo: r.roll_no, hasPin: !!r.pin_hash,
+  id: r.id, name: r.name, classId: r.class_id, sectionId: r.section_id, rollNo: r.roll_no,
 });
 
-const AUTH_COLUMNS = 'id, name, class_id, section_id, pin_hash';
+const AUTH_COLUMNS = 'id, name, class_id, section_id';
 
 export class StudentRepository {
   constructor(private readonly db: Db) {}
 
   insert(s: {
     id: string; name: string; classId: string; sectionId: string | null; rollNo: string | null;
-    pinHash: string | null; qrTokenHash: string; now: number;
+    qrTokenHash: string; now: number;
   }): Student {
     this.db
       .prepare(
-        `INSERT INTO students (id, name, class_id, section_id, roll_no, pin_hash, qr_token_hash, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO students (id, name, class_id, section_id, roll_no, qr_token_hash, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(s.id, s.name, s.classId, s.sectionId, s.rollNo, s.pinHash, s.qrTokenHash, s.now, s.now);
-    return { id: s.id, name: s.name, classId: s.classId, sectionId: s.sectionId, rollNo: s.rollNo, hasPin: !!s.pinHash };
+      .run(s.id, s.name, s.classId, s.sectionId, s.rollNo, s.qrTokenHash, s.now, s.now);
+    return { id: s.id, name: s.name, classId: s.classId, sectionId: s.sectionId, rollNo: s.rollNo };
   }
 
   listByClass(classId: string): Student[] {
@@ -65,12 +64,15 @@ export class StudentRepository {
   }
 
   // Spec 4.1: the same name + class + roll number counts as a duplicate. A missing roll number matches a missing one.
+  // Is there already a student of this name with this roll number in the class? Roll numbers are
+  // compared the way sign-in compares them ("05" and "5" are one number): otherwise two students who
+  // look the same on the sign-in screen could be added, and nobody could tell them apart there.
   findDuplicate(name: string, classId: string, rollNo: string | null, exceptId?: string): boolean {
-    return !!this.db
-      .prepare(
-        `SELECT 1 FROM students WHERE name = ? COLLATE NOCASE AND class_id = ? AND roll_no IS ? AND status = 'active' AND id IS NOT ?`,
-      )
-      .get(name, classId, rollNo, exceptId ?? null);
+    const same = this.db
+      .prepare(`SELECT roll_no FROM students WHERE name = ? COLLATE NOCASE AND class_id = ? AND status = 'active' AND id IS NOT ?`)
+      .pluck()
+      .all(name, classId, exceptId ?? null) as (string | null)[];
+    return same.some((r) => (r === null || rollNo === null ? r === rollNo : rollKey(r) === rollKey(rollNo)));
   }
 
   setQrHash(id: string, hash: string, now: number) {
@@ -89,10 +91,9 @@ export class StudentRepository {
     return rows.length;
   }
 
-  // A pending first sign-in code dies with the student.
   markDeleted(id: string, now: number) {
     this.db
-      .prepare(`UPDATE students SET status = 'deleted', enrol_code_hash = NULL, enrol_code_expires_at = NULL, updated_at = ? WHERE id = ?`)
+      .prepare(`UPDATE students SET status = 'deleted', updated_at = ? WHERE id = ?`)
       .run(now, id);
   }
 
@@ -106,25 +107,5 @@ export class StudentRepository {
     return this.db
       .prepare(`SELECT ${AUTH_COLUMNS} FROM students WHERE qr_token_hash = ? AND status = 'active'`)
       .get(hash) as StudentAuthRow | undefined;
-  }
-
-  findByEnrolCodeHash(hash: string, now: number): StudentAuthRow | undefined {
-    return this.db
-      .prepare(`SELECT ${AUTH_COLUMNS} FROM students WHERE enrol_code_hash = ? AND enrol_code_expires_at > ? AND status = 'active'`)
-      .get(hash, now) as StudentAuthRow | undefined;
-  }
-
-  setPin(id: string, pinHash: string, now: number) {
-    this.db.prepare('UPDATE students SET pin_hash = ?, updated_at = ? WHERE id = ?').run(pinHash, now, id);
-  }
-
-  setEnrolCode(id: string, codeHash: string | null, expiresAt: number | null, now: number) {
-    this.db
-      .prepare('UPDATE students SET enrol_code_hash = ?, enrol_code_expires_at = ?, updated_at = ? WHERE id = ?')
-      .run(codeHash, expiresAt, now, id);
-  }
-
-  enrolCodeInUse(hash: string, now: number): boolean {
-    return !!this.db.prepare('SELECT 1 FROM students WHERE enrol_code_hash = ? AND enrol_code_expires_at > ?').get(hash, now);
   }
 }

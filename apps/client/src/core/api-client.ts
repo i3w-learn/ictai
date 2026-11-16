@@ -1,5 +1,5 @@
-import type { z, ZodType } from 'zod';
-import { API, ApiError, type Endpoint, type RouteKey } from '@ict/contracts';
+import { ZodError, type z, type ZodType } from 'zod';
+import { API, ApiError, plainProblem, type Endpoint, type RouteKey } from '@ict/contracts';
 import { PlatformError, type Platform } from '../platform/platform';
 import type { ServerLocator } from './server-locator';
 import { baseUrl, type ServerTarget } from './settings';
@@ -44,7 +44,7 @@ export class ApiClient {
     const { body, query, params } = input as { body?: unknown; query?: Record<string, string>; params?: Record<string, string> };
     const path = buildPath(pattern, params, query);
 
-    const res = await this.send({ method, path, body: ep.body ? ep.body.parse(body ?? {}) : undefined, token });
+    const res = await this.send({ method, path, body: ep.body ? checked(ep.body, body ?? {}) : undefined, token });
     if (res.status >= 400) {
       const err = ApiError.safeParse(res.body);
       throw new ApiCallError(res.status, err.success ? err.data.code : 'UNKNOWN', err.success ? err.data.message : `Server error ${res.status}`);
@@ -75,6 +75,17 @@ export class ApiClient {
       this.target.set(moved);
       return this.platform.request({ ...r, baseUrl: baseUrl(moved), certFp: moved.certFp });
     }
+  }
+}
+
+// What the person typed is checked here before it is sent. A problem is said in plain words, the
+// same words the server would use, never as the checker's own technical report.
+function checked(schema: ZodType, body: unknown): unknown {
+  try {
+    return schema.parse(body);
+  } catch (e) {
+    if (e instanceof ZodError) throw new ApiCallError(400, 'BAD_REQUEST', plainProblem(e));
+    throw e;
   }
 }
 

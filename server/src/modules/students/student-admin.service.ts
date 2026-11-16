@@ -1,15 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import type { ClassCode, ImportResult, ImportStudents, NewStudent, SchoolClass, Section, SignInCard, StaffPrincipal, Student, UpdateStudent } from '@ict/contracts';
+import type { ImportResult, ImportStudents, NewStudent, SchoolClass, Section, SignInCard, StaffPrincipal, Student, UpdateStudent } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
-import { DAY, type Clock } from '../../core/clock.js';
+import type { Clock } from '../../core/clock.js';
 import { AppError, forbidden, notFound, unique } from '../../core/errors.js';
 import { checkClass, checkMyClass, scopeOf, seesClass, type Scope } from '../../core/scope.js';
 import type { SessionRepository } from '../auth/session.repository.js';
-import { hashSecret, hashToken, newToken, sixDigitCode } from '../auth/secrets.js';
+import { hashToken, newToken } from '../auth/secrets.js';
 import type { ClassRepository } from './class.repository.js';
 import type { StudentRepository } from './student.repository.js';
 
-const ENROL_CODE_TTL = 7 * DAY;
 
 const duplicate = (name: string) =>
   new AppError(409, 'ALREADY_EXISTS', `${name} is already in this class with the same roll number.`);
@@ -54,7 +53,6 @@ export class StudentAdminService {
       classId: s.classId,
       sectionId: s.sectionId,
       rollNo: s.rollNo,
-      pinHash: s.pin ? await hashSecret(s.pin) : null,
       qrTokenHash: hashToken(qrToken),
       now: this.now(),
     });
@@ -62,7 +60,6 @@ export class StudentAdminService {
   }
 
   // Each row is judged alone: good rows are added, bad ones come back with the reason.
-  // Imported students have no PIN yet; they start with a first sign-in code or a card.
   importStudents(actor: StaffPrincipal, classId: string, rows: ImportStudents['rows']): ImportResult {
     this.myClass(scopeOf(actor), classId);
     const sections = new Map(this.classes.listSections(classId).map((x) => [x.name.toLowerCase(), x.id]));
@@ -78,7 +75,7 @@ export class StudentAdminService {
       const sectionId = section ? sections.get(section.toLowerCase()) : null;
       if (sectionId === undefined) return skip(`Section "${section}" is not in this class. Add the section first.`);
       if (this.students.findDuplicate(name, classId, rollNo)) return skip('Already in this class with the same roll number.');
-      this.students.insert({ id: randomUUID(), name, classId, sectionId, rollNo, pinHash: null, qrTokenHash: hashToken(newToken()), now: this.now() });
+      this.students.insert({ id: randomUUID(), name, classId, sectionId, rollNo, qrTokenHash: hashToken(newToken()), now: this.now() });
       result.added++;
     });
     if (result.added > 0) this.audit.record({ kind: 'staff', id: actor.userId }, 'student.import', classId, { added: result.added });
@@ -108,17 +105,6 @@ export class StudentAdminService {
     this.audit.record({ kind: 'staff', id: actor.userId }, 'student.delete', id);
   }
 
-  async resetPin(scope: Scope, studentId: string, pin: string) {
-    this.mine(scope, studentId);
-    this.students.setPin(studentId, await hashSecret(pin), this.now());
-  }
-
-  // A one-time code for the student's first sign-in, where they choose their own PIN.
-  issueEnrolmentCode(scope: Scope, studentId: string): { code: string; expiresAt: number } {
-    this.mine(scope, studentId);
-    return this.newCode(studentId);
-  }
-
   // Year-end move, e.g. every Class 7 student into Class 8. Sections carry over by name.
   promote(actor: StaffPrincipal, fromClassId: string, toClassId: string): { moved: number } {
     const scope = scopeOf(actor);
@@ -132,41 +118,18 @@ export class StudentAdminService {
     return { moved };
   }
 
-  classCodes(actor: StaffPrincipal, classId: string): ClassCode[] {
-    const codes = this.codesFor(scopeOf(actor), classId);
-    this.audit.record({ kind: 'staff', id: actor.userId }, 'class.codes', classId, { count: codes.length });
-    return codes;
-  }
-
   // New QR tokens replace the old ones, so cards printed earlier stop working.
   cards(actor: StaffPrincipal, classId: string): SignInCard[] {
     const now = this.now();
-    const cards = this.codesFor(scopeOf(actor), classId).map((c) => {
+    this.myClass(scopeOf(actor), classId);
+    // Every student on the class's roster is in it by definition.
+    const cards = this.students.roster(classId).map((r) => {
       const qrToken = newToken();
-      this.students.setQrHash(c.studentId, hashToken(qrToken), now);
-      return { ...c, qrToken };
+      this.students.setQrHash(r.id, hashToken(qrToken), now);
+      return { studentId: r.id, name: r.name, rollNo: r.rollNo, qrToken };
     });
     this.audit.record({ kind: 'staff', id: actor.userId }, 'class.cards', classId, { count: cards.length });
     return cards;
-  }
-
-  // The class is checked once; every student on its roster is in it by definition.
-  private codesFor(scope: Scope, classId: string): ClassCode[] {
-    this.myClass(scope, classId);
-    return this.students.roster(classId).map((r) => ({ studentId: r.id, name: r.name, rollNo: r.rollNo, ...this.newCode(r.id) }));
-  }
-
-  // A fresh one-time code for a student the caller has already checked.
-  private newCode(studentId: string): { code: string; expiresAt: number } {
-    const now = this.now();
-    for (let tries = 0; tries < 20; tries++) {
-      const code = sixDigitCode();
-      if (this.students.enrolCodeInUse(hashToken(code), now)) continue;
-      const expiresAt = now + ENROL_CODE_TTL;
-      this.students.setEnrolCode(studentId, hashToken(code), expiresAt, now);
-      return { code, expiresAt };
-    }
-    throw new AppError(503, 'BUSY', 'Could not make a free code. Try again.');
   }
 
   // An active student in one of this teacher's classes.

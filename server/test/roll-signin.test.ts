@@ -37,9 +37,9 @@ describe('Sign-in with class and roll number', () => {
     expect((await students()).map((s: { name: string }) => s.name)).toEqual(['Asha']);
   });
 
-  it('signs a student in with class and roll number alone, also one who was given a PIN before', async () => {
+  it('signs a student in with class and roll number alone', async () => {
     const { roll, pc, add } = await lab();
-    await add('Asha', '05', { pin: '1234' });
+    await add('Asha', '05');
     const res = await roll(await pc(), { rollNo: '5' });
     expect(res.statusCode).toBe(201);
     expect(res.json().principal).toMatchObject({ kind: 'student', name: 'Asha' });
