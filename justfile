@@ -35,6 +35,10 @@ e2e:
 check:
     pnpm typecheck
 
+# Lint everything
+lint:
+    pnpm lint
+
 # Regenerate contracts/openapi.json
 openapi:
     pnpm --filter @ict/contracts openapi

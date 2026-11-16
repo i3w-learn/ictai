@@ -15,7 +15,7 @@ export function LabToday() {
     // The line follows the clock, so it changes when the bell rings without asking the server again.
     const t = setInterval(() => setClock(clockOf(new Date())), 20_000);
     return () => { alive = false; clearInterval(t); };
-  }, []);
+  }, [call]);
 
   if (!today || today.periods.length === 0) return null;
   const { now, next } = labNow(today.periods, clock);

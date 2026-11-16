@@ -17,9 +17,10 @@ export function FindServer() {
     setFound(await locator!.discover());
   });
 
+  const { run: searchNow } = search;
   useEffect(() => {
-    void search.run();
-  }, [locator]);
+    void searchNow();
+  }, [searchNow, locator]);
 
   const pick = useAction(async (f: FoundServer) => {
     if (!f.certFp) throw new Error('This server has no certificate yet. Restart the server and try again.');

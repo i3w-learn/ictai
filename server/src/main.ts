@@ -43,7 +43,7 @@ async function main() {
     await app.listen({ port: config.apiPort, host: '0.0.0.0' });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'EADDRINUSE') {
-      throw new Error(`Port ${config.apiPort} is already used by another program. Close it, then start the server again.`);
+      throw new Error(`Port ${config.apiPort} is already used by another program. Close it, then start the server again.`, { cause: err });
     }
     throw err;
   }

@@ -16,7 +16,8 @@ export function MyBooks({ onBack }: { onBack: () => void }) {
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState<ContentItem | null>(null);
   const load = useAction(async () => { setItems(await call('GET /api/v1/content/mine')); setLoaded(true); });
-  useEffect(() => { void load.run(); }, []);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow]);
 
   if (open) return <Viewer item={open} onBack={() => setOpen(null)} />;
   return (

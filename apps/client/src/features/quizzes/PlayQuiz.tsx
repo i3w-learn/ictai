@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { quizRoom, type StudentRunState } from '@ict/contracts';
 import { useApp, useLiveState } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
-import { Button, Centered, ErrorNote, PageTitle, useAction } from '../../ui/ui';
+import { Button, Centered, ErrorNote, PageTitle, useAction, useLatest } from '../../ui/ui';
 
 // A student taking a Lab Mode quiz at their own pace (v2's Join page).
 // The server keeps each question's clock and says which question the student is on (`current`),
@@ -31,9 +31,12 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
   const timeUp = useAction(async () => setLocal(await read()));
 
   // Every question answered or out of time: hand in.
+  const allDone = run.status === 'active' && !run.finished && !run.current;
+  const { run: finishNow } = finish;
+  const finishing = useLatest(finish.busy);
   useEffect(() => {
-    if (run.status === 'active' && !run.finished && !run.current && !finish.busy) void finish.run();
-  }, [run.status, run.finished, run.current == null]);
+    if (allDone && !finishing.current) void finishNow();
+  }, [allDone, finishNow, finishing]);
 
   const header = (
     <div className="flex items-center gap-3">
@@ -71,7 +74,8 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
     <Centered>
       {header}
       <Countdown
-        key={current.index}
+        // A fresh word from the server starts the clock again.
+        key={`${current.index} ${current.remainingMs}`}
         seconds={run.secondsPerQuestion}
         remainingMs={current.remainingMs}
         onTimeUp={() => void timeUp.run()}
@@ -99,26 +103,24 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
 }
 
 // Counts down the time the server says is left. Each fresh word from the server (a new
-// `remainingMs`) sets the clock again, so this PC's clock only has to be right for a few seconds.
+// `remainingMs`) makes a new countdown, so this PC's clock only has to be right for a few seconds.
 function Countdown({ seconds, remainingMs, onTimeUp }: { seconds: number; remainingMs: number; onTimeUp: () => void }) {
-  const [deadline, setDeadline] = useState(() => Date.now() + remainingMs);
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    setDeadline(Date.now() + remainingMs);
-    setNow(Date.now());
-  }, [remainingMs]);
+  const [deadline] = useState(() => Date.now() + remainingMs);
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(t);
   }, []);
   const left = Math.max(0, deadline - now);
   // At zero, ask the server what is next; keep asking every few seconds in case a call fails.
+  const over = left === 0;
+  const timeUp = useLatest(onTimeUp);
   useEffect(() => {
-    if (left !== 0) return;
-    onTimeUp();
-    const t = setInterval(onTimeUp, 3000);
+    if (!over) return;
+    timeUp.current();
+    const t = setInterval(() => timeUp.current(), 3000);
     return () => clearInterval(t);
-  }, [left === 0]);
+  }, [over, timeUp]);
 
   const secs = Math.ceil(left / 1000);
   return (

@@ -21,7 +21,8 @@ export function ReportCardsPanel({ refresh }: { refresh: number }) {
   const [printing, setPrinting] = useState(false);
 
   const loadClasses = useAction(async () => setClasses(await call('GET /api/v1/classes')));
-  useEffect(() => { void loadClasses.run(); }, [refresh]);
+  const { run: loadClassesNow } = loadClasses;
+  useEffect(() => { void loadClassesNow(); }, [loadClassesNow, refresh]);
 
   // Picking a class offers its latest term straight away.
   const pickClass = useAction(async (id: string) => {
@@ -76,7 +77,12 @@ function CardRow({ card: c, onChange }: { card: ReportCard; onChange: (c: Report
   // Freezing can never be undone, so only the Super Admin is offered it (the server refuses anyone else).
   const canFreeze = me?.kind === 'staff' && me.permissions.includes('settings.manage');
   const [remarks, setRemarks] = useState(c.remarks);
-  useEffect(() => setRemarks(c.remarks), [c.remarks]);
+  // Remarks saved somewhere else replace what is typed here.
+  const [saved, setSaved] = useState(c.remarks);
+  if (saved !== c.remarks) {
+    setSaved(c.remarks);
+    setRemarks(c.remarks);
+  }
   const save = useAction(async () => onChange(await call('PUT /api/v1/report-cards/:id/remarks', { params: { id: c.id }, body: { remarks } })));
   const move = useAction(async (status: CardStatus) => onChange(await call('PUT /api/v1/report-cards/:id/status', { params: { id: c.id }, body: { status } })));
   const frozen = c.status === 'frozen';

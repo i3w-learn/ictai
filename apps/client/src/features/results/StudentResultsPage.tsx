@@ -21,7 +21,8 @@ export function StudentResultsPage({ studentId, onBack }: { studentId: string; o
   const { call } = useApp();
   const [data, setData] = useState<StudentResults | null>(null);
   const load = useAction(async () => setData(await call('GET /api/v1/results/students/:id', { params: { id: studentId } })));
-  useEffect(() => { void load.run(); }, [studentId]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, studentId]);
 
   const s = data?.student;
   return (

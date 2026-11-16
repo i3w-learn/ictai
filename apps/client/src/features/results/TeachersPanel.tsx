@@ -11,7 +11,8 @@ export function TeachersPanel() {
   const { call } = useApp();
   const [rows, setRows] = useState<TeacherActivity[]>([]);
   const load = useAction(async () => setRows(await call('GET /api/v1/results/teachers')));
-  useEffect(() => { void load.run(); }, []);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow]);
 
   return (
     <Panel title="What teachers have done" actions={<Button variant="quiet" onClick={() => load.run()}>Refresh</Button>}>

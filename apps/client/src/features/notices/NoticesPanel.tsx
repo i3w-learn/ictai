@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Megaphone, Pin } from 'lucide-react';
-import type { Notice, SchoolClass, Section } from '@ict/contracts';
+import type { Notice, SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
+import { useSections } from '../home/useSections';
 import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, useAction } from '../../ui/ui';
 import { endOfDay, whoFor, whenShort } from './notices';
 
@@ -15,7 +16,6 @@ export function NoticesPanel({ refresh }: { refresh: number }) {
   const limited = p?.kind === 'staff' && p.classIds != null;
   const [notices, setNotices] = useState<Notice[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [sections, setSections] = useState<Section[]>([]);
   const [form, setForm] = useState(BLANK);
 
   const load = useAction(async () => {
@@ -23,16 +23,11 @@ export function NoticesPanel({ refresh }: { refresh: number }) {
     setNotices(n);
     setClasses(c);
   });
-  useEffect(() => { void load.run(); }, [refresh]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, refresh]);
 
   // The sections offered follow the class picked.
-  useEffect(() => {
-    setSections([]);
-    if (!form.classId) return;
-    let current = true;
-    call('GET /api/v1/sections', { query: { classId: form.classId } }).then((s) => { if (current) setSections(s); }, () => undefined);
-    return () => { current = false; };
-  }, [form.classId]);
+  const sections = useSections(form.classId);
 
   const problem = !form.title.trim() ? 'Type a title.' : limited && !form.classId ? 'Pick a class.' : null;
 

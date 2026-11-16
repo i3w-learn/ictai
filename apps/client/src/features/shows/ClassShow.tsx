@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MonitorPlay, Pause, Volume2, VolumeX } from 'lucide-react';
 import { Show, showPosition, showRoom } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
+import { useLatest } from '../../ui/ui';
 import { useFileUrl } from '../content/useFileUrl';
 
 // A show as this screen received it: what the server said, and when (on this PC's own stopwatch).
@@ -38,7 +39,7 @@ export function useClassShow(): LiveShow | null {
     ask();
     const t = setInterval(ask, ASK_EVERY_MS);
     return () => { alive = false; leave(); clearInterval(t); setLive(null); };
-  }, [classId]);
+  }, [relay, call, classId]);
   return live;
 }
 
@@ -49,8 +50,7 @@ export function ClassShow({ live }: { live: LiveShow }) {
   const { show } = live;
   const { url, percent, error, onError } = useFileUrl(show.item);
   const video = useRef<HTMLVideoElement>(null);
-  const latest = useRef(live);
-  latest.current = live;
+  const latest = useLatest(live);
   const [muted, setMuted] = useState(false);
   const [failed, setFailed] = useState(false);
   // The video is not arriving (the Server PC is off, or the cable is out). Changing `attempt` starts
@@ -58,10 +58,10 @@ export function ClassShow({ live }: { live: LiveShow }) {
   const [waiting, setWaiting] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const known = useRef(false);
-  const moved = useRef({ at: 0, when: performance.now() });
+  const moved = useRef({ at: 0, when: 0 });
 
   // Puts this screen's video where the teacher's is.
-  const follow = () => {
+  const follow = useCallback(() => {
     const v = video.current;
     if (!v || v.readyState < 1) return;
     const { show: s, gotAt } = latest.current;
@@ -74,11 +74,12 @@ export function ClassShow({ live }: { live: LiveShow }) {
       // show a button to turn the sound on.
       if (v.paused) void v.play().catch(() => { v.muted = true; setMuted(true); return v.play().catch(() => undefined); });
     } else if (!v.paused) v.pause();
-  };
-  useEffect(() => { follow(); }, [live, url]);
-  useEffect(() => { const t = setInterval(follow, CHECK_EVERY_MS); return () => clearInterval(t); }, []);
+  }, [latest]);
+  useEffect(() => { follow(); }, [follow, live, url]);
+  useEffect(() => { const t = setInterval(follow, CHECK_EVERY_MS); return () => clearInterval(t); }, [follow]);
   // Is the video moving when the teacher's is? If not for a while, say so and start it afresh.
   useEffect(() => {
+    moved.current.when = performance.now();
     const t = setInterval(() => {
       const v = video.current;
       const now = performance.now();
@@ -90,7 +91,7 @@ export function ClassShow({ live }: { live: LiveShow }) {
       if (now - moved.current.when > RETRY_AFTER_MS) { moved.current.when = now - WAITING_AFTER_MS; setAttempt((n) => n + 1); }
     }, 500);
     return () => clearInterval(t);
-  }, []);
+  }, [latest]);
 
   const sound = () => { const v = video.current; if (!v) return; v.muted = !v.muted; setMuted(v.muted); };
 

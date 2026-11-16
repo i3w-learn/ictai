@@ -17,7 +17,8 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
   const ai = useAiJob('quiz');
 
   const loadClasses = useAction(async () => setClasses(await call('GET /api/v1/classes')));
-  useEffect(() => { void loadClasses.run(); }, []);
+  const { run: loadClassesNow } = loadClasses;
+  useEffect(() => { void loadClassesNow(); }, [loadClassesNow]);
 
   const count = Number(form.count);
   const problem =

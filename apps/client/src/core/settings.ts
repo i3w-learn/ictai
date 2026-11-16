@@ -39,3 +39,10 @@ export class SettingsStore {
     return this.platform.clearSettings();
   }
 }
+
+// The newest copy of a value, for code that lives outside React and must never work with an old one.
+export class Current<T> {
+  constructor(private value: T) {}
+  get = () => this.value;
+  set = (value: T) => { this.value = value; };
+}

@@ -14,7 +14,8 @@ export function LabSession({ runId, onExit }: { runId: string; onExit: () => voi
 
   // REST gives the first picture even before the relay is up; after that the relay keeps it fresh.
   const load = useAction(async () => setFirst(await read()));
-  useEffect(() => { void load.run(); }, [runId]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, runId]);
 
   const start = useAction(async () => setFirst(await call('POST /api/v1/quiz-runs/:id/start', { params: { id: runId } })));
   const end = useAction(async () => setFirst(await call('POST /api/v1/quiz-runs/:id/end', { params: { id: runId } })));

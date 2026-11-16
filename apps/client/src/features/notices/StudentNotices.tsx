@@ -19,7 +19,7 @@ export function StudentNotices() {
     ask();
     const t = setInterval(ask, ASK_EVERY_MS);
     return () => { alive = false; clearInterval(t); };
-  }, []);
+  }, [call]);
 
   if (notices.length === 0) return null;
   return (

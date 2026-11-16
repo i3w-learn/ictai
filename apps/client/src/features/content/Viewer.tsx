@@ -3,7 +3,7 @@ import { ArrowLeft, MonitorPlay } from 'lucide-react';
 import { SHOW_BEAT_MS, type ContentItem } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
-import { Button, Card, ErrorNote, Note, useAction } from '../../ui/ui';
+import { Button, Card, ErrorNote, Note, useAction, useLatest } from '../../ui/ui';
 import { KIND_WORDS, sizeWords } from './files';
 import { useFileUrl } from './useFileUrl';
 import { VideoPlayer, type PlayerState } from './VideoPlayer';
@@ -40,6 +40,7 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
       }
     });
   };
+  const tellNow = useLatest(tell);
   const startShow = useAction(async () => {
     const s = await call('POST /api/v1/shows', { body: { contentId: item.id } });
     showId.current = s.id;
@@ -57,11 +58,11 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
   // still here; and the class's screens are put right if one has drifted.
   useEffect(() => {
     if (!showing) return;
-    const t = setInterval(() => { const s = peek.current?.(); if (s) tell(s); }, SHOW_BEAT_MS);
+    const t = setInterval(() => { const s = peek.current?.(); if (s) tellNow.current(s); }, SHOW_BEAT_MS);
     return () => clearInterval(t);
-  }, [showing]);
+  }, [showing, tellNow]);
   // Leaving the video ends the show.
-  useEffect(() => () => { const id = showId.current; if (id) void call('DELETE /api/v1/shows/:id', { params: { id } }).catch(() => undefined); }, []);
+  useEffect(() => () => { const id = showId.current; if (id) void call('DELETE /api/v1/shows/:id', { params: { id } }).catch(() => undefined); }, [call]);
 
   return (
     <div className="mx-auto grid w-full max-w-5xl gap-4">

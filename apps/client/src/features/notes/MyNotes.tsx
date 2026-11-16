@@ -3,7 +3,7 @@ import { ArrowLeft, Plus } from 'lucide-react';
 import { MAX_NOTES_PER_STUDENT, NOTE_BODY_MAX, type Note } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
-import { Button, Card, ConfirmButton, ErrorNote, Field, PageTitle, SectionLabel, cn, useAction } from '../../ui/ui';
+import { Button, Card, ConfirmButton, ErrorNote, Field, PageTitle, SectionLabel, cn, useAction, useLatest } from '../../ui/ui';
 import { afterSave, BLANK, draftOf, isDirty, saveDraft, snippet, subjectsOf, type Draft, type NotesApi } from './notes';
 
 // How long after the last keystroke a note saves itself.
@@ -25,7 +25,8 @@ export function MyNotes({ onBack }: { onBack: () => void }) {
     setNotes(await call('GET /api/v1/notes'));
     setLoaded(true);
   });
-  useEffect(() => { void load.run(); }, []);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow]);
 
   const saved = draft?.id ? notes.find((n) => n.id === draft.id) : undefined;
   const dirty = draft != null && isDirty(draft, saved);
@@ -73,7 +74,7 @@ export function MyNotes({ onBack }: { onBack: () => void }) {
     try {
       await persist(draft);
     } catch (e) {
-      throw new Error(`Your note is not saved yet. ${e instanceof Error ? e.message : ''}`.trim());
+      throw new Error(`Your note is not saved yet. ${e instanceof Error ? e.message : ''}`.trim(), { cause: e });
     }
   }
 
@@ -82,6 +83,7 @@ export function MyNotes({ onBack }: { onBack: () => void }) {
     const note = await persist(draft);
     setDraft((cur) => afterSave(cur, draft, note));
   });
+  const saveNow = useLatest(save);
   const open = (next: Draft) => run('leave', async () => {
     await saveFirst();
     setDraft(next);
@@ -104,9 +106,9 @@ export function MyNotes({ onBack }: { onBack: () => void }) {
   // student types more, so a server that is down does not flash errors every two seconds.
   useEffect(() => {
     if (!draft || !dirty || busy || tried.current === draft) return;
-    const t = setTimeout(() => void save(), AUTOSAVE_MS);
+    const t = setTimeout(() => void saveNow.current(), AUTOSAVE_MS);
     return () => clearTimeout(t);
-  }, [draft, dirty, busy]);
+  }, [draft, dirty, busy, saveNow]);
 
   // Throwing typed text away needs no server, so it always works, even when saving does not.
   const discard = (to: Draft | null) => { setError(null); setDraft(to); };

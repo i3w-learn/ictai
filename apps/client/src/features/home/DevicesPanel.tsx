@@ -18,7 +18,7 @@ export function DevicesPanel() {
   const [devices, setDevices] = useState<Device[]>([]);
   // New PCs join by themselves. Staff can lock the lab so that no further device gets in.
   const [open, setOpen] = useState(true);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   const refresh = useAction(async () => {
     const [list, joining] = await Promise.all([call('GET /api/v1/devices'), call('GET /api/v1/devices/joining')]);
@@ -31,14 +31,15 @@ export function DevicesPanel() {
     await refresh.run();
   });
   // Re-read every few seconds: PCs join, switch on and off, and students sign in and out.
+  const { run: refreshNow } = refresh;
   useEffect(() => {
-    void refresh.run();
+    void refreshNow();
     const t = setInterval(() => {
       setNow(Date.now());
-      void refresh.run();
+      void refreshNow();
     }, 5000);
     return () => clearInterval(t);
-  }, []);
+  }, [refreshNow]);
 
   return (
     <Panel

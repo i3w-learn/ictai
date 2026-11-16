@@ -12,7 +12,8 @@ export function HowIAmDoing({ onBack, onWork }: { onBack: () => void; onWork: ()
   const { call } = useApp();
   const [p, setP] = useState<MyProgress | null>(null);
   const load = useAction(async () => setP(await call('GET /api/v1/me/progress')));
-  useEffect(() => { void load.run(); }, []);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow]);
 
   const nothingYet = p && p.quizzes.taken === 0 && p.work.set === 0;
   return (
