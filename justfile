@@ -35,6 +35,16 @@ e2e:
 check:
     pnpm typecheck
 
+# Watch the server's diary live: what happens in the lab, one line per event (server/.data/events.log)
+logs:
+    @touch server/.data/events.log
+    tail -n 40 -f server/.data/events.log
+
+# Watch only the video lines: shows starting, playing, pausing, and how each student's screen is doing
+video-logs:
+    @touch server/.data/events.log
+    tail -n 40 -f server/.data/events.log | grep --line-buffered ' show\.'
+
 # Lint everything
 lint:
     pnpm lint

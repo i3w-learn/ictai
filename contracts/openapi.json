@@ -845,7 +845,7 @@
     },
     "/api/v1/auth/student/roll": {
       "post": {
-        "summary": "Student sign-in with class and roll number; adds the student the first time",
+        "summary": "Student sign-in with class and roll number; when two students share the roll number, also the one picked by name",
         "x-access": {
           "kind": "device",
           "deviceKind": "lab_pc"
@@ -878,6 +878,11 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 16
+                  },
+                  "studentId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   }
                 },
                 "required": [
@@ -9906,6 +9911,45 @@
                     },
                     "now": {
                       "type": "number"
+                    },
+                    "inkRev": {
+                      "default": 0,
+                      "type": "number"
+                    },
+                    "pen": {
+                      "default": null,
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "studentId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "studentId",
+                        "name"
+                      ]
+                    },
+                    "watching": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -10116,6 +10160,45 @@
                     },
                     "now": {
                       "type": "number"
+                    },
+                    "inkRev": {
+                      "default": 0,
+                      "type": "number"
+                    },
+                    "pen": {
+                      "default": null,
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "studentId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "studentId",
+                        "name"
+                      ]
+                    },
+                    "watching": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -10182,6 +10265,655 @@
         "responses": {
           "204": {
             "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shows/{id}/screen": {
+      "post": {
+        "summary": "A student's screen says how the video is going there (opened, waiting, failed…), for the server's diary",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "event": {
+                    "type": "string",
+                    "enum": [
+                      "opened",
+                      "ready",
+                      "waiting",
+                      "recovered",
+                      "retrying",
+                      "silent",
+                      "failed"
+                    ]
+                  },
+                  "position": {
+                    "default": 0,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 86400
+                  },
+                  "behind": {
+                    "default": 0,
+                    "type": "number",
+                    "minimum": -86400,
+                    "maximum": 86400
+                  }
+                },
+                "required": [
+                  "event"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shows/{id}/ink": {
+      "get": {
+        "summary": "All the writing on the video right now",
+        "x-access": {
+          "kind": "signed-in"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rev": {
+                      "type": "number"
+                    },
+                    "strokes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "by": {
+                            "type": "string"
+                          },
+                          "byName": {
+                            "type": "string"
+                          },
+                          "colour": {
+                            "type": "string",
+                            "enum": [
+                              "red",
+                              "yellow",
+                              "green",
+                              "blue",
+                              "white"
+                            ]
+                          },
+                          "width": {
+                            "type": "string",
+                            "enum": [
+                              "thin",
+                              "medium",
+                              "thick"
+                            ]
+                          },
+                          "points": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "by",
+                          "byName",
+                          "colour",
+                          "width",
+                          "points"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "rev",
+                    "strokes"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Write on the video: more of one pen line. The teacher, or the student who has the pen",
+        "x-access": {
+          "kind": "signed-in"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "strokeId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "colour": {
+                    "type": "string",
+                    "enum": [
+                      "red",
+                      "yellow",
+                      "green",
+                      "blue",
+                      "white"
+                    ]
+                  },
+                  "width": {
+                    "type": "string",
+                    "enum": [
+                      "thin",
+                      "medium",
+                      "thick"
+                    ]
+                  },
+                  "points": {
+                    "maxItems": 900,
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000
+                    }
+                  }
+                },
+                "required": [
+                  "strokeId",
+                  "colour",
+                  "width",
+                  "points"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Wipe all the writing off the video",
+        "x-access": {
+          "kind": "staff",
+          "permission": "lesson.present"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shows/{id}/ink/{strokeId}": {
+      "delete": {
+        "summary": "Rub out one line. The teacher any line; a student only their own",
+        "x-access": {
+          "kind": "signed-in"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "strokeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shows/{id}/pen": {
+      "put": {
+        "summary": "Give the pen to one student, or take it back",
+        "x-access": {
+          "kind": "staff",
+          "permission": "lesson.present"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "studentId": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "studentId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "classId": {
+                      "type": "string"
+                    },
+                    "className": {
+                      "type": "string"
+                    },
+                    "item": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "pdf",
+                            "image",
+                            "video",
+                            "audio",
+                            "link"
+                          ]
+                        },
+                        "classId": {
+                          "type": "string"
+                        },
+                        "className": {
+                          "type": "string"
+                        },
+                        "subject": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "chapter": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fileHash": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fileName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "size": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "mime": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "url": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "needsInternet": {
+                          "type": "boolean"
+                        },
+                        "byName": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "kind",
+                        "classId",
+                        "className",
+                        "subject",
+                        "chapter",
+                        "fileHash",
+                        "fileName",
+                        "size",
+                        "mime",
+                        "url",
+                        "needsInternet",
+                        "byName",
+                        "createdAt"
+                      ]
+                    },
+                    "byName": {
+                      "type": "string"
+                    },
+                    "playing": {
+                      "type": "boolean"
+                    },
+                    "position": {
+                      "type": "number"
+                    },
+                    "rate": {
+                      "type": "number"
+                    },
+                    "at": {
+                      "type": "number"
+                    },
+                    "now": {
+                      "type": "number"
+                    },
+                    "inkRev": {
+                      "default": 0,
+                      "type": "number"
+                    },
+                    "pen": {
+                      "default": null,
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "studentId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "studentId",
+                        "name"
+                      ]
+                    },
+                    "watching": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "classId",
+                    "className",
+                    "item",
+                    "byName",
+                    "playing",
+                    "position",
+                    "rate",
+                    "at",
+                    "now"
+                  ]
+                }
+              }
+            }
           },
           "default": {
             "description": "Error",
@@ -10335,6 +11067,45 @@
                     },
                     "now": {
                       "type": "number"
+                    },
+                    "inkRev": {
+                      "default": 0,
+                      "type": "number"
+                    },
+                    "pen": {
+                      "default": null,
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "studentId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "studentId",
+                        "name"
+                      ]
+                    },
+                    "watching": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name"
+                        ]
+                      }
                     }
                   },
                   "required": [

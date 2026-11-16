@@ -20,6 +20,8 @@ export const StudentRollLogin = z.object({
   classId: Id,
   sectionId: Id.nullable().default(null),
   rollNo: z.string().trim().min(1).max(16),
+  // Which student, when two in the class have this roll number: the one whose name was picked.
+  studentId: Id.optional(),
 });
 
 // Roll numbers are matched loosely: "05", "5" and " 5 " are the same student, and so are "a1" and "A1".

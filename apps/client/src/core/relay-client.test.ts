@@ -188,4 +188,23 @@ describe('RelayClient', () => {
     await vi.advanceTimersByTimeAsync(1000);
     expect(f.sent.filter((m) => m.t === 'join' && m.room === 'quiz:1')).toHaveLength(2);
   });
+
+  it('hands the small events of a joined room to whoever listens, and not after they stop', async () => {
+    const f = fakeRelay();
+    const r = attached(new RelayClient(f.platform, () => TARGET));
+    r.connect('tok');
+    await flush();
+    const states: unknown[] = [];
+    const events: unknown[] = [];
+    r.subscribe('show:7', (s) => states.push(s));
+    const deaf = r.listen('show:7', (e) => events.push(e));
+    f.push({ t: 'event', room: 'show:7', seq: 1, p: { kind: 'add' } });
+    f.push({ t: 'event', room: 'show:8', seq: 1, p: { kind: 'other room' } });
+    expect(events).toEqual([{ kind: 'add' }]);
+    expect(states).toEqual([]); // an event is not the room's state
+    deaf();
+    f.push({ t: 'event', room: 'show:7', seq: 2, p: { kind: 'add' } });
+    expect(events).toHaveLength(1);
+    r.detach();
+  });
 });

@@ -19,7 +19,7 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
   const [students, setStudents] = useState<Student[]>([]);
   const [newClass, setNewClass] = useState('');
   const [newSection, setNewSection] = useState('');
-  const [form, setForm] = useState({ name: '', rollNo: '', sectionId: '', pin: '' });
+  const [form, setForm] = useState({ name: '', rollNo: '', sectionId: '' });
   const [promoteTo, setPromoteTo] = useState('');
   const [promoted, setPromoted] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
@@ -72,10 +72,9 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
         classId,
         sectionId: form.sectionId || null,
         rollNo: form.rollNo.trim() || null,
-        ...(form.pin ? { pin: form.pin } : {}),
       },
     });
-    setForm({ name: '', rollNo: '', sectionId: form.sectionId, pin: '' });
+    setForm({ name: '', rollNo: '', sectionId: form.sectionId });
     await loadClass.run(classId);
     onChanged();
   });
@@ -91,12 +90,8 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
     onChanged();
   });
 
-  const makeCodes = useAction(async () => {
-    setSheet({ kind: 'codes', className, rows: await call('POST /api/v1/classes/:id/enrolment-codes', { params: { id: classId } }) });
-  });
-
   const makeCards = useAction(async () => {
-    setSheet({ kind: 'cards', className, rows: await call('POST /api/v1/classes/:id/cards', { params: { id: classId } }) });
+    setSheet({ className, rows: await call('POST /api/v1/classes/:id/cards', { params: { id: classId } }) });
     await loadClass.run(classId);
   });
 
@@ -142,8 +137,7 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
                 {sections.map((x) => <option key={x.id} value={x.id}>Section {x.name}</option>)}
               </Select>
             )}
-            <Field id="student-pin" className="w-36" label="PIN (optional)" inputMode="numeric" maxLength={4} value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, '') })} />
-            <Button type="submit" disabled={!form.name.trim() || (form.pin.length > 0 && form.pin.length !== 4)}>Add student</Button>
+            <Button type="submit" disabled={!form.name.trim()}>Add student</Button>
             <input
               ref={filePicker} type="file" accept=".csv,text/csv" className="hidden" aria-label="Class list file"
               onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void importFile.run(f); }}
@@ -167,7 +161,6 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
           {students.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-xl bg-secondary px-3 py-2">
               <span className="text-sm font-medium text-secondary-foreground">Whole class</span>
-              <Button variant="quiet" disabled={makeCodes.busy} onClick={() => makeCodes.run()}>First sign-in codes</Button>
               <ConfirmButton question="New cards stop old ones working. Go ahead?" onConfirm={() => void makeCards.run()}>Print sign-in cards</ConfirmButton>
               <span className="flex-1" />
               <Select aria-label="Move all to class" value={promoteTo} onChange={(e) => setPromoteTo(e.target.value)}>
@@ -192,7 +185,7 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
           </ul>
         </>
       )}
-      <ErrorNote message={loadClasses.error ?? loadClass.error ?? addClass.error ?? addSection.error ?? addStudent.error ?? importFile.error ?? makeCodes.error ?? makeCards.error ?? promote.error} />
+      <ErrorNote message={loadClasses.error ?? loadClass.error ?? addClass.error ?? addSection.error ?? addStudent.error ?? importFile.error ?? makeCards.error ?? promote.error} />
     </Panel>
   );
 }

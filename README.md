@@ -119,6 +119,38 @@ just ai-dev
 
 Dev data lives in `server/.data/`. `just reset-server` wipes it for a fresh start.
 
+### Logs
+
+The server keeps a diary, `events.log`, next to its database (`server/.data/events.log` in development). It has one plain line per event and never leaves the Server PC. Each line also shows in the server's own terminal.
+
+```bash
+just logs         # watch everything live
+just video-logs   # watch only "Show to class": the show itself and how each student's screen is doing
+```
+
+```
+2026-11-16 13:05:02  show.started  show="3f9a1c2e"  video="Fractions"  class="7"  by="Ravi K"
+2026-11-16 13:05:02  show.screen.opened  show="3f9a1c2e"  student="Asha"  pc="Lab PC 4"  at=0  behind=0
+2026-11-16 13:05:09  show.playing  show="3f9a1c2e"  at=0  speed=1
+2026-11-16 13:06:40  show.screen.waiting  show="3f9a1c2e"  student="Asha"  pc="Lab PC 4"  at=91.2  behind=4.5
+2026-11-16 13:09:31  show.stopped  show="3f9a1c2e"  video="Fractions"  class="7"  by="Ravi K"  screens=38
+```
+
+| Line | Meaning |
+|---|---|
+| `show.started` / `show.stopped` | The teacher started or stopped showing a video. `screens` is how many student screens spoke up. |
+| `show.playing` / `show.paused` | The teacher played, paused, jumped or changed speed. `at` is seconds into the video. |
+| `show.replaced` | Another show took the class. |
+| `show.gone_quiet` | The teacher's app went silent for 20 seconds, so the server ended the show. |
+| `show.screen.opened` / `ready` | The video came up on a student's screen / finished loading there. |
+| `show.screen.waiting` / `recovered` / `retrying` | The video stopped arriving on that PC / came back / was started afresh. |
+| `show.screen.silent` | That PC would not start sound by itself, so it plays without sound. |
+| `show.screen.failed` | That PC cannot play the video. |
+| `show.pen.given` / `show.pen.taken` | The teacher gave a student the pen to write on the video / took it back. |
+| `show.ink.started` / `show.ink.cleared` | Someone began writing on a clean video / the teacher wiped the writing. Single lines are not logged. |
+
+`behind` is how many seconds that screen is behind the teacher. A diary over 5 MB is put aside as `events.log.1` when the server starts.
+
 ## Test
 
 ```bash

@@ -18,7 +18,7 @@ import { SchoolSettings, StudentPrefs } from './settings.js';
 import { SlotInput, SlotQuery, StudentToday, Timetable } from './timetable.js';
 import { ContentItem, ContentQuery, FileChunk, FileChunkParams, FinishUpload, LinkInput, StartUpload, UploadChunk, UploadTicket } from './content.js';
 import { Sequence, SequenceInput, Todo } from './sequences.js';
-import { Show, ShowStart, ShowUpdate } from './shows.js';
+import { Ink, InkAdd, PenGive, ScreenReport, Show, ShowStart, ShowUpdate, StrokeParams } from './shows.js';
 import { CardRemarks, CardStatusChange, CardsQuery, MakeCards, MakeCardsResult, ReportCard } from './report-cards.js';
 import { Assignment, AssignmentDetail, AssignmentInput, MarkInput, MarkParams, MyWork, WorkAnswer } from './work.js';
 import { NewTeacher, SetPassword, StaffMember, UpdateTeacher } from './staff.js';
@@ -58,7 +58,7 @@ export const API = {
   'GET /api/v1/auth/student/classes': { summary: 'Classes for the sign-in screen', access: labPc, status: 200, response: z.array(SchoolClass) },
   'GET /api/v1/auth/student/roster': { summary: 'Student names in a class', access: labPc, query: ClassQuery, status: 200, response: z.array(RosterEntry) },
   'GET /api/v1/auth/student/sections': { summary: 'Sections of a class, for the sign-in screen', access: labPc, query: ClassQuery, status: 200, response: z.array(Section) },
-  'POST /api/v1/auth/student/roll': { summary: 'Student sign-in with class and roll number; adds the student the first time', access: labPc, body: StudentRollLogin, status: 201, response: SessionResult },
+  'POST /api/v1/auth/student/roll': { summary: 'Student sign-in with class and roll number; when two students share the roll number, also the one picked by name', access: labPc, body: StudentRollLogin, status: 201, response: SessionResult },
   'POST /api/v1/auth/student/pin': { summary: 'Student sign-in with PIN', access: labPc, body: StudentPinLogin, status: 201, response: SessionResult },
   'POST /api/v1/auth/student/qr': { summary: 'Student sign-in with QR card', access: labPc, body: StudentQrLogin, status: 201, response: SessionResult },
   'POST /api/v1/auth/student/enrol': { summary: 'First sign-in with an enrolment code; sets the PIN', access: labPc, body: StudentFirstLogin, status: 201, response: SessionResult },
@@ -144,6 +144,12 @@ export const API = {
   'POST /api/v1/shows': { summary: 'Start showing a library video to its class; it opens on their screens', access: staff('lesson.present'), body: ShowStart, status: 201, response: Show },
   'PUT /api/v1/shows/:id': { summary: "Say where the teacher's player is: playing or paused, and the place in the video", access: staff('lesson.present'), params: IdParams, body: ShowUpdate, status: 200, response: Show },
   'DELETE /api/v1/shows/:id': { summary: "Stop showing; the video leaves the class's screens", access: staff('lesson.present'), params: IdParams, status: 204 },
+  'POST /api/v1/shows/:id/screen': { summary: "A student's screen says how the video is going there (opened, waiting, failed…), for the server's diary", access: student, params: IdParams, body: ScreenReport, status: 204 },
+  'GET /api/v1/shows/:id/ink': { summary: 'All the writing on the video right now', access: { kind: 'signed-in' }, params: IdParams, status: 200, response: Ink },
+  'POST /api/v1/shows/:id/ink': { summary: 'Write on the video: more of one pen line. The teacher, or the student who has the pen', access: { kind: 'signed-in' }, params: IdParams, body: InkAdd, status: 204 },
+  'DELETE /api/v1/shows/:id/ink/:strokeId': { summary: 'Rub out one line. The teacher any line; a student only their own', access: { kind: 'signed-in' }, params: StrokeParams, status: 204 },
+  'DELETE /api/v1/shows/:id/ink': { summary: 'Wipe all the writing off the video', access: staff('lesson.present'), params: IdParams, status: 204 },
+  'PUT /api/v1/shows/:id/pen': { summary: 'Give the pen to one student, or take it back', access: staff('lesson.present'), params: IdParams, body: PenGive, status: 200, response: Show },
   'GET /api/v1/shows/mine': { summary: "What the teacher is showing the student's class right now, if anything", access: student, status: 200, response: Show.nullable() },
 
   // Playlists and learning paths (staff), and the student's "Things to do".

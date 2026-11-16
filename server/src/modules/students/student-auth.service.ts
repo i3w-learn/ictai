@@ -44,7 +44,7 @@ export class StudentAuthService {
   // server has not seen is added as a new student, with the name the student typed.
   // Nothing here waits, so two students sending the same roll number at once are handled one
   // after the other: the first is added and the second is told whose number it is.
-  withRoll(device: DevicePrincipal, who: { classId: string; sectionId: string | null; rollNo: string }): SessionResult {
+  withRoll(device: DevicePrincipal, who: { classId: string; sectionId: string | null; rollNo: string; studentId?: string }): SessionResult {
     if (!this.classes.classExists(who.classId)) throw notFound('Class');
     const sections = this.classes.listSections(who.classId);
     if (who.sectionId ? !sections.some((s) => s.id === who.sectionId) : sections.length > 0) {
@@ -52,17 +52,18 @@ export class StudentAuthService {
     }
 
     const same = this.students.roster(who.classId).filter((s) => sameRoll(s, who.sectionId, who.rollNo));
-    if (same.length > 1) throw new AppError(409, 'ROLL_NOT_UNIQUE', `More than one student has roll number ${who.rollNo}. Ask your teacher.`);
-
     // Only a student the teacher has added gets in. A roll number nobody has is turned away, not added.
-    const known = same[0];
-    if (!known) throw new AppError(404, 'ROLL_UNKNOWN', `Roll number ${who.rollNo} is not in this class. Ask your teacher to add you.`);
+    if (same.length === 0) throw new AppError(404, 'ROLL_UNKNOWN', `Roll number ${who.rollNo} is not in this class. Ask your teacher to add you.`);
+    // Class, roll number and full name together are one student (the teacher cannot add the same three
+    // twice). So when two students share a roll number, the name the student picked settles it. The
+    // name picked must be one of those with this roll number: it is never a way in as someone else.
+    const known = who.studentId ? same.find((s) => s.id === who.studentId) : same.length === 1 ? same[0] : undefined;
+    if (!known) throw new AppError(409, 'ROLL_NOT_UNIQUE', `More than one student has roll number ${who.rollNo}. Pick your name.`);
 
     const st = this.students.findActive(known.id)!;
-    // A PIN the teacher set still counts: the roll number alone never gets past it.
-    if (st.pin_hash) throw new AppError(401, 'PIN_REQUIRED', `${known.name} signs in with a PIN.`);
-
-    // One student, one lab PC at a time: without a PIN this is what stops a friend signing in as you.
+    // Class and roll number are all a student needs: a roll number belongs to one student of a class,
+    // which a name does not. An old PIN on the student does not stand in the way.
+    // One student, one lab PC at a time: this is what stops a friend signing in as you.
     const elsewhere = this.sessionRows.liveStudentDevice(st.id, device.deviceId, this.now());
     if (elsewhere) {
       throw new AppError(409, 'ALREADY_SIGNED_IN', `${st.name} is already signed in on ${this.devices.name(elsewhere) ?? 'another PC'}. Sign out there first.`);

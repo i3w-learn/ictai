@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import type { Section, Student } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, ConfirmButton, ErrorNote, Field, Note, Select, useAction } from '../../ui/ui';
+import { Button, ConfirmButton, ErrorNote, Field, Select, useAction } from '../../ui/ui';
 
-type Mode = 'view' | 'edit' | 'pin';
+type Mode = 'view' | 'edit';
 
-// One student's line in the console, with its own edit, PIN, code and delete actions.
+// One student's line in the console, with its own edit and delete actions. There is no PIN to set:
+// a student signs in with class, roll number and name.
 export function StudentRow({ student: s, className, sections, onChanged }: { student: Student; className: string; sections: Section[]; onChanged: () => Promise<void> }) {
   const { call } = useApp();
   const [mode, setMode] = useState<Mode>('view');
   const [edit, setEdit] = useState({ name: s.name, rollNo: s.rollNo ?? '', sectionId: s.sectionId ?? '' });
-  const [pin, setPin] = useState('');
-  const [code, setCode] = useState<string | null>(null);
 
   const save = useAction(async () => {
     await call('PATCH /api/v1/students/:id', {
@@ -20,17 +19,6 @@ export function StudentRow({ student: s, className, sections, onChanged }: { stu
     });
     setMode('view');
     await onChanged();
-  });
-
-  const savePin = useAction(async () => {
-    await call('PUT /api/v1/students/:id/pin', { params: { id: s.id }, body: { pin } });
-    setPin('');
-    setMode('view');
-    await onChanged();
-  });
-
-  const issueCode = useAction(async () => {
-    setCode((await call('POST /api/v1/students/:id/enrolment-code', { params: { id: s.id } })).code);
   });
 
   const remove = useAction(async () => {
@@ -47,12 +35,10 @@ export function StudentRow({ student: s, className, sections, onChanged }: { stu
         <span className="flex-1 font-medium">
           {s.name}
           <span className="ml-2 text-xs font-normal text-muted-foreground">
-            {[`Class ${className}${section ? section : ''}`, s.rollNo && `Roll ${s.rollNo}`, !s.hasPin && 'No PIN yet'].filter(Boolean).join(' · ')}
+            {[`Class ${className}${section ? section : ''}`, s.rollNo && `Roll ${s.rollNo}`].filter(Boolean).join(' · ')}
           </span>
         </span>
         <Button variant="quiet" onClick={() => setMode(mode === 'edit' ? 'view' : 'edit')}>Edit</Button>
-        <Button variant="quiet" onClick={() => setMode(mode === 'pin' ? 'view' : 'pin')}>Reset PIN</Button>
-        <Button variant="quiet" onClick={() => issueCode.run()}>First sign-in code</Button>
         <ConfirmButton question={`Delete ${s.name}?`} onConfirm={() => void remove.run()}>Delete</ConfirmButton>
       </div>
 
@@ -69,15 +55,7 @@ export function StudentRow({ student: s, className, sections, onChanged }: { stu
         </form>
       )}
 
-      {mode === 'pin' && (
-        <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); void savePin.run(); }}>
-          <Field id={`pin-${s.id}`} className="w-40" label="New PIN" inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
-          <Button type="submit" disabled={pin.length !== 4 || savePin.busy}>Save</Button>
-        </form>
-      )}
-
-      {code && <Note>First sign-in code for {s.name}: <b className="font-mono text-base text-primary">{code}</b></Note>}
-      <ErrorNote message={save.error ?? savePin.error ?? issueCode.error ?? remove.error} />
+      <ErrorNote message={save.error ?? remove.error} />
     </li>
   );
 }
