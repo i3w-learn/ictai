@@ -23,7 +23,8 @@ export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, refresh }: { refresh:
     setClasses(cls);
     setQuizzes(list);
   });
-  useEffect(() => { void load.run(); }, [classId, refresh]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, classId, refresh]);
 
   // If this quiz is already open (say, from another console), go back to that run.
   const startLab = useAction(async (quizId: string) => {

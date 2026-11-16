@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ClipboardList } from 'lucide-react';
-import type { Assignment, SchoolClass, Section } from '@ict/contracts';
+import type { Assignment, SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
+import { useSections } from '../home/useSections';
 import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, useAction } from '../../ui/ui';
 import { SubjectField } from '../quizzes/SubjectField';
 import { dayShort, endOfDay } from './work';
@@ -13,7 +14,6 @@ export function WorkPanel({ onOpen, refresh, onChanged }: { onOpen: (id: string)
   const { call } = useApp();
   const [work, setWork] = useState<Assignment[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [sections, setSections] = useState<Section[]>([]);
   const [form, setForm] = useState(BLANK);
 
   const load = useAction(async () => {
@@ -21,15 +21,11 @@ export function WorkPanel({ onOpen, refresh, onChanged }: { onOpen: (id: string)
     setWork(w);
     setClasses(c);
   });
-  useEffect(() => { void load.run(); }, [refresh]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, refresh]);
 
-  useEffect(() => {
-    setSections([]);
-    if (!form.classId) return;
-    let current = true;
-    call('GET /api/v1/sections', { query: { classId: form.classId } }).then((s) => { if (current) setSections(s); }, () => undefined);
-    return () => { current = false; };
-  }, [form.classId]);
+  // The sections offered follow the class picked.
+  const sections = useSections(form.classId);
 
   const max = Number(form.maxMarks);
   const problem = !form.title.trim() ? 'Type a title.' : !form.classId ? 'Pick a class.' : !(Number.isInteger(max) && max >= 1 && max <= 100) ? 'Marks: 1 to 100.' : null;

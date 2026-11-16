@@ -15,7 +15,8 @@ export function MyWork({ onBack }: { onBack: () => void }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const load = useAction(async () => { setWork(await call('GET /api/v1/work')); setLoaded(true); });
-  useEffect(() => { void load.run(); }, []);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow]);
 
   const open = work.find((w) => w.id === openId);
   if (open) return <OneWork work={open} onBack={() => setOpenId(null)} onChanged={(w) => setWork((list) => list.map((x) => (x.id === w.id ? w : x)))} />;

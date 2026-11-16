@@ -94,7 +94,7 @@ describe('joining the lab', () => {
 
   it('expires a device token after 90 unused days, and renews it while in use', async () => {
     const { app, clock, login, auth } = await testServer();
-    const token = await login('admin', 'admin-pass');
+    await login('admin', 'admin-pass');
     const device = (await app.inject(enrol())).json().token;
     const day = 24 * 3600_000;
 

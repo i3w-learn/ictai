@@ -63,7 +63,8 @@ export function ResultsPanel({ onStudent, refresh }: { onStudent: (studentId: st
     setClasses(cls);
     setData(overview);
   });
-  useEffect(() => { void load.run(); }, [classId, refresh]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, classId, refresh]);
 
   const download = () => {
     if (!data) return;

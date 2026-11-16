@@ -16,7 +16,8 @@ export function SettingsPanel({ onSaved }: { onSaved: (saved: SchoolSettings) =>
     setSaved(s);
     setForm(s);
   });
-  useEffect(() => { void load.run(); }, []);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow]);
 
   const save = useAction(async () => {
     const s = await call('PUT /api/v1/settings', { body: form! });

@@ -38,11 +38,12 @@ export function EnrolDevice() {
     }
   });
 
+  const { run: joinNow } = join;
   useEffect(() => {
-    void join.run();
-    const t = setInterval(() => void join.run(), 5000);
+    void joinNow();
+    const t = setInterval(() => void joinNow(), 5000);
     return () => clearInterval(t);
-  }, []);
+  }, [joinNow]);
 
   return (
     <Centered narrow>

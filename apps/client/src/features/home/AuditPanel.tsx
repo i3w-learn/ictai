@@ -64,7 +64,8 @@ export function AuditPanel() {
     setEntries((prev) => (before ? [...prev, ...page] : page));
     setMore(page.length === 100);
   });
-  useEffect(() => { void load.run(); }, []);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow]);
 
   return (
     <Panel title="Activity log" actions={<Button variant="quiet" onClick={() => load.run()}>Refresh</Button>}>

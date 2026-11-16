@@ -38,7 +38,8 @@ export function QuizEditor({ quizId, draft, onDone }: { quizId: string | null; d
     setMeta({ title: q.title, classId: q.classId, subject: q.subject ?? '', topic: q.topic ?? '', minutes: String(q.secondsPerQuestion / 60) });
     setQuestions(q.questions.map((x) => ({ ...x })));
   });
-  useEffect(() => { void load.run(); }, [quizId]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, quizId]);
 
   // Editing a question counts as checking it, so its AI note goes away.
   const update = (i: number, d: Partial<Draft>) => {

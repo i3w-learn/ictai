@@ -11,7 +11,8 @@ export function MarkWork({ id, onBack }: { id: string; onBack: () => void }) {
   const { call } = useApp();
   const [detail, setDetail] = useState<AssignmentDetail | null>(null);
   const load = useAction(async () => setDetail(await call('GET /api/v1/assignments/:id', { params: { id } })));
-  useEffect(() => { void load.run(); }, [id]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, id]);
 
   if (!detail) return <div className="mx-auto grid max-w-4xl gap-4"><div><Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button></div><ErrorNote message={load.error} /></div>;
   const a = detail.assignment;

@@ -20,7 +20,7 @@ export function useOpenQuiz(): { quiz: OpenRunForStudent | null; clear: () => vo
     ask();
     const t = setInterval(ask, ASK_EVERY_MS);
     return () => { alive = false; clearInterval(t); };
-  }, [asked]);
+  }, [call, asked]);
   return { quiz, clear: () => { setQuiz(null); setAsked((n) => n + 1); } };
 }
 

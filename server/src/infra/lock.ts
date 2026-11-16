@@ -14,7 +14,7 @@ export function acquireSingleInstance(file: string): () => void {
       if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
       const pid = Number(readFileSync(file, 'utf8'));
       // Our own pid means the lock was left by a killed copy that had the same pid (a fresh container).
-      if (pid && pid !== process.pid && isAlive(pid)) throw new Error(`Another ICT server is already running (pid ${pid}).`);
+      if (pid && pid !== process.pid && isAlive(pid)) throw new Error(`Another ICT server is already running (pid ${pid}).`, { cause: err });
       unlinkSync(file); // stale lock from a crash
     }
   }

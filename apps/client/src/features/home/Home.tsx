@@ -134,7 +134,7 @@ function StudentHome({ name }: { name: string }) {
     let alive = true;
     call('GET /api/v1/me/prefs').then((p) => { if (alive) { setPrefs(p); applyPrefs(p); } }, () => undefined);
     return () => { alive = false; applyPrefs(null); };
-  }, []);
+  }, [call]);
   // Shown at once, then saved. If saving fails the student still sees their choice and is told.
   const savePrefs = useAction(async (p: StudentPrefs) => {
     setPrefs(p);

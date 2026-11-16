@@ -21,7 +21,8 @@ export function StaffPanel({ classesChanged }: { classesChanged: number }) {
     setStaff(s);
     setClasses(c);
   });
-  useEffect(() => { void load.run(); }, [classesChanged]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, classesChanged]);
 
   const add = useAction(async () => {
     await call('POST /api/v1/staff', { body: { ...form, subjects: toSubjects(form.subjects) } });

@@ -27,7 +27,8 @@ export function ContentPanel({ onOpen, refresh, onChanged }: { onOpen: (item: Co
     setItems(i);
     setClasses(c);
   });
-  useEffect(() => { void load.run(); }, [refresh]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, refresh]);
 
   const filing = { title: form.title, classId: form.classId, subject: form.subject || null, chapter: form.chapter || null };
   const done = async () => {

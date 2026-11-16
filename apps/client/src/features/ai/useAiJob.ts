@@ -31,24 +31,26 @@ export function useAiJob<K extends 'quiz' | 'ask'>(kind: K) {
     // Pick up a request still in progress, e.g. after leaving this screen.
     setJob((cur) => cur ?? ofKind.find(isOpen) ?? null);
   });
-  useEffect(() => { void load.run(); }, []);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow]);
 
   const waiting = !!job && isOpen(job);
+  const jobId = job?.id;
   useEffect(() => {
-    if (!waiting || !job) return;
+    if (!waiting || !jobId) return;
     const timer = setInterval(() => {
-      call('GET /api/v1/ai/jobs/:id', { params: { id: job.id } }).then(
+      call('GET /api/v1/ai/jobs/:id', { params: { id: jobId } }).then(
         (j) => {
           setFailures(0);
           if (j.kind !== kind) return;
           setJob((cur) => acceptPoll(cur, j));
-          if (!isOpen(j)) void load.run();
+          if (!isOpen(j)) void loadNow();
         },
         () => setFailures((n) => n + 1),
       );
     }, POLL_MS);
     return () => clearInterval(timer);
-  }, [waiting, job?.id]);
+  }, [call, kind, loadNow, waiting, jobId]);
 
   // A new request from this screen: it becomes the one followed.
   const follow = (j: Job) => { setFailures(0); setJob(j); };

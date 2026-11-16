@@ -27,7 +27,7 @@ describe('app state', () => {
   });
 
   it('a console skips enrolment', () => {
-    let s = reducer(initialState, { type: 'loaded', settings: { role: 'console', server, device: null } });
+    const s = reducer(initialState, { type: 'loaded', settings: { role: 'console', server, device: null } });
     expect(phaseOf(s)).toBe('sign-in');
   });
 

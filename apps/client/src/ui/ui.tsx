@@ -1,4 +1,4 @@
-import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -104,20 +104,31 @@ export function ConfirmButton({ children, question, onConfirm }: { children: Rea
   );
 }
 
+// Holds the newest `value` for code that runs later (timers, replies from the server), so that code
+// never works with an old copy. It is set before any effect of the same render runs.
+export function useLatest<T>(value: T) {
+  const ref = useRef(value);
+  useLayoutEffect(() => { ref.current = value; });
+  return ref;
+}
+
 // Runs an async action with a busy flag and a readable error; the shared pattern for every form.
 export function useAction<A extends unknown[]>(fn: (...args: A) => Promise<void>) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const run = async (...args: A) => {
+  // `run` is one and the same function for as long as the screen lives, and always does the newest `fn`.
+  const latest = useLatest(fn);
+  const run = useCallback(async (...args: A) => {
     setBusy(true);
     setError(null);
     try {
-      await fn(...args);
+      await latest.current(...args);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
       setBusy(false);
     }
-  };
-  return { run, busy, error, clear: () => setError(null) };
+  }, [latest]);
+  const clear = useCallback(() => setError(null), []);
+  return { run, busy, error, clear };
 }

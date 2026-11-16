@@ -1,10 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { DEVICE_PING_MS, type RouteKey } from '@ict/contracts';
 import { ApiCallError, ApiClient, type CallInput, type CallOutput } from '../core/api-client';
 import { RelayClient, type RelayStatus } from '../core/relay-client';
 import { ServerLocator } from '../core/server-locator';
-import { SettingsStore, baseUrl, type ServerTarget } from '../core/settings';
+import { Current, SettingsStore, baseUrl, type ServerTarget } from '../core/settings';
 import type { Platform } from '../platform/platform';
+import { useLatest } from '../ui/ui';
 import { initialState, phaseOf, reducer, type Action, type AppState, type Role } from './app-state';
 
 // Which token a call carries: the signed-in person's, this device's, or none.
@@ -28,9 +29,11 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
   const [state, dispatch] = useReducer(reducer, initialState);
   const store = useMemo(() => new SettingsStore(platform), [platform]);
 
-  // The API client reads the latest server address through a ref, so it never goes stale.
-  const stateRef = useRef(state);
-  stateRef.current = state;
+  const stateRef = useLatest(state);
+  // The API and relay clients live outside React. They read the newest server address from here, so
+  // it never goes stale.
+  const serverNow = useMemo(() => new Current<ServerTarget | null>(null), []);
+  useLayoutEffect(() => serverNow.set(state.settings.server), [serverNow, state.settings.server]);
 
   useEffect(() => {
     void (async () => {
@@ -51,16 +54,16 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
     () =>
       locator &&
       new ApiClient(platform, locator, {
-        get: () => stateRef.current.settings.server,
+        get: serverNow.get,
         set: (server: ServerTarget) => dispatch({ type: 'server', server }),
       }),
-    [platform, locator],
+    [platform, locator, serverNow],
   );
 
   // One live socket while someone is signed in (spec 8.3).
   const relay = useMemo(
-    () => new RelayClient(platform, () => stateRef.current.settings.server, () => dispatch({ type: 'session', session: null })),
-    [platform],
+    () => new RelayClient(platform, serverNow.get, () => dispatch({ type: 'session', session: null })),
+    [platform, serverNow],
   );
   useEffect(() => {
     relay.attach();
@@ -98,7 +101,7 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
     } catch {
       // A dead session is handled by the next ordinary call.
     }
-  }, [api]);
+  }, [api, stateRef]);
   useEffect(() => {
     if (!sessionToken) return;
     const t = setInterval(() => void refreshMe(), 60_000);
@@ -112,42 +115,38 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
     void platform.setFileSource?.(server && sessionToken ? { baseUrl: baseUrl(server), certFp: server.certFp, token: sessionToken } : null)?.catch(() => undefined);
   }, [platform, server, sessionToken]);
 
-  const value = useMemo<AppContextValue>(() => {
-    const call: AppContextValue['call'] = async (key, input, credential = 'session') => {
-      if (!api) throw new ApiCallError(0, 'NO_SERVER', 'Choose this device’s role first.');
-      const s = stateRef.current;
-      const token = credential === 'session' ? s.session?.token : credential === 'device' ? s.settings.device?.token : undefined;
-      try {
-        return await api.call(key, input, token);
-      } catch (e) {
-        // An expired session sends the person back to sign-in. Only if it is still the session in use: a late
-        // refusal for the person who just signed out must not sign out the next person at the same PC.
-        if (e instanceof ApiCallError && e.status === 401 && credential === 'session' && stateRef.current.session?.token === token) {
-          dispatch({ type: 'session', session: null });
-        }
-        // A refusal may mean our picture of this person is stale; fetch a fresh one.
-        if (e instanceof ApiCallError && e.status === 403 && credential === 'session') void refreshMe();
-        throw e;
-      }
-    };
-    return {
-      state,
-      phase: phaseOf(state),
-      dispatch,
-      platform,
-      locator,
-      relay,
-      call,
-      signOut: async () => {
-        await call('POST /api/v1/auth/logout', {}).catch(() => undefined);
+  // `call` stays the same function while the app talks to the same server, so screens can safely name
+  // it in their effects without those effects running again on every change of state.
+  const call = useCallback<AppContextValue['call']>(async (key, input, credential = 'session') => {
+    if (!api) throw new ApiCallError(0, 'NO_SERVER', 'Choose this device’s role first.');
+    const s = stateRef.current;
+    const token = credential === 'session' ? s.session?.token : credential === 'device' ? s.settings.device?.token : undefined;
+    try {
+      return await api.call(key, input, token);
+    } catch (e) {
+      // An expired session sends the person back to sign-in. Only if it is still the session in use: a late
+      // refusal for the person who just signed out must not sign out the next person at the same PC.
+      if (e instanceof ApiCallError && e.status === 401 && credential === 'session' && stateRef.current.session?.token === token) {
         dispatch({ type: 'session', session: null });
-      },
-      resetDevice: async () => {
-        await store.clear();
-        dispatch({ type: 'reset' });
-      },
-    };
-  }, [state, platform, locator, relay, api, store, refreshMe]);
+      }
+      // A refusal may mean our picture of this person is stale; fetch a fresh one.
+      if (e instanceof ApiCallError && e.status === 403 && credential === 'session') void refreshMe();
+      throw e;
+    }
+  }, [api, stateRef, refreshMe]);
+  const signOut = useCallback(async () => {
+    await call('POST /api/v1/auth/logout', {}).catch(() => undefined);
+    dispatch({ type: 'session', session: null });
+  }, [call]);
+  const resetDevice = useCallback(async () => {
+    await store.clear();
+    dispatch({ type: 'reset' });
+  }, [store]);
+
+  const value = useMemo<AppContextValue>(
+    () => ({ state, phase: phaseOf(state), dispatch, platform, locator, relay, call, signOut, resetDevice }),
+    [state, platform, locator, relay, call, signOut, resetDevice],
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -162,25 +161,26 @@ export function useApp(): AppContextValue {
 // `error` is the server's message when we may not, or may no longer, see the room.
 export function useRelayRoom<T>(room: string | null): { state: T | null; error: string | null } {
   const { relay } = useApp();
-  const [state, setState] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // What arrived is kept with the room it came from, so on a change of room the old room's state is
+  // not shown for the new one.
+  const [got, setGot] = useState<{ relay: RelayClient; room: string; state: T | null; error: string | null } | null>(null);
   useEffect(() => {
-    setState(null);
-    setError(null);
     if (!room) return;
-    return relay.subscribe(room, (s) => { setState(s as T); setError(null); }, setError);
+    const kept = (g: typeof got) => (g && g.relay === relay && g.room === room ? g.state : null);
+    return relay.subscribe(
+      room,
+      (s) => setGot({ relay, room, state: s as T, error: null }),
+      (error) => setGot((g) => ({ relay, room, state: kept(g), error })),
+    );
   }, [relay, room]);
-  return { state, error };
+  const mine = got && got.relay === relay && got.room === room ? got : null;
+  return { state: mine?.state ?? null, error: mine?.error ?? null };
 }
 
 export function useRelayStatus(): RelayStatus {
   const { relay } = useApp();
-  const [status, setStatus] = useState(relay.getStatus());
-  useEffect(() => {
-    setStatus(relay.getStatus());
-    return relay.onStatus(setStatus);
-  }, [relay]);
-  return status;
+  const listen = useCallback((changed: () => void) => relay.onStatus(changed), [relay]);
+  return useSyncExternalStore(listen, () => relay.getStatus());
 }
 
 // A room's state that stays fresh even when the relay is down: relay pushes and REST replies
@@ -189,11 +189,17 @@ export function useLiveState<T>(room: string, initial: T | null, read: () => Pro
   const live = useRelayRoom<T>(room);
   const status = useRelayStatus();
   const [state, setState] = useState<T | null>(initial);
-  useEffect(() => { if (live.state) setState(live.state); }, [live.state]);
+  // A new push from the relay replaces what is shown.
+  const [pushed, setPushed] = useState(live.state);
+  if (live.state !== pushed) {
+    setPushed(live.state);
+    if (live.state) setState(live.state);
+  }
+  const readNow = useLatest(read);
   useEffect(() => {
     if (status === 'online') return;
-    const t = setInterval(() => void read().then(setState).catch(() => undefined), 3000);
+    const t = setInterval(() => void readNow.current().then(setState).catch(() => undefined), 3000);
     return () => clearInterval(t);
-  }, [status, room]);
+  }, [status, room, readNow]);
   return [state, setState, live.error] as const;
 }

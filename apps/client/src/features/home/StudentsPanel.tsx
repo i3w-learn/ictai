@@ -42,14 +42,19 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
     setStudents(list);
   });
 
-  useEffect(() => { void loadClasses.run(); }, []);
-  useEffect(() => { void loadClass.run(classId); setPromoted(null); setPromoteTo(''); setImported(null); }, [classId]);
+  const { run: loadClassesNow } = loadClasses;
+
+  useEffect(() => { void loadClassesNow(); }, [loadClassesNow]);
+  const { run: loadClassNow } = loadClass;
+  useEffect(() => { void loadClassNow(classId); }, [loadClassNow, classId]);
+  // Another class: what was said about the last one (moved, imported) no longer applies.
+  const pickClass = (id: string) => { setClassId(id); setPromoted(null); setPromoteTo(''); setImported(null); };
 
   const addClass = useAction(async () => {
     const c = await call('POST /api/v1/classes', { body: { name: newClass } });
     setNewClass('');
     await loadClasses.run();
-    setClassId(c.id);
+    pickClass(c.id);
     onChanged();
   });
 
@@ -108,7 +113,7 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
     <Panel title="Students">
       {sheet && <ClassSheet sheet={sheet} onClose={() => setSheet(null)} />}
       <div className="flex flex-wrap items-end gap-3">
-        <Select aria-label="Class" value={classId} onChange={(e) => setClassId(e.target.value)}>
+        <Select aria-label="Class" value={classId} onChange={(e) => pickClass(e.target.value)}>
           <option value="">Choose a class</option>
           {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
         </Select>

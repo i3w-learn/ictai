@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { SCHOOL_DAYS, type Period, type SchoolClass, type Section, type Slot, type Timetable } from '@ict/contracts';
+import { SCHOOL_DAYS, type Period, type SchoolClass, type Slot, type Timetable } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
+import { useSections } from '../home/useSections';
 import { Button, ErrorNote, Field, Panel, Select, cn, useAction } from '../../ui/ui';
 import { slotLabel } from './timetable';
 
@@ -14,7 +15,6 @@ export function TimetablePanel({ refresh }: { refresh: number }) {
   const scope = p?.kind === 'staff' ? p.classIds : null;
   const [grid, setGrid] = useState<Timetable | null>(null);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [sections, setSections] = useState<Section[]>([]);
   const [open, setOpen] = useState<Cell | null>(null);
   const [form, setForm] = useState({ classId: '', sectionId: '', subject: '' });
 
@@ -23,15 +23,11 @@ export function TimetablePanel({ refresh }: { refresh: number }) {
     setGrid(g);
     setClasses(c);
   });
-  useEffect(() => { void load.run(); }, [refresh]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, refresh]);
 
-  useEffect(() => {
-    setSections([]);
-    if (!form.classId) return;
-    let current = true;
-    call('GET /api/v1/sections', { query: { classId: form.classId } }).then((s) => { if (current) setSections(s); }, () => undefined);
-    return () => { current = false; };
-  }, [form.classId]);
+  // The sections offered follow the class picked.
+  const sections = useSections(form.classId);
 
   const slotAt = (day: number, periodId: string) => grid?.slots.find((s) => s.day === day && s.periodId === periodId);
   // A teacher limited to some classes cannot change a box another class holds.

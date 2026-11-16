@@ -3,7 +3,7 @@ import jsQR from 'jsqr';
 import { sameRoll, type RosterEntry, type SchoolClass, type Section } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
-import { Button, Card, Centered, ErrorNote, Field, PageTitle, useAction } from '../../ui/ui';
+import { Button, Card, Centered, ErrorNote, Field, PageTitle, useAction, useLatest } from '../../ui/ui';
 
 // Where the student sits in the school: their class and, when the class has sections, their section.
 type Place = { cls: SchoolClass; section: Section | null };
@@ -34,8 +34,7 @@ function Tile({ onClick, children }: { onClick: () => void; children: ReactNode 
 function CardCamera({ onRead }: { onRead: (text: string) => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(!navigator.mediaDevices?.getUserMedia);
-  const report = useRef(onRead);
-  report.current = onRead;
+  const report = useLatest(onRead);
 
   useEffect(() => {
     if (!navigator.mediaDevices?.getUserMedia) return;
@@ -67,7 +66,7 @@ function CardCamera({ onRead }: { onRead: (text: string) => void }) {
       clearInterval(timer);
       stream?.getTracks().forEach((t) => t.stop());
     };
-  }, []);
+  }, [report]);
 
   if (failed) return null;
   return <video ref={video} muted playsInline className="aspect-video w-full rounded-xl bg-secondary object-cover" />;
@@ -83,17 +82,18 @@ export function StudentSignIn() {
   const [pin, setPin] = useState('');
 
   const loadClasses = useAction(async () => setClasses(await call('GET /api/v1/auth/student/classes', {}, 'device')));
+  const { run: loadClassesNow } = loadClasses;
   useEffect(() => {
-    void loadClasses.run();
-  }, []);
+    void loadClassesNow();
+  }, [loadClassesNow]);
   // A lab PC is often switched on before the server PC. Keep asking until the classes arrive,
   // so the screen fills in by itself and nobody has to restart the app.
   const waiting = step.at === 'class' && classes.length === 0;
   useEffect(() => {
     if (!waiting) return;
-    const t = setInterval(() => void loadClasses.run(), 5000);
+    const t = setInterval(() => void loadClassesNow(), 5000);
     return () => clearInterval(t);
-  }, [waiting]);
+  }, [loadClassesNow, waiting]);
 
   const openClass = useAction(async (cls: SchoolClass) => {
     const sections = await call('GET /api/v1/auth/student/sections', { query: { classId: cls.id } }, 'device');

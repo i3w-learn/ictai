@@ -14,7 +14,8 @@ export function ThingsToDo({ onBack, onWork }: { onBack: () => void; onWork: () 
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState<ContentItem | null>(null);
   const load = useAction(async () => { setTodo(await call('GET /api/v1/todo')); setLoaded(true); });
-  useEffect(() => { void load.run(); }, []);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow]);
 
   const start = useAction(async (step: TodoStep) => {
     if (step.kind === 'work') return onWork();

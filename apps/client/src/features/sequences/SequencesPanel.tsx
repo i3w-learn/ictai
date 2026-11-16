@@ -25,7 +25,8 @@ export function SequencesPanel({ refresh }: { refresh: number }) {
     const [s, c, lib, w] = await Promise.all([call('GET /api/v1/sequences'), call('GET /api/v1/classes'), call('GET /api/v1/content', { query: {} }), call('GET /api/v1/assignments')]);
     setList(s); setClasses(c); setLibrary(lib); setWork(w);
   });
-  useEffect(() => { void load.run(); }, [refresh]);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow, refresh]);
 
   // What can be added as a step: this class's library, and for a path its work too.
   const choices: Draft[] = [

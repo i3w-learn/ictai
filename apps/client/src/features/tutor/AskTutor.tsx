@@ -20,19 +20,21 @@ export function AskTutor({ onBack }: { onBack: () => void }) {
     // Pick up a question still being answered, e.g. after leaving this screen.
     setJob((cur) => cur ?? m.jobs.find((j) => j.status === 'queued' || j.status === 'running') ?? null);
   });
-  useEffect(() => { void load.run(); }, []);
+  const { run: loadNow } = load;
+  useEffect(() => { void loadNow(); }, [loadNow]);
 
   const waiting = job?.status === 'queued' || job?.status === 'running';
+  const jobId = job?.id;
   useEffect(() => {
-    if (!waiting || !job) return;
+    if (!waiting || !jobId) return;
     const timer = setInterval(() => {
-      call('GET /api/v1/ai/tutor/:id', { params: { id: job.id } }).then((j) => {
+      call('GET /api/v1/ai/tutor/:id', { params: { id: jobId } }).then((j) => {
         setJob(j);
-        if (j.status === 'done' || j.status === 'failed') void load.run();
+        if (j.status === 'done' || j.status === 'failed') void loadNow();
       }, () => {});
     }, 3000);
     return () => clearInterval(timer);
-  }, [waiting, job?.id]);
+  }, [call, loadNow, waiting, jobId]);
 
   const ask = useAction(async () => {
     try {

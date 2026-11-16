@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ContentItem } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
+import { useLatest } from '../../ui/ui';
 import { fetchFile } from './files';
 
 // The kinds whose players can ask for a file part by part and say when that fails.
@@ -20,18 +21,21 @@ export function useFileUrl(item: Pick<ContentItem, 'id' | 'kind' | 'fileHash' | 
   const [progress, setProgress] = useState<[number, number]>([0, 1]);
   const [error, setError] = useState<string | null>(null);
 
+  // The file is fetched afresh only for a different file, not each time the same one is handed in again.
+  const itemNow = useLatest(item);
+  const { id, fileHash } = item;
   useEffect(() => {
-    if (!item.fileHash || stream) return;
+    if (!fileHash || stream) return;
     let stopped = false;
     let made: string | null = null;
     const api = { chunk: (hash: string, index: number) => call('GET /api/v1/files/:hash/chunks/:index', { params: { hash, index } }) };
-    fetchFile(api, item, (d, t) => { if (!stopped) setProgress([d, t]); }, () => stopped).then(
+    fetchFile(api, itemNow.current, (d, t) => { if (!stopped) setProgress([d, t]); }, () => stopped).then(
       (blob) => { if (blob && !stopped) { made = URL.createObjectURL(blob); setFetched(made); } },
       (e) => { if (!stopped) setError(e instanceof Error ? e.message : 'Could not open this file.'); },
     );
     // Leaving the screen stops the fetch and frees the memory the file took.
     return () => { stopped = true; if (made) URL.revokeObjectURL(made); };
-  }, [item.id, stream]);
+  }, [call, itemNow, id, fileHash, stream]);
 
   return { url: stream ?? fetched, percent: Math.round((progress[0] / progress[1]) * 100), error, onError: stream ? () => setStreamFailed(true) : undefined };
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react';
 import { Maximize, Minimize, Pause, Play, RotateCcw, RotateCw, Volume2, VolumeX } from 'lucide-react';
 import { Button, cn } from '../../ui/ui';
 import { clock } from './files';
@@ -100,11 +100,7 @@ export function VideoPlayer({ src, title, onError, onState, peek }: { src: strin
     hide.current = window.setTimeout(() => setAwake(false), HIDE_AFTER_MS);
   }, []);
   useEffect(() => () => window.clearTimeout(hide.current), []);
-  useEffect(() => {
-    if (!peek) return;
-    peek.current = () => (video.current ? stateOf(video.current) : { playing: false, position: 0, rate: 1 });
-    return () => { peek.current = null; };
-  }, [peek]);
+  useImperativeHandle(peek, () => () => (video.current ? stateOf(video.current) : { playing: false, position: 0, rate: 1 }), []);
   const said = (e: { currentTarget: HTMLVideoElement }) => onState?.(stateOf(e.currentTarget));
 
   useEffect(() => {
@@ -124,8 +120,10 @@ export function VideoPlayer({ src, title, onError, onState, peek }: { src: strin
     }
     wake();
   };
-  const jump = (by: number) => { const v = video.current; if (!v) return; v.currentTime = Math.min(Math.max(0, v.currentTime + by), v.duration || 0); wake(); };
-  const seek = (to: number) => { const v = video.current; if (!v) return; v.currentTime = to; setTime(to); wake(); };
+  // A jump is said at once, not when the video has finished getting there: a paused video that has to
+  // fetch the new place may take seconds to finish, and the class's screens should not wait for that.
+  const jump = (by: number) => { const v = video.current; if (!v) return; v.currentTime = Math.min(Math.max(0, v.currentTime + by), v.duration || 0); wake(); said({ currentTarget: v }); };
+  const seek = (to: number) => { const v = video.current; if (!v) return; v.currentTime = to; setTime(to); wake(); said({ currentTarget: v }); };
   const sound = () => { const v = video.current; if (v) v.muted = !v.muted; wake(); };
   const faster = () => { const v = video.current; if (v) v.playbackRate = SPEEDS[(SPEEDS.indexOf(v.playbackRate) + 1) % SPEEDS.length]!; wake(); };
   const fullScreen = () => {
