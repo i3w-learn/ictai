@@ -198,6 +198,7 @@ mod e2e {
     /// show ends; once that stops too, the show ends, and the repeating gives up by itself.
     /// Needs a server at ICT_E2E_BASE with a staff sign-in (ICT_E2E_USER / ICT_E2E_PASSWORD) and a
     /// video in its library (skipped without them).
+    /// Run these one at a time (`-- --test-threads=1`): they show to the same class, and a class has one show.
     #[tokio::test]
     async fn e2e_keep_alive_holds_a_show_while_the_page_is_silent() {
         let (Ok(base), Ok(user), Ok(password)) = (std::env::var("ICT_E2E_BASE"), std::env::var("ICT_E2E_USER"), std::env::var("ICT_E2E_PASSWORD")) else { return };
@@ -228,5 +229,66 @@ mod e2e {
         tokio::time::sleep(Duration::from_secs(27)).await;
         assert_eq!(send(&clients, beat.clone()).await.unwrap().status, 404);
         tokio::time::timeout(Duration::from_secs(5), repeat(&clients, beat, Duration::from_secs(1))).await.expect("gives up once the show is gone");
+    }
+
+    /// The other ways a show's "still here" should end or carry on: the class is given another
+    /// show (stop), the teacher signs out (stop), the server cannot be reached for a while (carry
+    /// on: it may come back), and a second repeat for the same show does no harm. Same needs as above.
+    #[tokio::test]
+    async fn e2e_keep_alive_stops_or_carries_on_as_it_should() {
+        let (Ok(base), Ok(user), Ok(password)) = (std::env::var("ICT_E2E_BASE"), std::env::var("ICT_E2E_USER"), std::env::var("ICT_E2E_PASSWORD")) else { return };
+        if !enabled() {
+            return;
+        }
+        let fp = probe(&base).await.unwrap().cert_fp;
+        let clients = Arc::new(HttpClients::default());
+        let req = |base: &str, method: &str, path: &str, body: Option<Value>, token: Option<&str>| ApiRequest {
+            base_url: base.into(), cert_fp: fp.clone(), method: method.into(), path: path.into(), body, token: token.map(String::from), timeout_ms: Some(2000),
+        };
+        let sign_in = || async {
+            let r = send(&clients, req(&base, "POST", "/api/v1/auth/staff", Some(serde_json::json!({ "username": user, "password": password })), None)).await.unwrap();
+            r.body.unwrap()["token"].as_str().unwrap().to_string()
+        };
+        let token = sign_in().await;
+        let library = send(&clients, req(&base, "GET", "/api/v1/content", None, Some(&token))).await.unwrap().body.unwrap();
+        let video = library.as_array().unwrap().iter().find(|c| c["kind"] == "video").expect("a video in the library")["id"].clone();
+        let start = |token: String| { let (clients, r) = (clients.clone(), req(&base, "POST", "/api/v1/shows", Some(serde_json::json!({ "contentId": video })), Some(&token))); async move { send(&clients, r).await.unwrap().body.unwrap()["id"].as_str().unwrap().to_string() } };
+        let every = Duration::from_millis(1000);
+        let gives_up = |beat: ApiRequest| { let clients = clients.clone(); async move { tokio::time::timeout(Duration::from_secs(6), repeat(&clients, beat, every)).await.is_ok() } };
+
+        // 1. The class is given another show: the first one is over (410), so its repeating stops.
+        let first = start(token.clone()).await;
+        let first_beat = req(&base, "POST", &format!("/api/v1/shows/{first}/beat"), None, Some(&token));
+        assert_eq!(send(&clients, first_beat.clone()).await.unwrap().status, 204);
+        let second = start(token.clone()).await;
+        assert_eq!(send(&clients, first_beat.clone()).await.unwrap().status, 410);
+        assert!(gives_up(first_beat).await, "stops when the show was replaced");
+
+        // 2. Two repeats for the same show at once (the page asked twice): the show just stays on.
+        let second_beat = req(&base, "POST", &format!("/api/v1/shows/{second}/beat"), None, Some(&token));
+        let twice: Vec<_> = (0..2).map(|_| tokio::spawn({ let (clients, beat) = (clients.clone(), second_beat.clone()); async move { repeat(&clients, beat, every).await } })).collect();
+        tokio::time::sleep(Duration::from_secs(4)).await;
+        assert!(twice.iter().all(|t| !t.is_finished()));
+        twice.iter().for_each(|t| t.abort());
+        assert_eq!(send(&clients, second_beat.clone()).await.unwrap().status, 204);
+
+        // 3. The server cannot be reached (nothing listens there): it keeps trying, it does not give up.
+        let nowhere = req("https://127.0.0.1:9", "POST", &format!("/api/v1/shows/{second}/beat"), None, Some(&token));
+        assert!(send(&clients, nowhere.clone()).await.is_err());
+        assert!(!gives_up(nowhere).await, "carries on while the server is away");
+
+        // 4. Someone who is not showing it (another sign-in of a student would be 403; a made-up show is 404).
+        let unknown = req(&base, "POST", "/api/v1/shows/00000000-0000-4000-8000-000000000000/beat", None, Some(&token));
+        assert_eq!(send(&clients, unknown.clone()).await.unwrap().status, 404);
+        assert!(gives_up(unknown).await, "stops for a show the server does not know");
+
+        // 5. The teacher signs out: her token is refused (401), so the repeating stops.
+        assert_eq!(send(&clients, req(&base, "POST", "/api/v1/auth/logout", None, Some(&token))).await.unwrap().status, 204);
+        assert_eq!(send(&clients, second_beat.clone()).await.unwrap().status, 401);
+        assert!(gives_up(second_beat).await, "stops once signed out");
+
+        // Tidy up: end the show that is still on, as a fresh sign-in.
+        let again = sign_in().await;
+        let _ = send(&clients, req(&base, "DELETE", &format!("/api/v1/shows/{second}"), None, Some(&again))).await;
     }
 }
