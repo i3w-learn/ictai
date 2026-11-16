@@ -1,6 +1,7 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
+import { fileEventLog } from './core/event-log.js';
 import { createContainer } from './container.js';
 import { systemClock } from './core/clock.js';
 import { openDb } from './infra/db/index.js';
@@ -24,7 +25,9 @@ async function main() {
   const db = openDb(config.dbFile);
   // Spec 9: the AI runtime starts on the first request, not at boot, so a missing kit never blocks the server.
   const runtime = new AiRuntime(config.ai, nodeSpawner(join(config.dataDir, 'ai.log')));
-  const c = createContainer({ db, now: systemClock, version: config.version, dataDir: config.dataDir, ai: { runtime, llm: new LlamaServerLlm(runtime) } });
+  // The diary of what happens in the lab (see `just logs`). Each line also goes to this terminal.
+  const log = fileEventLog(join(config.dataDir, 'events.log'), systemClock, (line) => console.log(line));
+  const c = createContainer({ db, now: systemClock, version: config.version, dataDir: config.dataDir, ai: { runtime, llm: new LlamaServerLlm(runtime) }, log });
   c.aiQueue.start();
   // A class is told within seconds when the teacher showing them a video has gone quiet.
   setInterval(() => c.shows.sweep(), 5_000).unref();

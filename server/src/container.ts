@@ -49,6 +49,7 @@ import { AnswerGenerator } from './modules/ai/answer-generator.js';
 import { TutorGenerator } from './modules/ai/tutor-generator.js';
 import { JobQueue, type JobRunners } from './modules/ai/job-queue.js';
 import { JobRepository } from './modules/ai/job.repository.js';
+import type { EventLog } from './core/event-log.js';
 import type { Llm } from './modules/ai/llm-client.js';
 import { QuizGenerator } from './modules/ai/quiz-generator.js';
 import { SchoolIdentity } from './modules/system/school-identity.js';
@@ -67,6 +68,8 @@ export function createContainer(opts: {
   // Where uploaded files are kept. Left out in tests, which then use a folder that is thrown away.
   dataDir?: string;
   ai?: { runtime: AiRuntimeInfo & { ensureReady?(): Promise<void> }; llm: Llm };
+  // The server's diary (events.log). Left out in tests, which then write nothing.
+  log?: EventLog;
 }) {
   const { db, now } = opts;
 
@@ -127,7 +130,7 @@ export function createContainer(opts: {
     timetable,
     work: new WorkService(now, repos.work, repos.classes, audit),
     content: new ContentService(now, repos.content, new FileStore(opts.dataDir ?? mkdtempSync(join(tmpdir(), 'ict-files-'))), repos.classes, audit),
-    shows: new ShowService(now, repos.content, relay, audit),
+    shows: new ShowService(now, repos.content, relay, audit, opts.log, (id) => repos.devices.name(id), (studentId) => repos.sessions.liveStudentDevice(studentId, '', now()) !== undefined),
     sequences: new SequenceService(now, repos.sequences, repos.content, repos.work, repos.classes, audit),
     reportCards: new ReportCardService(now, repos.reportCards, repos.classes, repos.students, results, repos.work, audit),
     staffAuth: new StaffAuthService(now, repos.staff, sessions, new FailureLimiter(now), audit),

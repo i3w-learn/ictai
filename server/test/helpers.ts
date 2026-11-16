@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type WebSocket from 'ws';
 import { buildApp } from '../src/app.js';
 import { createContainer } from '../src/container.js';
+import { eventLine, type EventLog } from '../src/core/event-log.js';
 import { openDb } from '../src/infra/db/index.js';
 import type { Llm } from '../src/modules/ai/llm-client.js';
 
@@ -13,7 +14,10 @@ export async function testServer(opts: { ai?: { llm: Llm; installed: boolean } }
     llm: opts.ai.llm,
     runtime: { installed: () => (opts.ai!.installed ? { name: 'Test model' } : null), isReady: () => opts.ai!.installed },
   };
-  const c = createContainer({ db, now: () => clock.t, version: 'test', ai });
+  // Every line the server would write in its diary (events.log), as "event key=value …" without the time.
+  const diary: string[] = [];
+  const log: EventLog = (event, detail) => diary.push(eventLine(0, event, detail).split('  ').slice(1).join(' '));
+  const c = createContainer({ db, now: () => clock.t, version: 'test', ai, log });
   c.aiQueue.start();
   c.identity.setCertFingerprint('AA:BB');
   await c.staffAuth.upsertAccount({ username: 'admin', password: 'admin-pass', role: 'super_admin' });
@@ -40,7 +44,7 @@ export async function testServer(opts: { ai?: { llm: Llm; installed: boolean } }
     return res.json().token;
   }
 
-  return { app, db, clock, c, login, auth, enrolDevice };
+  return { app, db, clock, c, login, auth, enrolDevice, diary };
 }
 
 // Collects every message a socket receives, and lets a test wait for the next one of a type.

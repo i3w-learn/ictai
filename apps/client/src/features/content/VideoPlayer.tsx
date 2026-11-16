@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import { Maximize, Minimize, Pause, Play, RotateCcw, RotateCw, Volume2, VolumeX } from 'lucide-react';
 import { Button, cn } from '../../ui/ui';
 import { clock } from './files';
@@ -34,7 +34,13 @@ type FullscreenBox = HTMLDivElement & { webkitRequestFullscreen?: () => void };
 // The picture is kept short enough that the controls under it are always on screen without scrolling.
 // Keys: Space plays and pauses, the arrows jump 10 seconds, M is sound, F is full screen.
 // `onState` hears every play, pause, jump and change of speed; `peek` lets the screen ask at any time.
-export function VideoPlayer({ src, title, onError, onState, peek }: { src: string; title: string; onError?: () => void; onState?: (s: PlayerState) => void; peek?: MutableRefObject<(() => PlayerState) | null> }) {
+// `layer` is laid over the picture (the writing a teacher does on the video); `onAspect` tells the
+// screen the picture's shape for it, and `pause` lets the screen pause the video. `tools` sit in the
+// row of controls. `plain` takes the big play button off the picture, out of the way of a pen.
+export function VideoPlayer({ src, title, onError, onState, peek, pause, layer, onAspect, tools, plain }: {
+  src: string; title: string; onError?: () => void; onState?: (s: PlayerState) => void; peek?: MutableRefObject<(() => PlayerState) | null>;
+  pause?: MutableRefObject<(() => void) | null>; layer?: ReactNode; onAspect?: (aspect: number) => void; tools?: ReactNode; plain?: boolean;
+}) {
   const video = useRef<HTMLVideoElement>(null);
   const box = useRef<FullscreenBox>(null);
   const hide = useRef<number | undefined>(undefined);
@@ -101,6 +107,7 @@ export function VideoPlayer({ src, title, onError, onState, peek }: { src: strin
   }, []);
   useEffect(() => () => window.clearTimeout(hide.current), []);
   useImperativeHandle(peek, () => () => (video.current ? stateOf(video.current) : { playing: false, position: 0, rate: 1 }), []);
+  useImperativeHandle(pause, () => () => video.current?.pause(), []);
   const said = (e: { currentTarget: HTMLVideoElement }) => onState?.(stateOf(e.currentTarget));
 
   useEffect(() => {
@@ -178,6 +185,7 @@ export function VideoPlayer({ src, title, onError, onState, peek }: { src: strin
           onLoadedMetadata={(e) => {
             known.current = true;
             setWaiting(false);
+            if (e.currentTarget.videoWidth && e.currentTarget.videoHeight) onAspect?.(e.currentTarget.videoWidth / e.currentTarget.videoHeight);
             // A fresh start after a fault carries on from the same place, playing if it was playing.
             if (resumeAt.current > 0) e.currentTarget.currentTime = resumeAt.current;
             if (resumePlaying.current) void e.currentTarget.play().catch(() => undefined);
@@ -198,7 +206,8 @@ export function VideoPlayer({ src, title, onError, onState, peek }: { src: strin
         />
 
         {/* The one loud thing: a big button in the middle whenever the video is not playing. */}
-        {!playing && !waiting && !stuck && (
+        {layer}
+        {!playing && !waiting && !stuck && !plain && (
           <button type="button" onClick={toggle} aria-label={ended ? 'Play again' : 'Play'} className="absolute top-1/2 left-1/2 grid size-20 -translate-x-1/2 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-white">
             {ended ? <RotateCcw className="size-8" strokeWidth={2.25} /> : <Play className="ml-1 size-9 fill-current" strokeWidth={0} />}
           </button>
@@ -220,11 +229,12 @@ export function VideoPlayer({ src, title, onError, onState, peek }: { src: strin
           onChange={(e) => seek(Number(e.target.value))} onKeyDown={(e) => { if (e.key.startsWith('Arrow')) e.preventDefault(); }}
           style={{ '--played': pct(time), '--loaded': pct(Math.max(loaded, time)) } as React.CSSProperties}
         />
-        <div className="flex items-center gap-1 text-white">
+        <div className="flex flex-wrap items-center gap-1 text-white">
           <button type="button" className={Round} onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}>{playing ? <Pause className="size-5 fill-current" strokeWidth={0} /> : <Play className="size-5 fill-current" strokeWidth={0} />}</button>
           <button type="button" className={Round} onClick={() => jump(-JUMP)} aria-label={`Back ${JUMP} seconds`}><RotateCcw className="size-5" /></button>
           <button type="button" className={Round} onClick={() => jump(JUMP)} aria-label={`Forward ${JUMP} seconds`}><RotateCw className="size-5" /></button>
           <span className="px-2 text-sm font-medium tabular-nums">{clock(time)} <span className="text-white/60">/ {clock(duration)}</span></span>
+          {tools}
           <span className="flex-1" />
           <button type="button" className={cn(Round, 'w-auto min-w-11 px-3 text-sm font-semibold tabular-nums')} onClick={faster} aria-label={`Speed ${speed} times. Press to change`}>{speed}×</button>
           <button type="button" className={Round} onClick={sound} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>{muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}</button>

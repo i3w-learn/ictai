@@ -1,8 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { SHOW_STALE_MS, showRoom, type ContentItem, type Show, type ShowUpdate, type StaffPrincipal, type StudentPrincipal } from '@ict/contracts';
+import {
+  INK_POINTS_MAX, INK_STROKES_MAX, SCREEN_REPORTS_MAX, SHOW_STALE_MS, showRoom,
+  type ContentItem, type Ink, type InkAdd, type InkEvent, type InkStroke, type Principal, type ScreenReport, type Show, type ShowUpdate, type StaffPrincipal, type StudentPrincipal,
+} from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import type { Clock } from '../../core/clock.js';
 import { AppError, notFound } from '../../core/errors.js';
+import { noEventLog, type EventLog } from '../../core/event-log.js';
 import { scopeOf, seesClass, seesQuiz } from '../../core/scope.js';
 import type { Relay } from '../../relay/relay.js';
 import type { ContentRepository } from '../content/content.repository.js';
@@ -18,6 +22,14 @@ interface Live {
   at: number;
   // When the teacher's app last spoke. A show that has gone quiet is over.
   heardAt: number;
+  // How many reports each student's screen has made, so one broken PC cannot flood the diary.
+  reports: Map<string, number>;
+  // The students whose screens have the video open, by id.
+  watching: Map<string, string>;
+  // The writing on the video, oldest line first, and the student who holds the pen, if any.
+  strokes: Map<string, InkStroke>;
+  inkRev: number;
+  pen: { studentId: string; name: string } | null;
 }
 
 // "Show to class". One show per class at a time, kept in memory: it is about the lesson going on now,
@@ -35,12 +47,17 @@ export class ShowService {
     private readonly content: ContentRepository,
     private readonly relay: Relay,
     private readonly audit: AuditLog,
+    // The server's diary (events.log), and the name of a lab PC for it.
+    private readonly log: EventLog = noEventLog,
+    private readonly pcName: (deviceId: string) => string | undefined = () => undefined,
+    // Is this student signed in on a lab PC right now? A student who has left cannot hold the pen.
+    private readonly signedIn: (studentId: string) => boolean = () => true,
   ) {
     relay.register({
       prefix: 'show',
       // A student listens to their own class only; a teacher to the classes she teaches.
       canJoin: (p, classId) => (p.kind === 'student' ? p.classId === classId : p.kind === 'staff' && seesClass(scopeOf(p), classId)),
-      snapshot: (_p, classId) => this.forClass(classId),
+      snapshot: (p, classId) => this.forClass(classId, p.kind === 'staff'),
     });
   }
 
@@ -52,23 +69,33 @@ export class ShowService {
     if (item.kind !== 'video') throw new AppError(400, 'BAD_REQUEST', 'Only a video can be shown to the class.');
     const now = this.now();
     const before = this.byClass.get(item.classId);
-    if (before) this.markOver(before.id);
-    const live: Live = { id: randomUUID(), item, by: actor.userId, byName: actor.displayName, playing: false, position: 0, rate: 1, at: now, heardAt: now };
+    if (before) {
+      this.markOver(before.id);
+      this.log('show.replaced', this.words(before));
+    }
+    const live: Live = { id: randomUUID(), item, by: actor.userId, byName: actor.displayName, playing: false, position: 0, rate: 1, at: now, heardAt: now, reports: new Map(), watching: new Map(), strokes: new Map(), inkRev: 0, pen: null };
     this.byClass.set(item.classId, live);
     this.audit.record({ kind: 'staff', id: actor.userId }, 'show.start', item.id, { title: item.title, classId: item.classId });
+    this.log('show.started', this.words(live));
     this.relay.notify(showRoom(item.classId));
-    return this.view(live);
+    return this.view(live, true);
   }
 
   // Only the teacher who is showing can move it. Every call also counts as "still here".
   update(actor: StaffPrincipal, id: string, input: ShowUpdate): Show {
     const live = this.mine(actor, id);
     const now = this.now();
-    const changed = live.playing !== input.playing || live.rate !== input.rate || Math.abs(expected(live, now) - input.position) > 0.5;
+    const jumped = Math.abs(expected(live, now) - input.position) > 0.5;
+    const changed = live.playing !== input.playing || live.rate !== input.rate || jumped;
     Object.assign(live, { playing: input.playing, position: input.position, rate: input.rate, at: now, heardAt: now });
     // A plain "still here" with nothing new is not sent on to 40 screens.
-    if (changed) this.relay.notify(showRoom(live.item.classId));
-    return this.view(live);
+    if (changed) {
+      this.log(input.playing ? 'show.playing' : 'show.paused', { show: short(live.id), at: seconds(input.position), speed: input.rate });
+      // The writing was about the moment the video stood at. Once it plays or jumps, it goes.
+      if (input.playing || jumped) this.wipe(live);
+      this.relay.notify(showRoom(live.item.classId));
+    }
+    return this.view(live, true);
   }
 
   stop(actor: StaffPrincipal, id: string) {
@@ -76,21 +103,101 @@ export class ShowService {
     this.markOver(live.id);
     this.end(live);
     this.audit.record({ kind: 'staff', id: actor.userId }, 'show.stop', live.item.id, { title: live.item.title });
+    this.log('show.stopped', this.words(live));
+  }
+
+  // A student's screen says how the video is going there. Only written down: it changes nothing.
+  // A report about a show that is already over is dropped without fuss.
+  screen(me: StudentPrincipal, id: string, input: ScreenReport) {
+    const live = this.byClass.get(me.classId);
+    if (!live || live.id !== id) return;
+    const said = live.reports.get(me.studentId) ?? 0;
+    if (said >= SCREEN_REPORTS_MAX) return;
+    live.reports.set(me.studentId, said + 1);
+    live.watching.set(me.studentId, me.name);
+    this.log(`show.screen.${input.event}`, { show: short(live.id), student: me.name, pc: this.pcName(me.deviceId), at: seconds(input.position), behind: seconds(input.behind) });
+  }
+
+  // --- Writing on the video ---
+
+  ink(p: Principal, id: string): Ink {
+    const live = this.seen(p, id);
+    return { rev: live.inkRev, strokes: [...live.strokes.values()] };
+  }
+
+  // More of one pen line. The teacher may write at any time. The student with the pen may write
+  // while the video is paused; on a playing video the line would be about a moment already gone.
+  write(p: Principal, id: string, input: InkAdd) {
+    const live = this.seen(p, id);
+    const who = this.writer(p, live);
+    if (p.kind === 'student' && live.playing) throw new AppError(409, 'SHOW_PLAYING', 'You can write when your teacher pauses the video.');
+    let stroke = live.strokes.get(input.strokeId);
+    if (stroke && stroke.by !== who.by) throw new AppError(403, 'FORBIDDEN', 'That line is not yours.');
+    if (!stroke) {
+      if (live.strokes.size >= INK_STROKES_MAX) throw new AppError(409, 'INK_FULL', 'There is no room left to write. Wipe the writing first.');
+      if (!live.strokes.size) this.log('show.ink.started', { show: short(live.id), by: who.byName });
+      stroke = { id: input.strokeId, ...who, colour: input.colour, width: input.width, points: [] };
+      live.strokes.set(stroke.id, stroke);
+    }
+    // A line that is already as long as it may be simply stops growing.
+    const more = input.points.slice(0, Math.max(0, INK_POINTS_MAX * 3 - stroke.points.length));
+    stroke.points.push(...more);
+    live.inkRev += 1;
+    this.say(live, { kind: 'add', show: live.id, rev: live.inkRev, stroke: { ...stroke, points: more } });
+  }
+
+  // The teacher may rub out any line; a student only a line of their own, and only with the pen.
+  erase(p: Principal, id: string, strokeId: string) {
+    const live = this.seen(p, id);
+    const who = this.writer(p, live);
+    const stroke = live.strokes.get(strokeId);
+    if (!stroke) return;
+    if (p.kind !== 'staff' && stroke.by !== who.by) throw new AppError(403, 'FORBIDDEN', 'That line is not yours.');
+    live.strokes.delete(strokeId);
+    live.inkRev += 1;
+    this.say(live, { kind: 'erase', show: live.id, rev: live.inkRev, strokeId });
+  }
+
+  clear(actor: StaffPrincipal, id: string) {
+    const live = this.mine(actor, id);
+    if (live.strokes.size) this.log('show.ink.cleared', { show: short(live.id), by: actor.displayName });
+    this.wipe(live);
+  }
+
+  // One student at a time holds the pen. Giving it to another takes it from the first.
+  givePen(actor: StaffPrincipal, id: string, studentId: string | null): Show {
+    const live = this.mine(actor, id);
+    if (live.pen) this.log('show.pen.taken', { show: short(live.id), student: live.pen.name });
+    live.pen = null;
+    if (studentId) {
+      const name = live.watching.get(studentId);
+      if (!name || !this.signedIn(studentId)) throw new AppError(409, 'NOT_WATCHING', "That student's screen does not have the video open.");
+      live.pen = { studentId, name };
+      this.log('show.pen.given', { show: short(live.id), student: name });
+    }
+    this.relay.notify(showRoom(live.item.classId));
+    return this.view(live, true);
   }
 
   forStudent(me: StudentPrincipal): Show | null {
     return this.forClass(me.classId);
   }
 
-  forClass(classId: string): Show | null {
+  forClass(classId: string, forTeacher = false): Show | null {
     const live = this.byClass.get(classId);
     if (!live) return null;
     // Gone quiet (the teacher's app closed or lost the network), or its video left the library: over.
     if (this.now() - live.heardAt > SHOW_STALE_MS || !this.content.get(live.item.id)) {
       this.byClass.delete(classId);
+      this.log('show.gone_quiet', this.words(live));
       return null;
     }
-    return this.view(live);
+    // A student who has signed out no longer holds the pen.
+    if (live.pen && !this.signedIn(live.pen.studentId)) {
+      this.log('show.pen.taken', { show: short(live.id), student: live.pen.name });
+      live.pen = null;
+    }
+    return this.view(live, forTeacher);
   }
 
   // Ends shows that have gone quiet and tells their classes. Called on a timer by the server.
@@ -98,6 +205,7 @@ export class ShowService {
     for (const [classId, live] of this.byClass) {
       if (this.now() - live.heardAt > SHOW_STALE_MS) {
         this.byClass.delete(classId);
+        this.log('show.gone_quiet', this.words(live));
         this.relay.notify(showRoom(classId));
       }
     }
@@ -108,6 +216,32 @@ export class ShowService {
     const live = [...this.byClass.values()].find((l) => l.id === id);
     if (!live || live.by !== actor.userId || !this.forClass(live.item.classId)) throw notFound('Show');
     return live;
+  }
+
+  // The show `id`, for someone who may see it: the teacher showing it, or a student of its class.
+  private seen(p: Principal, id: string): Live {
+    if (p.kind === 'staff') return this.mine(p, id);
+    const live = p.kind === 'student' ? this.byClass.get(p.classId) : undefined;
+    if (!live || live.id !== id || !this.forClass(live.item.classId)) throw notFound('Show');
+    return live;
+  }
+
+  // Who is writing, if they may: the teacher, or the student who holds the pen.
+  private writer(p: Principal, live: Live): { by: string; byName: string } {
+    if (p.kind === 'staff') return { by: 'teacher', byName: p.displayName };
+    if (p.kind !== 'student' || live.pen?.studentId !== p.studentId) throw new AppError(403, 'NO_PEN', 'Your teacher has not given you the pen.');
+    return { by: p.studentId, byName: p.name };
+  }
+
+  private wipe(live: Live) {
+    if (!live.strokes.size) return;
+    live.strokes.clear();
+    live.inkRev += 1;
+    this.say(live, { kind: 'clear', show: live.id, rev: live.inkRev });
+  }
+
+  private say(live: Live, event: InkEvent) {
+    this.relay.emit(showRoom(live.item.classId), event);
   }
 
   private markOver(id: string) {
@@ -121,10 +255,23 @@ export class ShowService {
     this.relay.notify(showRoom(live.item.classId));
   }
 
-  private view(live: Live): Show {
-    return { id: live.id, classId: live.item.classId, className: live.item.className, item: live.item, byName: live.byName, playing: live.playing, position: live.position, rate: live.rate, at: live.at, now: this.now() };
+  // What a diary line says about a show.
+  private words(live: Live) {
+    return { show: short(live.id), video: live.item.title, class: live.item.className, by: live.byName, screens: live.reports.size || undefined };
+  }
+
+  private view(live: Live, forTeacher = false): Show {
+    return {
+      id: live.id, classId: live.item.classId, className: live.item.className, item: live.item, byName: live.byName,
+      playing: live.playing, position: live.position, rate: live.rate, at: live.at, now: this.now(), inkRev: live.inkRev, pen: live.pen,
+      ...(forTeacher ? { watching: [...live.watching].map(([studentId, name]) => ({ studentId, name })) } : {}),
+    };
   }
 }
 
 // Where the video is by now, going by what the teacher last said.
 const expected = (l: Live, now: number) => (l.playing ? l.position + ((now - l.at) / 1000) * l.rate : l.position);
+
+// A show's id is long; its first part is enough to tell the lines of one show from another's.
+const short = (id: string) => id.slice(0, 8);
+const seconds = (n: number) => Math.round(n * 10) / 10;

@@ -21,7 +21,7 @@ interface Member {
 }
 
 // Spec 8.3: live room state is in memory. Writes go over REST; the relay pushes a fresh
-// `state` snapshot to each member on join and whenever the room changes.
+// `state` snapshot to each member on join and whenever the room changes, or a small `event`.
 export class Relay {
   private kinds = new Map<string, RoomKind>();
   private rooms = new Map<string, Set<Member>>();
@@ -61,6 +61,18 @@ export class Relay {
 
   // Sends every member of the room a fresh snapshot, built for that member.
   notify(room: string) {
+    const kind = this.kindOf(room);
+    this.each(room, (m, p, seq) => this.send(m, { t: 'state', room, seq, ts: this.now(), p: kind!.snapshot(p, idOf(room)) }));
+  }
+
+  // Sends every member of the room one small thing that just happened (a pen line growing, say),
+  // when sending the whole state again each time would be far too much.
+  emit(room: string, event: unknown) {
+    this.each(room, (m, _p, seq) => this.send(m, { t: 'event', room, seq, ts: this.now(), p: event }));
+  }
+
+  // Runs `fn` for each member who may still be in the room; one who may not is dropped and told.
+  private each(room: string, fn: (m: Member, p: Principal, seq: number) => void) {
     const members = this.rooms.get(room);
     if (!members?.size) return;
     const kind = this.kindOf(room);
@@ -75,7 +87,7 @@ export class Relay {
           this.error(m, 'FORBIDDEN', 'You can no longer see this room.', room);
           continue;
         }
-        this.send(m, { t: 'state', room, seq, ts: this.now(), p: kind.snapshot(p, idOf(room)) });
+        fn(m, p, seq);
       } catch (err) {
         this.log(err);
       }

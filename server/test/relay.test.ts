@@ -135,4 +135,22 @@ describe('relay and sessions', () => {
     expect(lastUsed()).toBe(before);
     ws.terminate();
   });
+
+  it('sends a small event to the room, in order with its states, and not to one who may not be there', async () => {
+    const { open, c, db } = await withRelay();
+    const { ws, got, next } = await open();
+    ws.send(JSON.stringify({ t: 'join', room: 'test:abc' }));
+    const first = await next('state');
+    c.relay.emit('test:abc', { kind: 'add', n: 1 });
+    const event = await next('event');
+    expect(event).toMatchObject({ room: 'test:abc', p: { kind: 'add', n: 1 } });
+    expect(event.seq).toBe(first.seq! + 1);
+    c.relay.emit('test:other', { kind: 'add', n: 2 }); // a room nobody here is in
+    db.prepare("UPDATE users SET display_name = 'Locked' WHERE username = 'teacher'").run();
+    const before = got.length;
+    c.relay.emit('test:abc', { kind: 'add', n: 3 });
+    expect(await next('error', before)).toMatchObject({ room: 'test:abc', p: { code: 'FORBIDDEN' } });
+    expect(got.filter((m) => m.t === 'event')).toHaveLength(1);
+    ws.terminate();
+  });
 });

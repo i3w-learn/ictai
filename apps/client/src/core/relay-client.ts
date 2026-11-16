@@ -27,6 +27,7 @@ export class RelayClient {
   private pongTimer: ReturnType<typeof setTimeout> | null = null;
   private rooms = new Map<string, Set<StateListener>>();
   private errors = new Map<string, Set<ErrorListener>>();
+  private events = new Map<string, Set<StateListener>>();
   private latest = new Map<string, unknown>();
   private statusListeners = new Set<(s: RelayStatus) => void>();
   private stopListening: (() => void) | null = null;
@@ -100,6 +101,17 @@ export class RelayClient {
     };
   }
 
+  // Hears the small events of a room (a pen line growing, say). The room itself is joined by
+  // `subscribe`; this only listens in, so use both.
+  listen(room: string, fn: StateListener): () => void {
+    if (!this.events.has(room)) this.events.set(room, new Set());
+    this.events.get(room)!.add(fn);
+    return () => {
+      this.events.get(room)?.delete(fn);
+      if (!this.events.get(room)?.size) this.events.delete(room);
+    };
+  }
+
   private async open() {
     this.drop();
     const token = this.token;
@@ -166,6 +178,7 @@ export class RelayClient {
       this.latest.set(room, p);
       for (const fn of this.rooms.get(room)!) fn(p);
     }
+    if (t === 'event' && room && this.rooms.has(room)) for (const fn of this.events.get(room) ?? []) fn(p);
     // The server refused or dropped us from a room. Tell the screen, forget the stale state, and
     // keep the room listed so a later reconnect asks for it again in case access came back.
     if (t === 'error' && room && this.rooms.has(room)) {

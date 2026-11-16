@@ -7,5 +7,11 @@ export function showRoutes(app: FastifyInstance, deps: { shows: ShowService }) {
   route(app, 'POST /api/v1/shows', ({ body, principal }) => shows.start(asStaff(principal), body.contentId));
   route(app, 'PUT /api/v1/shows/:id', ({ params, body, principal }) => shows.update(asStaff(principal), params.id, body));
   route(app, 'DELETE /api/v1/shows/:id', ({ params, principal }) => shows.stop(asStaff(principal), params.id));
+  route(app, 'POST /api/v1/shows/:id/screen', ({ params, body, principal }) => shows.screen(asStudent(principal), params.id, body));
+  route(app, 'GET /api/v1/shows/:id/ink', ({ params, principal }) => shows.ink(principal!, params.id));
+  route(app, 'POST /api/v1/shows/:id/ink', ({ params, body, principal }) => shows.write(principal!, params.id, body));
+  route(app, 'DELETE /api/v1/shows/:id/ink/:strokeId', ({ params, principal }) => shows.erase(principal!, params.id, params.strokeId));
+  route(app, 'DELETE /api/v1/shows/:id/ink', ({ params, principal }) => shows.clear(asStaff(principal), params.id));
+  route(app, 'PUT /api/v1/shows/:id/pen', ({ params, body, principal }) => shows.givePen(asStaff(principal), params.id, body.studentId));
   route(app, 'GET /api/v1/shows/mine', ({ principal }) => shows.forStudent(asStudent(principal)));
 }
