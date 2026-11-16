@@ -37,17 +37,38 @@ describe('Sign-in with class and roll number', () => {
     expect((await students()).map((s: { name: string }) => s.name)).toEqual(['Asha']);
   });
 
-  it('does not let a roll number get past a PIN the teacher set', async () => {
-    const { roll, pc, send, add } = await lab();
-    const asha = await add('Asha', '05', { pin: '1234' });
-    const device = await pc();
-    for (const rollNo of ['05', '5']) {
-      const res = await roll(device, { rollNo });
-      expect(res.statusCode).toBe(401);
-      expect(res.json().code).toBe('PIN_REQUIRED');
-    }
-    // The PIN still works, on the same screen's next step.
-    expect((await send('POST', '/api/v1/auth/student/pin', device, { studentId: asha.id, pin: '1234' })).statusCode).toBe(201);
+  it('signs a student in with class and roll number alone, also one who was given a PIN before', async () => {
+    const { roll, pc, add } = await lab();
+    await add('Asha', '05', { pin: '1234' });
+    const res = await roll(await pc(), { rollNo: '5' });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().principal).toMatchObject({ kind: 'student', name: 'Asha' });
+  });
+
+  it('asks which student it is when two share a roll number, and signs in the one picked by name', async () => {
+    const { roll, pc, add } = await lab();
+    const kumar = await add('Manas Kumar', '2');
+    const singh = await add('Manas Singh', '2');
+    const asha = await add('Asha', '9');
+    const first = await roll(await pc(), { rollNo: '2' });
+    expect(first.statusCode).toBe(409);
+    expect(first.json()).toMatchObject({ code: 'ROLL_NOT_UNIQUE', message: 'More than one student has roll number 2. Pick your name.' });
+    const picked = await roll(await pc(), { rollNo: '2', studentId: singh.id });
+    expect(picked.statusCode).toBe(201);
+    expect(picked.json().principal).toMatchObject({ kind: 'student', name: 'Manas Singh', studentId: singh.id });
+    const other = await roll(await pc(), { rollNo: '2', studentId: kumar.id });
+    expect(other.json().principal).toMatchObject({ name: 'Manas Kumar' });
+    // The name picked must have that roll number: it is not a way in as any student.
+    expect((await roll(await pc(), { rollNo: '2', studentId: asha.id })).statusCode).toBe(409);
+    expect((await roll(await pc(), { rollNo: '9', studentId: singh.id })).statusCode).toBe(409);
+  });
+
+  it('does not let the teacher add the same name, class and roll number twice', async () => {
+    const { send, admin, c7, add } = await lab();
+    await add('Manas Singh', '2');
+    const again = await send('POST', '/api/v1/students', admin, { name: 'Manas Singh', classId: c7.id, rollNo: '2' });
+    expect(again.statusCode).toBe(409);
+    expect(again.json().code).toBe('ALREADY_EXISTS');
   });
 
   it('treats 5 and 05 as the same roll number', async () => {

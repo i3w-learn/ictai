@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import jsQR from 'jsqr';
 import { sameRoll, type RosterEntry, type SchoolClass, type Section } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { ApiCallError } from '../../core/api-client';
 import { Button, Card, Centered, ErrorNote, Field, PageTitle, useAction, useLatest } from '../../ui/ui';
 
 // Where the student sits in the school: their class and, when the class has sections, their section.
@@ -12,7 +11,7 @@ type Step =
   | { at: 'section'; cls: SchoolClass; sections: Section[] }
   | { at: 'roll'; place: Place }
   | { at: 'confirm'; place: Place; student: RosterEntry }
-  | { at: 'pin'; place: Place; student: RosterEntry }
+  | { at: 'who'; place: Place; students: RosterEntry[] }
   | { at: 'card' };
 
 const placeLabel = (p: Place) => `Class ${p.cls.name}${p.section ? ` ${p.section.name}` : ''}`;
@@ -72,14 +71,14 @@ function CardCamera({ onRead }: { onRead: (text: string) => void }) {
   return <video ref={video} muted playsInline className="aspect-video w-full rounded-xl bg-secondary object-cover" />;
 }
 
-// Made for young students: pick your class, type your roll number, and you are in. No PIN and no code.
+// Made for young students: pick your class, type your roll number, say "yes, that is me", and you are in.
+// No PIN and no code. Two students with the same roll number pick their own name instead.
 // Only a student the teacher has added gets in: the class, section and roll number are that student's ID.
 export function StudentSignIn() {
   const { call, dispatch } = useApp();
   const [step, setStep] = useState<Step>({ at: 'class' });
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [rollNo, setRollNo] = useState('');
-  const [pin, setPin] = useState('');
 
   const loadClasses = useAction(async () => setClasses(await call('GET /api/v1/auth/student/classes', {}, 'device')));
   const { run: loadClassesNow } = loadClasses;
@@ -104,28 +103,17 @@ export function StudentSignIn() {
   const findMe = useAction(async (place: Place) => {
     const roster = await call('GET /api/v1/auth/student/roster', { query: { classId: place.cls.id } }, 'device');
     const same = roster.filter((s) => sameRoll(s, place.section?.id ?? null, rollNo));
-    if (same.length > 1) throw new Error(`More than one student has roll number ${rollNo.trim()}. Ask your teacher.`);
     if (!same[0]) throw new Error(`Roll number ${rollNo.trim()} is not in ${placeLabel(place)}. Ask your teacher to add you.`);
+    // Two students with the same roll number: each picks their own full name.
+    if (same.length > 1) return setStep({ at: 'who', place, students: [...same].sort((a, b) => a.name.localeCompare(b.name)) });
     setStep({ at: 'confirm', place, student: same[0] });
   });
 
-  const signIn = useAction(async (place: Place) => {
-    try {
-      const session = await call('POST /api/v1/auth/student/roll', {
-        body: { classId: place.cls.id, sectionId: place.section?.id ?? null, rollNo: rollNo.trim() },
-      }, 'device');
-      dispatch({ type: 'session', session });
-    } catch (e) {
-      // The teacher gave this student a PIN: ask for it.
-      if (e instanceof ApiCallError && e.code === 'PIN_REQUIRED') {
-        return setStep((s) => (s.at === 'confirm' ? { at: 'pin', place: s.place, student: s.student } : s));
-      }
-      throw e;
-    }
-  });
-
-  const withPin = useAction(async (studentId: string) => {
-    const session = await call('POST /api/v1/auth/student/pin', { body: { studentId, pin } }, 'device');
+  // The student the screen showed by name is the one signed in, never another with the same roll number.
+  const signIn = useAction(async (place: Place, student: RosterEntry) => {
+    const session = await call('POST /api/v1/auth/student/roll', {
+      body: { classId: place.cls.id, sectionId: place.section?.id ?? null, rollNo: rollNo.trim(), studentId: student.id },
+    }, 'device');
     dispatch({ type: 'session', session });
   });
 
@@ -138,23 +126,23 @@ export function StudentSignIn() {
   });
 
   // Going back wipes the trouble shown so far, so an old message does not follow the student to the next screen.
-  const forget = () => [openClass, findMe, signIn, withPin, withCard].forEach((a) => a.clear());
-  const go = (to: Step) => () => { forget(); setPin(''); setStep(to); };
-  const startOver = () => { forget(); setRollNo(''); setPin(''); setStep({ at: 'class' }); };
+  const forget = () => [openClass, findMe, signIn, withCard].forEach((a) => a.clear());
+  const go = (to: Step) => () => { forget(); setStep(to); };
+  const startOver = () => { forget(); setRollNo(''); setStep({ at: 'class' }); };
   // Only the trouble that belongs to the screen in view.
   const error = {
     class: loadClasses.error ?? openClass.error,
     section: null,
     roll: findMe.error,
     confirm: signIn.error,
-    pin: withPin.error,
+    who: signIn.error,
     card: withCard.error,
   }[step.at];
   const tiles = 'grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3';
   const big = '[&_input]:h-14 [&_input]:text-center [&_input]:text-2xl [&_input]:font-semibold';
 
   return (
-    <Centered narrow={step.at !== 'class' && step.at !== 'section'}>
+    <Centered narrow={step.at !== 'class' && step.at !== 'section' && step.at !== 'who'}>
       {step.at === 'class' && (
         <>
           <PageTitle eyebrow="Sign in">Which class are you in?</PageTitle>
@@ -192,20 +180,19 @@ export function StudentSignIn() {
       {step.at === 'confirm' && (
         <Card className="grid gap-4 p-6 sm:p-8">
           <PageTitle eyebrow={`${placeLabel(step.place)} · Roll ${step.student.rollNo ?? rollNo.trim()}`}>Are you {step.student.name}?</PageTitle>
-          <Button className="h-14 text-lg" autoFocus disabled={signIn.busy} onClick={() => signIn.run(step.place)}>Yes, that is me</Button>
+          <Button className="h-14 text-lg" autoFocus disabled={signIn.busy} onClick={() => signIn.run(step.place, step.student)}>Yes, that is me</Button>
           <Button variant="quiet" onClick={go({ at: 'roll', place: step.place })}>No, go back</Button>
         </Card>
       )}
 
-      {step.at === 'pin' && (
-        <Card className="p-6 sm:p-8">
-          <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); void withPin.run(step.student.id); }}>
-            <PageTitle eyebrow={placeLabel(step.place)}>Hi {step.student.name}</PageTitle>
-            <Field id="pin" label="Your 4-digit PIN" type="password" inputMode="numeric" maxLength={4} autoFocus value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
-            <Button type="submit" className="h-12" disabled={withPin.busy || pin.length !== 4}>Sign in</Button>
-            <Button type="button" variant="quiet" onClick={go({ at: 'roll', place: step.place })}>Not you?</Button>
-          </form>
-        </Card>
+      {step.at === 'who' && (
+        <>
+          <PageTitle eyebrow={`${placeLabel(step.place)} · Roll ${rollNo.trim()}`}>Which one are you?</PageTitle>
+          <div className={tiles}>
+            {step.students.map((x) => <Tile key={x.id} onClick={() => { if (!signIn.busy) void signIn.run(step.place, x); }}>{x.name}</Tile>)}
+          </div>
+          <div><Button variant="quiet" onClick={go({ at: 'roll', place: step.place })}>Back</Button></div>
+        </>
       )}
 
       {step.at === 'card' && (
