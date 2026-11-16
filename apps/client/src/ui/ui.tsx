@@ -43,7 +43,7 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={cn('rounded-2xl border border-border bg-card shadow-[0_1px_3px_rgba(15,23,42,0.04),0_8px_24px_-16px_rgba(15,23,42,0.12)]', className)}>
+    <div className={cn('rounded-3xl border border-card-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.03),0_16px_40px_-20px_rgba(49,46,129,0.2)]', className)}>
       {children}
     </div>
   );
@@ -51,7 +51,7 @@ export function Card({ className, children }: { className?: string; children: Re
 
 export function Panel({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
   return (
-    <Card className="grid gap-4 p-5 lg:p-6">
+    <Card className="grid gap-5 p-6 lg:p-7">
       <header className="flex items-center justify-between gap-3">
         <SectionLabel>{title}</SectionLabel>
         {actions}
@@ -61,9 +61,9 @@ export function Panel({ title, children, actions }: { title: string; children: R
   );
 }
 
-// Small uppercase heading used above sections.
+// The heading of a panel or a block.
 export function SectionLabel({ children }: { children: ReactNode }) {
-  return <h2 className="text-[13px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">{children}</h2>;
+  return <h2 className="font-display text-lg font-semibold tracking-tight">{children}</h2>;
 }
 
 // Page title with an optional small line above it.

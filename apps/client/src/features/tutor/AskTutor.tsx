@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import type { AiTutorJob, MyTutor } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
@@ -7,7 +7,7 @@ import { Button, Card, ErrorNote, Note, PageTitle, useAction } from '../../ui/ui
 
 // PRD student app "Ask": the student types a question and the AI on the Server PC gives a hint in
 // simple words. A few questions a day, one at a time. Nothing leaves the school.
-export function AskTutor({ onBack }: { onBack: () => void }) {
+export function AskTutor() {
   const { call } = useApp();
   const [mine, setMine] = useState<MyTutor | null>(null);
   const [off, setOff] = useState<string | null>(null);
@@ -52,7 +52,6 @@ export function AskTutor({ onBack }: { onBack: () => void }) {
   const none = mine !== null && mine.leftToday === 0;
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-5">
-      <div><Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button></div>
       <PageTitle sub="Ask about something you are learning. You get a hint and an explanation, so you can work out the answer yourself.">Ask</PageTitle>
       {off ? <Note>{off}</Note> : (
         <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); if (question.trim() && !waiting && !none) void ask.run(); }}>

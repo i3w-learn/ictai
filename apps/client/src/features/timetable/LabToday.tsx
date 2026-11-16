@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { StudentToday } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
+import { Empty } from '../../ui/dashboard';
+import { Card, cn } from '../../ui/ui';
 import { clockOf, labNow } from './timetable';
 
-// PRD student "Today": the student's current lab period. One line under the greeting: in a period now,
-// or when the next one is. Says nothing on a day with no lab, so the screen stays calm.
+
+// PRD student "Today": the student's lab periods for today as a row of cards. The period that is on
+// now (or, between periods, the next one) is the wide card; the others stand beside it as narrow ones.
 export function LabToday() {
   const { call } = useApp();
   const [today, setToday] = useState<StudentToday | null>(null);
@@ -12,19 +15,48 @@ export function LabToday() {
   useEffect(() => {
     let alive = true;
     call('GET /api/v1/timetable/today').then((t) => { if (alive) setToday(t); }, () => undefined);
-    // The line follows the clock, so it changes when the bell rings without asking the server again.
+    // The cards follow the clock, so they change when the bell rings without asking the server again.
     const t = setInterval(() => setClock(clockOf(new Date())), 20_000);
     return () => { alive = false; clearInterval(t); };
   }, [call]);
 
-  if (!today || today.periods.length === 0) return null;
-  const { now, next } = labNow(today.periods, clock);
-  const what = (p: StudentToday['periods'][number]) => `${p.periodName}${p.subject ? ` · ${p.subject}` : ''}`;
+  const periods = today?.periods ?? [];
+  const { now, next } = labNow(periods, clock);
+  const main = now ?? next;
+  const wide = (
+    <Card className="flex h-44 min-w-56 flex-1 flex-col justify-between p-5" key="main">
+      {main ? (
+        <>
+          <span className="self-start rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">{now ? 'Now' : 'Next'}</span>
+          <span className="grid gap-1" aria-live="polite">
+            <span className="font-display text-2xl leading-tight font-semibold">{main.periodName}</span>
+            {main.subject && <span className="text-lg">{main.subject}</span>}
+            <span className="text-muted-foreground tabular-nums">{now ? `Your lab period now, until ${main.end}` : `Your next lab period, at ${main.start}`}</span>
+          </span>
+        </>
+      ) : (
+        <span className="my-auto text-lg text-muted-foreground" aria-live="polite">
+          Your lab periods for today are over.
+        </span>
+      )}
+    </Card>
+  );
+  if (periods.length === 0) return today ? <Empty>No lab periods for you today.</Empty> : null;
   return (
-    <p className="rounded-xl border border-border bg-card px-4 py-3 text-lg" aria-live="polite">
-      {now ? <><b>Your lab period now:</b> {what(now)} <span className="text-muted-foreground tabular-nums">until {now.end}</span></>
-        : next ? <><b>Your next lab period:</b> {what(next)} <span className="text-muted-foreground tabular-nums">at {next.start}</span></>
-        : <span className="text-muted-foreground">Your lab periods for today are over.</span>}
-    </p>
+    // A row that scrolls sideways would cut off its cards' shadows. The padding gives them room,
+    // and the same margin taken away keeps the row where it was.
+    <div className="-mx-4 -mt-2 -mb-8 flex gap-3 overflow-x-auto px-4 pt-2 pb-10">
+      {periods.map((p) => p === main ? wide : (
+        <Card key={`${p.start} ${p.periodName}`} className={cn('flex h-44 w-[4.5rem] shrink-0 flex-col items-center justify-between gap-2 py-4', p.end <= clock && 'opacity-55')}>
+          {/* Read from the bottom up, the period's name and its subject side by side. */}
+          <span className="min-h-0 flex-1 rotate-180 text-sm [writing-mode:vertical-rl]">
+            <span className="block truncate font-medium">{p.periodName}</span>
+            {p.subject && <span className="block truncate text-muted-foreground">{p.subject}</span>}
+          </span>
+          <span className="text-xs text-muted-foreground tabular-nums">{p.start}</span>
+        </Card>
+      ))}
+      {periods.length > 0 && !main && wide}
+    </div>
   );
 }

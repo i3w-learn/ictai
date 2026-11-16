@@ -1,44 +1,43 @@
-import { useEffect, useState } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
-import { DEFAULT_PREFS, type ContentItem, type SchoolSettings, type StudentPrefs, type StudentRunState } from '@ict/contracts';
+import { useState, type ReactNode } from 'react';
+import { ClipboardList, GraduationCap, House, School, Wrench } from 'lucide-react';
+import type { ContentItem, SchoolSettings } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, Centered, PageTitle, Panel, useAction } from '../../ui/ui';
+import { Shell, SideMenu, type MenuItem } from '../../ui/dashboard';
+import { Centered, PageTitle } from '../../ui/ui';
+import { StudentHome } from './StudentHome';
 import { AuditPanel } from './AuditPanel';
 import { DevicesPanel } from './DevicesPanel';
 import { StaffPanel } from './StaffPanel';
 import { StudentsPanel } from './StudentsPanel';
-import { QuizPopup, QuizWaiting, useOpenQuiz } from '../quizzes/QuizInvite';
-import { ClassShow, useClassShow } from '../shows/ClassShow';
 import { LabSession } from '../quizzes/LabSession';
-import { PlayQuiz } from '../quizzes/PlayQuiz';
 import { QuizEditor } from '../quizzes/QuizEditor';
 import { QuizzesPanel } from '../quizzes/QuizzesPanel';
 import { AiQuizMaker, type AiDraft } from '../quizzes/AiQuizMaker';
 import { AskAi } from '../quizzes/AskAi';
 import { ContentPanel } from '../content/ContentPanel';
-import { MyBooks } from '../content/MyBooks';
 import { Viewer } from '../content/Viewer';
 import { NoticesPanel } from '../notices/NoticesPanel';
-import { HowIAmDoing } from '../progress/HowIAmDoing';
 import { ReportCardsPanel } from '../report-cards/ReportCardsPanel';
-import { StudentNotices } from '../notices/StudentNotices';
 import { SequencesPanel } from '../sequences/SequencesPanel';
-import { ThingsToDo } from '../sequences/ThingsToDo';
 import { SettingsPanel } from '../settings/SettingsPanel';
-import { StudentSettings } from '../settings/StudentSettings';
-import { applyPrefs } from '../settings/prefs';
-import { LabToday } from '../timetable/LabToday';
 import { TimetablePanel } from '../timetable/TimetablePanel';
-import { AskTutor } from '../tutor/AskTutor';
 import { MarkWork } from '../work/MarkWork';
-import { MyWork } from '../work/MyWork';
 import { WorkPanel } from '../work/WorkPanel';
-import { MyNotes } from '../notes/MyNotes';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { StudentResultsPage } from '../results/StudentResultsPage';
 import { TeachersPanel } from '../results/TeachersPanel';
 
-// The console's pages besides the dashboard.
+// The pages in the console's side menu.
+type Page = 'today' | 'teach' | 'reports' | 'school' | 'system';
+const MENU: MenuItem<Page>[] = [
+  { key: 'today', label: 'Today', icon: House },
+  { key: 'teach', label: 'Teach', icon: GraduationCap },
+  { key: 'reports', label: 'Reports', icon: ClipboardList },
+  { key: 'school', label: 'School', icon: School },
+  { key: 'system', label: 'System', icon: Wrench },
+];
+
+// The console's screens that open over a menu page.
 type View =
   | { kind: 'dash' }
   | { kind: 'edit-quiz'; quizId: string | null; draft?: AiDraft }
@@ -58,6 +57,7 @@ export function Home() {
   const { state, dispatch } = useApp();
   const p = state.session!.principal;
   const [view, setView] = useState<View>({ kind: 'dash' });
+  const [page, setPage] = useState<Page>('today');
   // Goes up when one panel changes something another panel lists (a class, a period, a library item, a
   // piece of work), so every panel shows it at once.
   const [refresh, setRefresh] = useState(0);
@@ -71,116 +71,65 @@ export function Home() {
 
   if (p.kind === 'student') return <StudentHome name={p.name} />;
   if (p.kind === 'staff' && state.settings.role === 'console') {
-    if (view.kind === 'edit-quiz') return <QuizEditor quizId={view.quizId} draft={view.draft} onDone={() => setView({ kind: 'dash' })} />;
-    if (view.kind === 'ai-quiz') return <AiQuizMaker onDraft={(draft) => setView({ kind: 'edit-quiz', quizId: null, draft })} onBack={() => setView({ kind: 'dash' })} />;
-    if (view.kind === 'content') return <Viewer item={view.item} onBack={() => setView({ kind: 'dash' })} />;
-    if (view.kind === 'mark-work') return <MarkWork id={view.id} onBack={() => setView({ kind: 'dash' })} />;
-    if (view.kind === 'ask-ai') return <AskAi onBack={() => setView({ kind: 'dash' })} />;
-    if (view.kind === 'lab') return <LabSession runId={view.runId} onExit={() => setView({ kind: 'dash' })} />;
-    if (view.kind === 'student') return <StudentResultsPage studentId={view.studentId} onBack={() => setView({ kind: 'dash' })} />;
+    // These cover the whole page and have their own Back, so the menu steps aside for them.
+    const back = () => setView({ kind: 'dash' });
+    if (view.kind === 'edit-quiz') return <Shell><QuizEditor quizId={view.quizId} draft={view.draft} onDone={back} /></Shell>;
+    if (view.kind === 'ai-quiz') return <Shell><AiQuizMaker onDraft={(draft) => setView({ kind: 'edit-quiz', quizId: null, draft })} onBack={back} /></Shell>;
+    if (view.kind === 'content') return <Shell><Viewer item={view.item} onBack={back} /></Shell>;
+    if (view.kind === 'mark-work') return <Shell><MarkWork id={view.id} onBack={back} /></Shell>;
+    if (view.kind === 'ask-ai') return <Shell><AskAi onBack={back} /></Shell>;
+    if (view.kind === 'lab') return <Shell><LabSession runId={view.runId} onExit={back} /></Shell>;
+    if (view.kind === 'student') return <Shell><StudentResultsPage studentId={view.studentId} onBack={back} /></Shell>;
+
+    const can = (permission: (typeof p.permissions)[number]) => p.permissions.includes(permission);
+    // What each menu page holds. A panel is there only for someone allowed to use it, and a page
+    // with no panels left is not in the menu.
+    const panels: Record<Page, ReactNode[]> = {
+      today: [
+        can('results.view') && <ResultsPanel key="results" refresh={refresh} onStudent={(studentId) => setView({ kind: 'student', studentId })} />,
+        can('teaching.manage') && <QuizzesPanel key="quizzes" refresh={refresh} onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} onAsk={() => setView({ kind: 'ask-ai' })} />,
+      ],
+      teach: [
+        can('teaching.manage') && <ContentPanel key="content" refresh={refresh} onChanged={changed} onOpen={(item) => setView({ kind: 'content', item })} />,
+        can('teaching.manage') && <SequencesPanel key="sequences" refresh={refresh} />,
+        can('teaching.manage') && <WorkPanel key="work" refresh={refresh} onChanged={changed} onOpen={(id) => setView({ kind: 'mark-work', id })} />,
+        can('teaching.manage') && <NoticesPanel key="notices" refresh={refresh} />,
+      ],
+      reports: [
+        can('results.view') && <ReportCardsPanel key="cards" refresh={refresh} />,
+        can('staff.manage') && <TeachersPanel key="teachers" />,
+      ],
+      school: [
+        can('setup.timetable') && <TimetablePanel key="timetable" refresh={refresh} />,
+        can('students.manage') && <StudentsPanel key="students" onChanged={changed} />,
+        can('staff.manage') && <StaffPanel key="staff" classesChanged={refresh} />,
+        can('setup.devices') && <DevicesPanel key="devices" />,
+      ],
+      system: [
+        can('settings.manage') && <SettingsPanel key="settings" onSaved={settingsSaved} />,
+        can('server.manage') && <AuditPanel key="audit" />,
+      ],
+    };
+    const menu = MENU.filter((m) => panels[m.key].some(Boolean));
+    const current = menu.find((m) => m.key === page) ?? menu[0];
     const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
     return (
-      <div className="mx-auto grid max-w-6xl gap-8">
-        <header className="border-b border-border pb-7">
-          <PageTitle eyebrow={`${today} · ${greeting()}, ${p.displayName}`}>Your lab today</PageTitle>
-        </header>
-        {p.permissions.includes('results.view') && <ResultsPanel refresh={refresh} onStudent={(studentId) => setView({ kind: 'student', studentId })} />}
-        {p.permissions.includes('teaching.manage') && (
-          <QuizzesPanel refresh={refresh} onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} onAsk={() => setView({ kind: 'ask-ai' })} />
-        )}
-        {p.permissions.includes('teaching.manage') && <ContentPanel refresh={refresh} onChanged={changed} onOpen={(item) => setView({ kind: 'content', item })} />}
-        {p.permissions.includes('teaching.manage') && <SequencesPanel refresh={refresh} />}
-        {p.permissions.includes('results.view') && <ReportCardsPanel refresh={refresh} />}
-        {p.permissions.includes('teaching.manage') && <WorkPanel refresh={refresh} onChanged={changed} onOpen={(id) => setView({ kind: 'mark-work', id })} />}
-        {p.permissions.includes('setup.timetable') && <TimetablePanel refresh={refresh} />}
-        {p.permissions.includes('teaching.manage') && <NoticesPanel refresh={refresh} />}
-        {p.permissions.includes('staff.manage') && <TeachersPanel />}
-        {p.permissions.includes('staff.manage') && <StaffPanel classesChanged={refresh} />}
-        {p.permissions.includes('setup.devices') && <DevicesPanel />}
-        {p.permissions.includes('students.manage') && <StudentsPanel onChanged={changed} />}
-        {p.permissions.includes('settings.manage') && <SettingsPanel onSaved={settingsSaved} />}
-        {p.permissions.includes('server.manage') && <AuditPanel />}
-      </div>
+      <Shell menu={menu.length > 1 && current && <SideMenu label="Pages" items={menu} current={current.key} onPick={setPage} />}>
+        <div className="mx-auto grid max-w-6xl gap-8">
+          <header className="pb-1">
+            <PageTitle eyebrow={`${today} · ${greeting()}, ${p.displayName}`}>{current?.key === 'today' || !current ? 'Your lab today' : current.label}</PageTitle>
+          </header>
+          {current && panels[current.key]}
+        </div>
+      </Shell>
     );
   }
 
   return (
-    <Centered>
-      <PageTitle sub="Live lessons arrive in the next milestone (M2).">Ready, {p.kind === 'staff' ? p.displayName : 'device'}</PageTitle>
-    </Centered>
-  );
-}
-
-// The student's own screens. A quiz the teacher opens for the class pops up over any of them.
-function StudentHome({ name }: { name: string }) {
-  const [playing, setPlaying] = useState<StudentRunState | null>(null);
-  const [notesOpen, setNotesOpen] = useState(false);
-  // The quiz the student said "Not now" to; a different quiz pops up again.
-  const [later, setLater] = useState<string | null>(null);
-  const { quiz, clear: clearQuiz } = useOpenQuiz();
-  // A video the teacher is showing the class right now. It lies over every screen below.
-  const classShow = useClassShow();
-  const { call } = useApp();
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [workOpen, setWorkOpen] = useState(false);
-  const [progressOpen, setProgressOpen] = useState(false);
-  const [tutorOpen, setTutorOpen] = useState(false);
-  const [booksOpen, setBooksOpen] = useState(false);
-  const [todoOpen, setTodoOpen] = useState(false);
-  // The student's own text size, colours and font. Put on at sign-in, taken off when this screen goes
-  // (sign-out), so they never stay on the PC for the next student.
-  const [prefs, setPrefs] = useState<StudentPrefs>(DEFAULT_PREFS);
-  useEffect(() => {
-    let alive = true;
-    call('GET /api/v1/me/prefs').then((p) => { if (alive) { setPrefs(p); applyPrefs(p); } }, () => undefined);
-    return () => { alive = false; applyPrefs(null); };
-  }, [call]);
-  // Shown at once, then saved. If saving fails the student still sees their choice and is told.
-  const savePrefs = useAction(async (p: StudentPrefs) => {
-    setPrefs(p);
-    applyPrefs(p);
-    await call('PUT /api/v1/me/prefs', { body: p });
-  });
-
-  // "Back to home" after a quiz means home, not the screen the quiz popped up over.
-  const goHome = () => { setNotesOpen(false); setSettingsOpen(false); setWorkOpen(false); setProgressOpen(false); setTutorOpen(false); setBooksOpen(false); setTodoOpen(false); };
-  if (playing) return <PlayQuiz initial={playing} onExit={() => { setPlaying(null); clearQuiz(); goHome(); }} />;
-  // While the teacher is showing a video, a quiz that is open waits: its popup would lie over the
-  // video, and over the pen of a student the teacher has asked to write on it. It comes up when the video goes.
-  const popup = <>{classShow && <ClassShow live={classShow} />}{quiz && quiz.runId !== later && !classShow && <QuizPopup quiz={quiz} onJoined={setPlaying} onLater={() => setLater(quiz.runId)} />}</>;
-  if (notesOpen) return <>{popup}<MyNotes onBack={() => setNotesOpen(false)} /></>;
-  if (progressOpen) return <>{popup}<HowIAmDoing onBack={() => setProgressOpen(false)} onWork={() => { setProgressOpen(false); setWorkOpen(true); }} /></>;
-  if (todoOpen) return <>{popup}<ThingsToDo onBack={() => setTodoOpen(false)} onWork={() => { setTodoOpen(false); setWorkOpen(true); }} /></>;
-  if (booksOpen) return <>{popup}<MyBooks onBack={() => setBooksOpen(false)} /></>;
-  if (tutorOpen) return <>{popup}<AskTutor onBack={() => setTutorOpen(false)} /></>;
-  if (workOpen) return <>{popup}<MyWork onBack={() => setWorkOpen(false)} /></>;
-  if (settingsOpen) return <>{popup}<StudentSettings prefs={prefs} onChange={(p) => void savePrefs.run(p)} error={savePrefs.error} onBack={() => setSettingsOpen(false)} /></>;
-  return (
-    <Centered>
-      {popup}
-      <PageTitle eyebrow={greeting()} sub="When your teacher starts a quiz, it will open here.">Hello, {name}</PageTitle>
-      <LabToday />
-      {quiz && <QuizWaiting quiz={quiz} onJoined={setPlaying} />}
-      <StudentNotices />
-      <Panel title="Things to do" actions={<Button variant="quiet" onClick={() => setTodoOpen(true)}>Open things to do</Button>}>
-        <p className="text-sm text-muted-foreground">Steps your teacher has put in order for you, with a tick for each one you finish.</p>
-      </Panel>
-      <Panel title="My books" actions={<Button variant="quiet" onClick={() => setBooksOpen(true)}>Open my books</Button>}>
-        <p className="text-sm text-muted-foreground">Books, pictures and videos your teachers have added for your class.</p>
-      </Panel>
-      <Panel title="My work" actions={<Button variant="quiet" onClick={() => setWorkOpen(true)}>Open my work</Button>}>
-        <p className="text-sm text-muted-foreground">Work your teacher has set: write your answer and hand it in.</p>
-      </Panel>
-      <Panel title="Ask" actions={<Button variant="quiet" onClick={() => setTutorOpen(true)}>Ask a question</Button>}>
-        <p className="text-sm text-muted-foreground">Stuck on something? Ask, and get a hint in simple words.</p>
-      </Panel>
-      <Panel title="How I am doing" actions={<Button variant="quiet" onClick={() => setProgressOpen(true)}>See how I am doing</Button>}>
-        <p className="text-sm text-muted-foreground">Your quiz results and work, and what to try next. Only you can see it.</p>
-      </Panel>
-      <Panel title="My notes" actions={<Button variant="quiet" onClick={() => setNotesOpen(true)}>Open my notes</Button>}>
-        <p className="text-sm text-muted-foreground">Write down what you learn. Only you can read your notes.</p>
-      </Panel>
-      <div><Button variant="quiet" onClick={() => setSettingsOpen(true)}><SlidersHorizontal className="size-4" /> Settings</Button></div>
-    </Centered>
+    <Shell>
+      <Centered>
+        <PageTitle sub="Live lessons arrive in the next milestone (M2).">Ready, {p.kind === 'staff' ? p.displayName : 'device'}</PageTitle>
+      </Centered>
+    </Shell>
   );
 }

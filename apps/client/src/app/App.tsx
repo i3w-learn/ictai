@@ -7,6 +7,7 @@ import { Home } from '../features/home/Home';
 import { RelayChip } from '../features/quizzes/RelayChip';
 import { StaffSignIn } from '../features/signin/StaffSignIn';
 import { StudentSignIn } from '../features/signin/StudentSignIn';
+import { Shell } from '../ui/dashboard';
 import { Button, cn } from '../ui/ui';
 import { useApp } from './app-context';
 import type { Phase } from './app-state';
@@ -27,7 +28,7 @@ function personOf(p: Principal | undefined): { kind: keyof typeof PERSON; name: 
   return null;
 }
 
-function Screen({ phase }: { phase: Phase }) {
+function Screen({ phase }: { phase: Exclude<Phase, 'home'> }) {
   const { state } = useApp();
   switch (phase) {
     case 'loading':
@@ -40,8 +41,6 @@ function Screen({ phase }: { phase: Phase }) {
       return <EnrolDevice />;
     case 'sign-in':
       return state.settings.role === 'student' ? <StudentSignIn /> : <StaffSignIn />;
-    case 'home':
-      return <Home />;
   }
 }
 
@@ -88,9 +87,8 @@ export function App() {
         {role && !state.session && <Button variant="quiet" onClick={() => resetDevice()}>Reset device</Button>}
         {state.session && <Button variant="quiet" onClick={() => signOut()}>Sign out</Button>}
       </header>
-      <main className="flex-1 overflow-y-auto px-6 py-9 lg:px-10">
-        <Screen phase={phase} />
-      </main>
+      {/* The home screens bring their own side menu, so they lay themselves out. */}
+      {phase === 'home' ? <Home /> : <Shell><Screen phase={phase} /></Shell>}
     </div>
   );
 }

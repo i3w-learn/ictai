@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Check, Circle } from 'lucide-react';
+import { Check, Circle } from 'lucide-react';
 import type { ContentItem, Todo, TodoStep } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, Card, ErrorNote, PageTitle, cn, useAction } from '../../ui/ui';
+import { Card, ErrorNote, PageTitle, cn, useAction } from '../../ui/ui';
 import { Viewer } from '../content/Viewer';
 
 // PRD student app "Things to do": the playlists and learning paths for the student's class, each step
 // with a tick, and the next step picked out. Opening a library step ticks it. A work step is ticked
 // when the work is handed in under My work.
-export function ThingsToDo({ onBack, onWork }: { onBack: () => void; onWork: () => void }) {
+export function ThingsToDo({ onWork }: { onWork: () => void }) {
   const { call } = useApp();
   const [todo, setTodo] = useState<Todo[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -30,7 +30,6 @@ export function ThingsToDo({ onBack, onWork }: { onBack: () => void; onWork: () 
   if (open) return <Viewer item={open} onBack={() => setOpen(null)} />;
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-5">
-      <div><Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button></div>
       <PageTitle sub="Go through the steps in order. A tick shows what you have done.">Things to do</PageTitle>
       {loaded && todo.length === 0 && <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing to do right now. Your teacher's playlists and learning paths will show here.</p>}
       {todo.map((q) => (

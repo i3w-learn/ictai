@@ -1,4 +1,3 @@
-import { ArrowLeft } from 'lucide-react';
 import type { StudentPrefs, TextSize } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, Card, ErrorNote, PageTitle, cn } from '../../ui/ui';
@@ -12,11 +11,10 @@ const SIZES: { value: TextSize; label: string; sample: string }[] = [
 // PRD student app "Settings": text size, high contrast, an easy-to-read font, and sign out.
 // Each choice is saved the moment it is made and follows the student to any lab PC.
 // (Choosing the app's language is not here yet: the screens exist in English only.)
-export function StudentSettings({ prefs, onChange, error, onBack }: { prefs: StudentPrefs; onChange: (p: StudentPrefs) => void; error: string | null; onBack: () => void }) {
+export function StudentSettings({ prefs, onChange, error }: { prefs: StudentPrefs; onChange: (p: StudentPrefs) => void; error: string | null }) {
   const { signOut } = useApp();
   return (
     <div className="mx-auto grid w-full max-w-2xl gap-6">
-      <div><Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button></div>
       <PageTitle sub="Your choices are saved for you. They will be here on any lab PC you sign in to.">Settings</PageTitle>
 
       <Card className="grid gap-3 p-5">
