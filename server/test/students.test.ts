@@ -32,6 +32,31 @@ describe('student management', () => {
     expect(JSON.stringify(list)).not.toMatch(/pin|qr|hash|\$2[ab]\$/i);
   });
 
+  it('treats "05" and "5" as one roll number when looking for a student who is already there', async () => {
+    const { app, staff, cls } = await withStudent(); // Asha Verma, roll 12
+    const add = (name: string, rollNo: string | null) => app.inject({ method: 'POST', url: '/api/v1/students', headers: staff, payload: { name, classId: cls.id, rollNo } });
+    for (const roll of ['012', ' 12 ', '0012']) expect((await add('Asha Verma', roll)).json()).toMatchObject({ code: 'ALREADY_EXISTS' });
+    expect((await add('asha verma', '12')).statusCode).toBe(409);
+    expect((await add('Asha Verma', '120')).statusCode).toBe(201); // another number
+    expect((await add('Bina Roy', '012')).statusCode).toBe(201); // another name may share the number
+    expect((await add('Asha Verma', null)).statusCode).toBe(201); // no number is not the same as number 12
+    expect((await add('Asha Verma', null)).statusCode).toBe(409);
+    const bina = (await add('Bina Roy', '7')).json();
+    const edit = await app.inject({ method: 'PATCH', url: `/api/v1/students/${bina.id}`, headers: staff, payload: { rollNo: '12' } });
+    expect(edit.statusCode).toBe(409); // nor by changing a roll number afterwards
+  });
+
+  it('says in plain words what is wrong with something typed', async () => {
+    const { app, staff, cls } = await withStudent();
+    const post = async (url: string, payload: object) => (await app.inject({ method: 'POST', url, headers: staff, payload })).json();
+    expect(await post('/api/v1/students', { name: 'N'.repeat(81), classId: cls.id })).toEqual({ code: 'BAD_REQUEST', message: 'The name is too long. Use at most 80 letters.' });
+    expect(await post('/api/v1/students', { name: 'Kabir', classId: cls.id, rollNo: '1'.repeat(17) })).toEqual({ code: 'BAD_REQUEST', message: 'The roll number is too long. Use at most 16 letters.' });
+    expect(await post('/api/v1/students', { name: '  ', classId: cls.id })).toEqual({ code: 'BAD_REQUEST', message: 'The name is missing.' });
+    expect(await post('/api/v1/classes', { name: 'X'.repeat(40) })).toEqual({ code: 'BAD_REQUEST', message: 'The name is too long. Use at most 32 letters.' });
+    const link = await post('/api/v1/content/links', { title: 'A link', classId: cls.id, url: 'example.org' });
+    expect(link).toEqual({ code: 'BAD_REQUEST', message: 'Type a full web address starting with http:// or https://' });
+  });
+
   it('has no PIN to set: a PIN sent with a new student is ignored, and the old PIN routes are gone', async () => {
     const { app, db, staff, cls, student, device } = await withStudent();
     const res = await app.inject({ method: 'POST', url: '/api/v1/students', headers: staff, payload: { name: 'Rohan', classId: cls.id, rollNo: '13', pin: '1234' } });

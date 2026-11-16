@@ -1,4 +1,4 @@
-import type { RosterEntry, Student } from '@ict/contracts';
+import { rollKey, type RosterEntry, type Student } from '@ict/contracts';
 import type { Db } from '../../infra/db/index.js';
 
 export interface StudentAuthRow {
@@ -64,12 +64,15 @@ export class StudentRepository {
   }
 
   // Spec 4.1: the same name + class + roll number counts as a duplicate. A missing roll number matches a missing one.
+  // Is there already a student of this name with this roll number in the class? Roll numbers are
+  // compared the way sign-in compares them ("05" and "5" are one number): otherwise two students who
+  // look the same on the sign-in screen could be added, and nobody could tell them apart there.
   findDuplicate(name: string, classId: string, rollNo: string | null, exceptId?: string): boolean {
-    return !!this.db
-      .prepare(
-        `SELECT 1 FROM students WHERE name = ? COLLATE NOCASE AND class_id = ? AND roll_no IS ? AND status = 'active' AND id IS NOT ?`,
-      )
-      .get(name, classId, rollNo, exceptId ?? null);
+    const same = this.db
+      .prepare(`SELECT roll_no FROM students WHERE name = ? COLLATE NOCASE AND class_id = ? AND status = 'active' AND id IS NOT ?`)
+      .pluck()
+      .all(name, classId, exceptId ?? null) as (string | null)[];
+    return same.some((r) => (r === null || rollNo === null ? r === rollNo : rollKey(r) === rollKey(rollNo)));
   }
 
   setQrHash(id: string, hash: string, now: number) {

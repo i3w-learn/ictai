@@ -116,4 +116,12 @@ describe('ApiClient', () => {
     const { api } = client(platform, saved);
     expect(() => api.keepAlive({ key: 'POST /api/v1/shows/:id/beat', input: { params: { id: 'x' } } }, 5000)).not.toThrow();
   });
+
+  it('says in plain words what is wrong with something typed, and does not send it', async () => {
+    const { platform, calls } = fakePlatform({ up: { '192.168.1.20': () => ({ status: 201, body: {} }) } });
+    const { api } = client(platform, saved);
+    const tooLong = api.call('POST /api/v1/classes', { body: { name: 'X'.repeat(40) } });
+    await expect(tooLong).rejects.toMatchObject({ status: 400, code: 'BAD_REQUEST', message: 'The name is too long. Use at most 32 letters.' });
+    expect(calls).toEqual([]);
+  });
 });

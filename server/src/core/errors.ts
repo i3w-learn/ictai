@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
+import { plainProblem } from '@ict/contracts';
 
 export class AppError extends Error {
   constructor(
@@ -36,9 +37,7 @@ export function registerErrorHandler(app: FastifyInstance) {
       return reply.status(err.status).send({ code: err.code, message: err.message });
     }
     if (err instanceof ZodError) {
-      const first = err.issues[0];
-      const where = first?.path.join('.') || 'body';
-      return reply.status(400).send({ code: 'BAD_REQUEST', message: `${where}: ${first?.message ?? 'invalid'}` });
+      return reply.status(400).send({ code: 'BAD_REQUEST', message: plainProblem(err) });
     }
     const status = (err as { statusCode?: number }).statusCode;
     if (status && status < 500) {
