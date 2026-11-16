@@ -12,8 +12,8 @@ async function withRavi() {
     t.app.inject({ method, url, headers: headers as Record<string, string>, ...(payload ? { payload } : {}) });
   const c7 = (await inject('POST', '/api/v1/classes', admin, { name: '7' })).json();
   const c8 = (await inject('POST', '/api/v1/classes', admin, { name: '8' })).json();
-  const asha = (await inject('POST', '/api/v1/students', admin, { name: 'Asha', classId: c7.id, pin: '1111' })).json();
-  const kabir = (await inject('POST', '/api/v1/students', admin, { name: 'Kabir', classId: c8.id, pin: '4444' })).json();
+  const asha = (await inject('POST', '/api/v1/students', admin, { name: 'Asha', classId: c7.id, rollNo: '1111' })).json();
+  const kabir = (await inject('POST', '/api/v1/students', admin, { name: 'Kabir', classId: c8.id, rollNo: '4444' })).json();
   const quiz = async (title: string, classId: string, subject: string | null) =>
     (await inject('POST', '/api/v1/quizzes', admin, { title, classId, subject, questions: Q })).json();
   const maths7 = await quiz('Maths 7', c7.id, 'Maths');
@@ -29,13 +29,13 @@ async function withRavi() {
 
 // Asha plays a quiz and gets every answer right or wrong.
 async function play(t: Awaited<ReturnType<typeof withRavi>>, quizId: string, choice: number) {
-  const device = t.auth(await t.enrolDevice('lab_pc'));
-  const a = t.auth((await t.inject('POST', '/api/v1/auth/student/pin', device, { studentId: t.asha.id, pin: '1111' })).json().token);
+  const a = t.auth(await t.studentToken(t.asha.id));
   const run = (await t.inject('POST', '/api/v1/quiz-runs', t.admin, { quizId })).json();
   await t.inject('POST', `/api/v1/quiz-runs/${run.runId}/join`, a);
   await t.inject('POST', `/api/v1/quiz-runs/${run.runId}/start`, t.admin);
   await t.inject('POST', `/api/v1/quiz-runs/${run.runId}/answers`, a, { questionIndex: 0, choice });
   await t.inject('POST', `/api/v1/quiz-runs/${run.runId}/end`, t.admin);
+  await t.inject('POST', '/api/v1/auth/logout', a); // so that she can sign in again for the next quiz
   return run;
 }
 

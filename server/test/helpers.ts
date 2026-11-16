@@ -44,7 +44,16 @@ export async function testServer(opts: { ai?: { llm: Llm; installed: boolean } }
     return res.json().token;
   }
 
-  return { app, db, clock, c, login, auth, enrolDevice, diary };
+  // Signs a student in on a lab PC of their own, the way the sign-in screen does: class, roll number
+  // and name. Returns the session token.
+  async function studentToken(studentId: string): Promise<string> {
+    const s = db.prepare('SELECT class_id AS classId, section_id AS sectionId, roll_no AS rollNo FROM students WHERE id = ?').get(studentId) as object;
+    const res = await app.inject({ method: 'POST', url: '/api/v1/auth/student/roll', headers: auth(await enrolDevice('lab_pc')), payload: { ...s, studentId } });
+    if (res.statusCode !== 201) throw new Error(`student sign-in failed: ${res.body}`);
+    return res.json().token;
+  }
+
+  return { app, db, clock, c, login, auth, enrolDevice, studentToken, diary };
 }
 
 // Collects every message a socket receives, and lets a test wait for the next one of a type.

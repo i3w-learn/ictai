@@ -3,7 +3,7 @@ import type { AuditLog } from '../../core/audit.js';
 import { HOUR, MINUTE, type Clock } from '../../core/clock.js';
 import { AppError, lockedOut, notFound } from '../../core/errors.js';
 import type { FailureLimiter } from '../auth/limiter.js';
-import { checkSecret, hashSecret, hashToken } from '../auth/secrets.js';
+import { hashToken } from '../auth/secrets.js';
 import type { SessionRepository } from '../auth/session.repository.js';
 import type { SessionService } from '../auth/session.service.js';
 import type { DeviceRepository } from '../devices/device.repository.js';
@@ -13,9 +13,8 @@ import type { StudentAuthRow, StudentRepository } from './student.repository.js'
 // Spec 3: student sessions end after 10 min idle (and at sign-out or lesson end).
 export const STUDENT_SESSION = { idleMs: 10 * MINUTE, maxMs: 8 * HOUR };
 
-const wrongPin = () => new AppError(401, 'INVALID_CREDENTIALS', 'That PIN is not right.');
-
-// Student sign-in on an enrolled lab PC: class + roll number, class + name + PIN, QR card, or first-time code.
+// Student sign-in on an enrolled lab PC: class + roll number (and the name, when two share a number),
+// or a QR card. There is no PIN.
 export class StudentAuthService {
   constructor(
     private readonly now: Clock,
@@ -61,8 +60,6 @@ export class StudentAuthService {
     if (!known) throw new AppError(409, 'ROLL_NOT_UNIQUE', `More than one student has roll number ${who.rollNo}. Pick your name.`);
 
     const st = this.students.findActive(known.id)!;
-    // Class and roll number are all a student needs: a roll number belongs to one student of a class,
-    // which a name does not. An old PIN on the student does not stand in the way.
     // One student, one lab PC at a time: this is what stops a friend signing in as you.
     const elsewhere = this.sessionRows.liveStudentDevice(st.id, device.deviceId, this.now());
     if (elsewhere) {
@@ -71,21 +68,7 @@ export class StudentAuthService {
     return this.start(device, st, 'roll');
   }
 
-  async withPin(device: DevicePrincipal, studentId: string, pin: string): Promise<SessionResult> {
-    const key = `pin:${device.deviceId}:${studentId}`;
-    const wait = this.limiter.blockedFor(key);
-    if (wait > 0) throw lockedOut(wait);
-
-    const st = this.students.findActive(studentId);
-    if (!st?.pin_hash || !(await checkSecret(pin, st.pin_hash))) {
-      this.failed(device, key, 'pin', st?.id ?? null);
-      throw wrongPin();
-    }
-    this.limiter.succeed(key);
-    return this.start(device, st, 'pin');
-  }
-
-  // Same lockout as wrong PINs, counted per lab PC: five unknown cards and it waits five minutes.
+  // Counted per lab PC: five unknown cards and it waits five minutes.
   withQr(device: DevicePrincipal, qrToken: string): SessionResult {
     const key = `qr:${device.deviceId}`;
     const wait = this.limiter.blockedFor(key);
@@ -98,23 +81,6 @@ export class StudentAuthService {
     }
     this.limiter.succeed(key);
     return this.start(device, st, 'qr');
-  }
-
-  async firstSignIn(device: DevicePrincipal, code: string, pin: string): Promise<SessionResult> {
-    const key = `enrol-code:${device.deviceId}`;
-    const wait = this.limiter.blockedFor(key);
-    if (wait > 0) throw lockedOut(wait);
-
-    const now = this.now();
-    const st = this.students.findByEnrolCodeHash(hashToken(code), now);
-    if (!st) {
-      this.failed(device, key, 'enrolment-code');
-      throw new AppError(401, 'INVALID_CREDENTIALS', 'That code is not right or has expired.');
-    }
-    this.limiter.succeed(key);
-    this.students.setPin(st.id, await hashSecret(pin), now);
-    this.students.setEnrolCode(st.id, null, null, now); // one-time
-    return this.start(device, st, 'enrolment-code');
   }
 
   // Spec 4.5: wrong tries are logged against the lab PC they came from, never with what was typed.

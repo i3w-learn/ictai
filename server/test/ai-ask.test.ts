@@ -72,11 +72,10 @@ describe('AI ask', () => {
   });
 
   it('a signed-in student cannot ask', async () => {
-    const { inject, teacher, enrolDevice, auth } = await setup({ llm: echoLlm, installed: true });
+    const { inject, teacher, studentToken, auth } = await setup({ llm: echoLlm, installed: true });
     const c7 = (await inject('POST', '/api/v1/classes', teacher, { name: '7' })).json();
-    const kid = (await inject('POST', '/api/v1/students', teacher, { name: 'Asha', classId: c7.id, pin: '1111' })).json();
-    const device = auth(await enrolDevice('lab_pc'));
-    const { token } = (await inject('POST', '/api/v1/auth/student/pin', device, { studentId: kid.id, pin: '1111' })).json();
+    const kid = (await inject('POST', '/api/v1/students', teacher, { name: 'Asha', classId: c7.id, rollNo: '1111' })).json();
+    const token = await studentToken(kid.id);
     expect((await inject('POST', '/api/v1/ai/ask', auth(token), { question: 'Hi' })).statusCode).toBe(403);
   });
 });

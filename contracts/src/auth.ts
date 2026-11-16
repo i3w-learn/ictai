@@ -8,11 +8,7 @@ export const StaffLogin = z.object({
 });
 export type StaffLogin = z.infer<typeof StaffLogin>;
 
-export const Pin = z.string().regex(/^\d{4}$/, 'PIN must be 4 digits');
-
-export const StudentPinLogin = z.object({ studentId: Id, pin: Pin });
 export const StudentQrLogin = z.object({ qrToken: z.string().min(16).max(128) });
-export const StudentFirstLogin = z.object({ code: z.string().regex(/^\d{6}$/), pin: Pin });
 
 // Easy sign-in: class, section and roll number, with no PIN. Only a student the teacher has added
 // gets in: the class, section and roll number together are that student's ID.

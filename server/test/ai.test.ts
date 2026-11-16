@@ -82,10 +82,9 @@ describe('AI quiz maker', () => {
   });
 
   it('students cannot use AI', async () => {
-    const { inject, teacher, c7, enrolDevice, auth } = await setup({ llm: goodLlm, installed: true });
-    const kid = (await inject('POST', '/api/v1/students', teacher, { name: 'Asha', classId: c7.id, pin: '1111' })).json();
-    const device = auth(await enrolDevice('lab_pc'));
-    const { token } = (await inject('POST', '/api/v1/auth/student/pin', device, { studentId: kid.id, pin: '1111' })).json();
+    const { inject, teacher, c7, studentToken, auth } = await setup({ llm: goodLlm, installed: true });
+    const kid = (await inject('POST', '/api/v1/students', teacher, { name: 'Asha', classId: c7.id, rollNo: '1111' })).json();
+    const token = await studentToken(kid.id);
     expect((await inject('GET', '/api/v1/ai/status', auth(token))).statusCode).toBe(403);
   });
 });

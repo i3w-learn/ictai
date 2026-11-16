@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { testServer } from './helpers.js';
 
-// Class-wide tools: duplicate check, promote, class codes, sign-in cards, and the audit log.
+// Class-wide tools: duplicate check, promote, sign-in cards, and the audit log.
 async function withClass() {
   const t = await testServer();
   const staff = t.auth(await t.login('teacher', 'teacher-pass'));
@@ -11,7 +11,7 @@ async function withClass() {
   const a7 = (await post('/api/v1/sections', { classId: c7.id, name: 'A' })).json();
   const b7 = (await post('/api/v1/sections', { classId: c7.id, name: 'B' })).json();
   const a8 = (await post('/api/v1/sections', { classId: c8.id, name: 'a' })).json();
-  const asha = (await post('/api/v1/students', { name: 'Asha Verma', classId: c7.id, sectionId: a7.id, rollNo: '12', pin: '4321' })).json();
+  const asha = (await post('/api/v1/students', { name: 'Asha Verma', classId: c7.id, sectionId: a7.id, rollNo: '12' })).json();
   const rohan = (await post('/api/v1/students', { name: 'Rohan Das', classId: c7.id, sectionId: b7.id, rollNo: '13' })).json();
   const device = t.auth(await t.enrolDevice('lab_pc'));
   return { ...t, staff, post, c7, c8, a8, asha, rohan, device };
@@ -59,7 +59,7 @@ describe('promote a class', () => {
 
     const list = (await app.inject({ method: 'GET', url: `/api/v1/students?classId=${c8.id}`, headers: staff })).json();
     expect(list).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: 'Asha Verma', classId: c8.id, sectionId: a8.id, hasPin: true }),
+      expect.objectContaining({ name: 'Asha Verma', classId: c8.id, sectionId: a8.id }),
       expect.objectContaining({ name: 'Rohan Das', classId: c8.id, sectionId: null }),
     ]));
     expect((await app.inject({ method: 'GET', url: `/api/v1/students?classId=${c7.id}`, headers: staff })).json()).toEqual([]);
@@ -72,17 +72,7 @@ describe('promote a class', () => {
   });
 });
 
-describe('class codes and cards', () => {
-  it('makes a working first sign-in code for every student', async () => {
-    const { app, post, c7, device } = await withClass();
-    const codes = (await post(`/api/v1/classes/${c7.id}/enrolment-codes`)).json();
-    expect(codes).toHaveLength(2);
-    expect(new Set(codes.map((c: { code: string }) => c.code)).size).toBe(2);
-    const rohan = codes.find((c: { name: string }) => c.name === 'Rohan Das');
-    const res = await app.inject({ method: 'POST', url: '/api/v1/auth/student/enrol', headers: device, payload: { code: rohan.code, pin: '2468' } });
-    expect(res.statusCode).toBe(201);
-  });
-
+describe('sign-in cards', () => {
   it('cards carry a new QR that works, and the old QR stops working', async () => {
     const { app, c7, staff, device } = await withClass();
     const created = (await app.inject({
@@ -93,7 +83,7 @@ describe('class codes and cards', () => {
 
     const cards = (await app.inject({ method: 'POST', url: `/api/v1/classes/${c7.id}/cards`, headers: staff })).json();
     const kabir = cards.find((c: { name: string }) => c.name === 'Kabir');
-    expect(kabir).toMatchObject({ rollNo: '14', code: expect.stringMatching(/^\d{6}$/), qrToken: expect.any(String) });
+    expect(kabir).toEqual({ studentId: created.id, name: 'Kabir', rollNo: '14', qrToken: expect.any(String) }); // a QR and nothing else to sign in with
     expect((await qr(kabir.qrToken)).statusCode).toBe(201);
     expect((await qr(created.qrToken)).statusCode).toBe(401);
   });

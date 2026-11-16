@@ -479,4 +479,12 @@ export const migrations: Migration[] = [
       );
     `,
   },
+  {
+    // Students sign in with class, roll number and name, or a QR card. PINs and first sign-in codes
+    // are gone, so what was stored for them is wiped. The columns stay, empty: SQLite cannot drop a
+    // UNIQUE column, and an empty column costs nothing.
+    version: 17,
+    name: 'no_student_pins',
+    sql: `UPDATE students SET pin_hash = NULL, enrol_code_hash = NULL, enrol_code_expires_at = NULL;`,
+  },
 ];
