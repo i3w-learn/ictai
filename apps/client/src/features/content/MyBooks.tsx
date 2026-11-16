@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, FileText, Film, Image, Link2, Music } from 'lucide-react';
+import { FileText, Film, Image, Link2, Music } from 'lucide-react';
 import type { ContentItem, ContentKind } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, ErrorNote, PageTitle, useAction } from '../../ui/ui';
+import { ErrorNote, PageTitle, useAction } from '../../ui/ui';
 import { KIND_WORDS, shelve } from './files';
 import { Viewer } from './Viewer';
 
-const ICON: Record<ContentKind, typeof FileText> = { pdf: FileText, image: Image, video: Film, audio: Music, link: Link2 };
+export const KIND_ICON: Record<ContentKind, typeof FileText> = { pdf: FileText, image: Image, video: Film, audio: Music, link: Link2 };
 
 // PRD student app "My books": everything the teachers have put in the library for this student's class,
 // by subject and chapter. Tap one to open it.
-export function MyBooks({ onBack }: { onBack: () => void }) {
+export function MyBooks() {
   const { call } = useApp();
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -22,7 +22,6 @@ export function MyBooks({ onBack }: { onBack: () => void }) {
   if (open) return <Viewer item={open} onBack={() => setOpen(null)} />;
   return (
     <div className="mx-auto grid w-full max-w-4xl gap-5">
-      <div><Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button></div>
       <PageTitle sub="Books, pictures and videos your teachers have added for your class.">My books</PageTitle>
       {loaded && items.length === 0 && <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing here yet. When your teacher adds something for your class, it shows here.</p>}
       {shelve(items).map((shelf) => (
@@ -33,7 +32,7 @@ export function MyBooks({ onBack }: { onBack: () => void }) {
               <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">{ch.chapter}</h3>
               <ul className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
                 {ch.items.map((i) => {
-                  const Icon = ICON[i.kind];
+                  const Icon = KIND_ICON[i.kind];
                   return (
                     <li key={i.id}>
                       <button type="button" onClick={() => setOpen(i)} className="flex h-full w-full cursor-pointer items-start gap-3 rounded-2xl border border-border bg-card px-4 py-4 text-left shadow-sm hover:border-accent/50">

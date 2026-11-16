@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Lightbulb } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 import type { MyProgress } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, Card, ErrorNote, PageTitle, useAction } from '../../ui/ui';
@@ -8,7 +8,7 @@ const day = (at: number) => new Date(at).toLocaleDateString(undefined, { day: 'n
 
 // PRD student app "How I am doing": the student's own quiz results and work, and one thing to try next.
 // A student only ever sees their own numbers here.
-export function HowIAmDoing({ onBack, onWork }: { onBack: () => void; onWork: () => void }) {
+export function HowIAmDoing({ onWork }: { onWork: () => void }) {
   const { call } = useApp();
   const [p, setP] = useState<MyProgress | null>(null);
   const load = useAction(async () => setP(await call('GET /api/v1/me/progress')));
@@ -18,7 +18,6 @@ export function HowIAmDoing({ onBack, onWork }: { onBack: () => void; onWork: ()
   const nothingYet = p && p.quizzes.taken === 0 && p.work.set === 0;
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-5">
-      <div><Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button></div>
       <PageTitle sub="Only you can see this.">How I am doing</PageTitle>
       <ErrorNote message={load.error} />
       {nothingYet && <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing to show yet. After your first quiz or piece of work, your results will be here.</p>}

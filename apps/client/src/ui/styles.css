@@ -4,7 +4,7 @@
 @import 'tailwindcss';
 
 :root {
-  --background: hsl(220 33% 98%);
+  --background: hsl(226 70% 97.5%);
   --foreground: hsl(222 30% 14%);
   --card: hsl(0 0% 100%);
   --primary: hsl(243 75% 59%);
@@ -16,6 +16,9 @@
   --destructive: hsl(0 72% 51%);
   --success: hsl(152 61% 36%);
   --border: hsl(220 22% 91%);
+  /* Cards have no outline on the light page: the soft shadow lifts them. Dark and high-contrast
+     screens bring the outline back, because a shadow does not show there. */
+  --card-border: transparent;
   --ring: hsl(243 75% 59%);
   /* Who is signed in, shown in the top bar so a shared PC never leaves you guessing. */
   --role-admin: hsl(271 68% 50%);
@@ -38,6 +41,7 @@
     --destructive: hsl(0 72% 62%);
     --success: hsl(152 50% 52%);
     --border: hsl(215 20% 20%);
+    --card-border: var(--border);
     --ring: hsl(243 75% 66%);
     --role-admin: hsl(271 80% 72%);
     --role-teacher: hsl(199 85% 62%);
@@ -58,6 +62,7 @@
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-border: var(--border);
+  --color-card-border: var(--card-border);
   --color-ring: var(--ring);
   --color-role-admin: var(--role-admin);
   --color-role-teacher: var(--role-teacher);
@@ -94,6 +99,7 @@ html[data-contrast='high'] {
   --secondary-foreground: hsl(0 0% 0%);
   --muted-foreground: hsl(220 15% 22%);
   --border: hsl(220 15% 30%);
+  --card-border: var(--border);
   --destructive: hsl(0 80% 35%);
   --success: hsl(152 80% 22%);
 }

@@ -9,7 +9,7 @@ const TAG = { todo: 'bg-primary/10 text-primary', submitted: 'bg-secondary text-
 
 // PRD student app "My work": what the teacher has set, in the order to look at it. Open one to read
 // what to do and write the answer. After marking, the marks and the teacher's comment show here.
-export function MyWork({ onBack }: { onBack: () => void }) {
+export function MyWork() {
   const { call } = useApp();
   const [work, setWork] = useState<Work[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -23,7 +23,6 @@ export function MyWork({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-5">
-      <div><Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button></div>
       <PageTitle sub="Work your teacher has set for you.">My work</PageTitle>
       {loaded && work.length === 0 && <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing to do right now. New work from your teacher will show here.</p>}
       <ul className="grid gap-3">

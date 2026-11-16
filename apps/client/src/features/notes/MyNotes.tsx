@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { MAX_NOTES_PER_STUDENT, NOTE_BODY_MAX, type Note } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
@@ -13,8 +13,9 @@ const day = (at: number) => new Date(at).toLocaleDateString(undefined, { day: 'n
 
 // "My notes": the student's own notebook. Only they can read it, and it follows them to any lab PC.
 // A note saves itself shortly after the student stops typing, and again before it is left
-// (opening another, starting a new one, going back), so signing out loses at most a moment's typing.
-export function MyNotes({ onBack }: { onBack: () => void }) {
+// (opening another, starting a new one, picking another page in the menu), so signing out loses at
+// most a moment's typing.
+export function MyNotes() {
   const { call } = useApp();
   const [notes, setNotes] = useState<Note[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -88,10 +89,11 @@ export function MyNotes({ onBack }: { onBack: () => void }) {
     await saveFirst();
     setDraft(next);
   });
-  const back = () => run('leave', async () => {
-    await saveFirst();
-    onBack();
-  });
+  // Picking another page in the menu takes this screen away at once, so what is typed and not yet
+  // saved is sent on the way out. Not while a save is already going: that would make two copies
+  // of a brand-new note.
+  const atLeave = useLatest(() => { if (draft && dirty && !running.current) void saveDraft(api, draft).catch(() => undefined); });
+  useEffect(() => () => atLeave.current(), [atLeave]);
   const remove = () => run('leave', async () => {
     if (draft?.id) {
       // Already deleted somewhere else is the same result, not a failure.
@@ -122,7 +124,6 @@ export function MyNotes({ onBack }: { onBack: () => void }) {
   return (
     <div className="mx-auto grid w-full max-w-5xl gap-6">
       <header className="flex flex-wrap items-end gap-4">
-        <Button variant="quiet" disabled={busy != null} onClick={() => void back()}><ArrowLeft className="size-4" /> Back</Button>
         <div className="flex-1">
           <PageTitle sub="Only you can read these. They are here on any lab PC you sign in to.">My notes</PageTitle>
         </div>
