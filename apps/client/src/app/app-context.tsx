@@ -19,6 +19,9 @@ interface AppContextValue {
   locator: ServerLocator | null;
   relay: RelayClient;
   call: <K extends RouteKey>(key: K, input?: CallInput<K>, credential?: Credential) => Promise<CallOutput<K>>;
+  // Has the app itself repeat one call as the signed-in person every `everyMs`, also while its
+  // window is hidden; null stops it. See `Platform.keepAlive`.
+  keepAlive: <K extends RouteKey>(call: { key: K; input: CallInput<K> } | null, everyMs?: number) => void;
   signOut: () => Promise<void>;
   resetDevice: () => Promise<void>;
 }
@@ -143,9 +146,13 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
     dispatch({ type: 'reset' });
   }, [store]);
 
+  const keepAlive = useCallback<AppContextValue['keepAlive']>((again, everyMs) => {
+    api?.keepAlive(again && { ...again, token: stateRef.current.session?.token }, everyMs);
+  }, [api, stateRef]);
+
   const value = useMemo<AppContextValue>(
-    () => ({ state, phase: phaseOf(state), dispatch, platform, locator, relay, call, signOut, resetDevice }),
-    [state, platform, locator, relay, call, signOut, resetDevice],
+    () => ({ state, phase: phaseOf(state), dispatch, platform, locator, relay, call, keepAlive, signOut, resetDevice }),
+    [state, platform, locator, relay, call, keepAlive, signOut, resetDevice],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

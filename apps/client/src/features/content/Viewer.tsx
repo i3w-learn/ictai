@@ -13,7 +13,7 @@ import { VideoPlayer, type PlayerState } from './VideoPlayer';
 // their own players. A teacher who may host lessons can also show a video to its class: it then plays
 // on the class's screens too, following whatever she does here.
 export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void }) {
-  const { call, state } = useApp();
+  const { call, keepAlive, state } = useApp();
   const { url, percent, error, onError } = useFileUrl(item);
 
   // --- Show to class ---
@@ -66,6 +66,14 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
     const t = setInterval(() => { const s = peek.current?.(); if (s) tellNow.current(s); }, SHOW_BEAT_MS);
     return () => clearInterval(t);
   }, [showing, tellNow]);
+  // And the app itself says "still here", because this page's own timer is slowed down, sometimes to
+  // once a minute, when the window is hidden or covered (the teacher has another program in front).
+  const liveId = showing ? live?.id : undefined;
+  useEffect(() => {
+    if (!liveId) return;
+    keepAlive({ key: 'POST /api/v1/shows/:id/beat', input: { params: { id: liveId } } }, SHOW_BEAT_MS);
+    return () => keepAlive(null);
+  }, [keepAlive, liveId]);
   // Leaving the video ends the show.
   useEffect(() => () => { const id = showId.current; if (id) void call('DELETE /api/v1/shows/:id', { params: { id } }).catch(() => undefined); }, [call]);
 

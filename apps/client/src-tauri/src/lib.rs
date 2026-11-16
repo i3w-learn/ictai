@@ -17,7 +17,7 @@ use tauri::{AppHandle, Manager, State};
 use crate::discovery::Found;
 use crate::error::AppError;
 use crate::files::{FileSource, Source};
-use crate::http::{ApiRequest, ApiResponse, HttpClients, ProbeResult};
+use crate::http::{ApiRequest, ApiResponse, HttpClients, KeepAlive, ProbeResult};
 use crate::relay::RelayState;
 
 /// `ICT_PROFILE=student` gives a second copy of the app its own saved settings, so one Mac
@@ -38,6 +38,19 @@ async fn discover_servers(app: String, version: String, wait_ms: Option<u64>) ->
 #[tauri::command]
 async fn api_request(clients: State<'_, HttpClients>, request: ApiRequest) -> Result<ApiResponse, AppError> {
     http::send(&clients, request).await
+}
+
+/// Says `request` again every `every_ms`, on the app's own clock, until it is replaced, stopped
+/// (called with no request) or the server says there is no point. See `KeepAlive`.
+#[tauri::command]
+fn keep_alive(app: AppHandle, state: State<'_, KeepAlive>, request: Option<ApiRequest>, every_ms: Option<u64>) {
+    let mut running = state.0.lock().unwrap();
+    if let Some(old) = running.take() {
+        old.abort();
+    }
+    let Some(request) = request else { return };
+    let every = Duration::from_millis(every_ms.unwrap_or(5000).max(1000));
+    *running = Some(tauri::async_runtime::spawn(async move { http::repeat(&app.state::<HttpClients>(), request, every).await }));
 }
 
 #[tauri::command]
@@ -100,6 +113,7 @@ fn install_role() -> Option<String> {
 pub fn run() {
     tauri::Builder::default()
         .manage(HttpClients::default())
+        .manage(KeepAlive::default())
         .manage(RelayState::default())
         .manage(FileSource::default())
         // Library files for the page's players: see files.rs.
@@ -113,6 +127,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             discover_servers,
             api_request,
+            keep_alive,
             probe_server,
             relay_open,
             relay_send,

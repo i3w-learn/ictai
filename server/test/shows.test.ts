@@ -125,6 +125,26 @@ describe('Show to class', () => {
     expect((await move(ravi, second, { playing: true, position: 5 })).statusCode).toBe(404);
   });
 
+  it('keeps a show going on a plain "still here" from the app, which moves nothing and tells no screen', async () => {
+    const { ravi, admin, asha, c7, clock, screen, start, move, mine, inject } = await school();
+    const id = (await start(ravi)).json().id;
+    await move(ravi, id, { playing: false, position: 42 });
+    const pc = screen(asha.token, c7.id);
+    const beat = (who: object, show = id) => inject('POST', `/api/v1/shows/${show}/beat`, who);
+    // Two minutes with the teacher's window hidden: only the app's own "still here" arrives.
+    for (let n = 0; n < 24; n += 1) {
+      clock.t += 5_000;
+      expect((await beat(ravi)).statusCode).toBe(204);
+    }
+    expect(await mine(asha.as)).toMatchObject({ id, playing: false, position: 42 });
+    expect(pc.got).toHaveLength(1);
+    expect((await beat(admin)).statusCode).toBe(404); // only the teacher who is showing
+    expect((await beat(asha.as)).statusCode).toBe(403);
+    clock.t += SHOW_STALE_MS + 1;
+    expect(await mine(asha.as)).toBeNull(); // and without it the show still ends
+    expect((await beat(ravi)).statusCode).toBe(404);
+  });
+
   it("keeps a show to its own class: another class's student neither hears nor sees it", async () => {
     const { ravi, asha, kabir, c7, c8, screen, start, mine } = await school();
     const other = screen(kabir.token, c8.id);

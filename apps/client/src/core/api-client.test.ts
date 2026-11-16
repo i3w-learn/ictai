@@ -97,4 +97,23 @@ describe('ApiClient', () => {
     await expect(api.call('GET /health')).rejects.toMatchObject({ kind: 'pin-mismatch' });
     expect(calls).toHaveLength(1);
   });
+
+  it('hands the app a call to repeat by itself, to the server it talks to now, and null to stop', () => {
+    const { platform } = fakePlatform({ up: {} });
+    const asked: unknown[] = [];
+    platform.keepAlive = async (req, everyMs) => { asked.push(req && { ...req, everyMs }); };
+    const { api } = client(platform, saved);
+    api.keepAlive({ key: 'POST /api/v1/shows/:id/beat', input: { params: { id: 'show 1' } }, token: 'tok' }, 5000);
+    api.keepAlive(null);
+    expect(asked).toEqual([
+      { baseUrl: 'https://192.168.1.20:7700', certFp: 'AA', method: 'POST', path: '/api/v1/shows/show%201/beat', body: undefined, token: 'tok', everyMs: 5000 },
+      null,
+    ]);
+  });
+
+  it('does nothing about repeating where there is no native side', () => {
+    const { platform } = fakePlatform({ up: {} });
+    const { api } = client(platform, saved);
+    expect(() => api.keepAlive({ key: 'POST /api/v1/shows/:id/beat', input: { params: { id: 'x' } } }, 5000)).not.toThrow();
+  });
 });

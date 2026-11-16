@@ -23,6 +23,10 @@ export class TauriPlatform implements Platform {
     return call<RawResponse>('api_request', { request });
   }
 
+  keepAlive(request: RawRequest | null, everyMs?: number) {
+    return call<void>('keep_alive', { request, everyMs });
+  }
+
   probe(baseUrl: string) {
     return call<{ certFp: string; health: unknown }>('probe_server', { baseUrl });
   }

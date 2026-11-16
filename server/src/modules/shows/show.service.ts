@@ -98,6 +98,11 @@ export class ShowService {
     return this.view(live, true);
   }
 
+  // "Still here", and nothing more. Where the video is does not change.
+  beat(actor: StaffPrincipal, id: string) {
+    this.mine(actor, id).heardAt = this.now();
+  }
+
   stop(actor: StaffPrincipal, id: string) {
     const live = this.mine(actor, id);
     this.markOver(live.id);
