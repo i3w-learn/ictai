@@ -36,17 +36,21 @@ async function main() {
   if (config.devAdmin) await c.staffAuth.upsertAccount({ ...config.devAdmin, role: 'super_admin' });
   await consumeBootstrapAdmin(config.bootstrapAdminFile, c.staffAuth);
 
-  // Videos that came with the app go into the library. On a new server there is nobody to own them
-  // until the school makes its Super Admin, so this asks again every few seconds until it is done.
+  // Videos that came with the app go into the library. The folder is looked at again every few
+  // seconds for as long as the server runs: on a new server there is nobody to own the videos until
+  // the school makes its Super Admin, and videos may be put in the folder later.
+  let startersFailed = false;
   const addStarters = async () => {
     try {
-      if (await c.starter?.sync() !== false) clearInterval(starters);
+      await c.starter?.sync();
+      startersFailed = false;
     } catch (err) {
-      clearInterval(starters);
-      log('starter.video.failed', { why: err instanceof Error ? err.message : String(err) });
+      // Said once, not every few seconds, until it works again.
+      if (!startersFailed) log('starter.video.failed', { why: err instanceof Error ? err.message : String(err) });
+      startersFailed = true;
     }
   };
-  const starters = setInterval(() => void addStarters(), 10_000).unref();
+  setInterval(() => void addStarters(), 10_000).unref();
   void addStarters();
 
   const { serverId } = c.identity.current();
@@ -71,7 +75,7 @@ async function main() {
       return { serverId: id.serverId, schoolId: id.schoolId, name: id.name, addrs: lanAddresses(), port: config.apiPort, certFp: id.certFp };
     },
   });
-  app.log.info({ serverId, certFp: tls.fingerprint, addrs: lanAddresses(), beacon: beacon.port }, 'ICT server ready');
+  app.log.info({ serverId, certFp: tls.fingerprint, addrs: lanAddresses(), beacon: beacon.port, starterDir: config.starterDir }, 'ICT server ready');
 
   const stop = async () => {
     c.aiQueue.stop();

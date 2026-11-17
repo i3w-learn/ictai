@@ -110,3 +110,102 @@ jobs:
         with:
           name: ICT-Student-Setup
           path: installer/Output/ICT-Student-Setup-*.exe
+
+  # Installs the real installer on a clean Windows machine, the way a school would, and checks
+  # that the server runs as a Windows service and that add-videos.bat puts a video in the library.
+  install-test:
+    needs: installer
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ICT-Setup
+          path: setup
+
+      - name: Install as a Server PC, with no questions
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem setup/ICT-Setup-*.exe).FullName
+          $p = Start-Process $exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/AdminPassword=admin-pass-1", "/LOG=$env:RUNNER_TEMP\setup.log" -Wait -PassThru
+          if ($p.ExitCode) { Get-Content "$env:RUNNER_TEMP\setup.log" -Tail 40; exit $p.ExitCode }
+          $server = "$env:ProgramFiles\ICT App\server"
+          foreach ($f in "node.exe", "server.cjs", "ict-server.exe", "ict-server.xml") { if (!(Test-Path "$server\$f")) { throw "Missing after install: $f" } }
+          if ((Get-Content "$env:ProgramFiles\ICT App\install-role.txt") -ne "console") { throw "The role file does not say console" }
+          Get-Service ICTServer | Format-List Name, Status, StartType
+
+      - name: The server runs as a Windows service
+        shell: pwsh
+        run: |
+          $server = "$env:ProgramFiles\ICT App\server"
+          $data = "$env:ProgramData\ICT App\server"
+          foreach ($i in 1..30) {
+            Start-Sleep 2
+            curl.exe -k -s --fail https://localhost:7700/health
+            if ($LASTEXITCODE -eq 0) { break }
+          }
+          if ($LASTEXITCODE) { Get-Content "$data\startup.log" -ErrorAction SilentlyContinue; Get-ChildItem $server; throw "The server did not start" }
+          if ((Get-Service ICTServer).Status -ne "Running") { throw "The service is not running" }
+
+      - name: Add a video with add-videos.bat
+        shell: pwsh
+        run: |
+          $pack = "$env:RUNNER_TEMP\ICT App Windows"   # a space in the path, as in a real Downloads folder
+          New-Item -ItemType Directory -Force "$pack\videos" | Out-Null
+          Copy-Item installer/add-videos.bat "$pack\2-add-videos.bat"
+          # A small file that begins the way an MP4 does.
+          $bytes = [byte[]](0, 0, 0, 0x20) + [Text.Encoding]::ASCII.GetBytes("ftypisom") + (New-Object byte[] 4000)
+          [IO.File]::WriteAllBytes("$pack\videos\G6-Mar-Mat-06Int11-Addition of Integers -Part 1-DMV-ILL.mp4", $bytes)
+          cmd /c "`"$pack\2-add-videos.bat`" < nul"
+          if ($LASTEXITCODE) { throw "add-videos.bat ended with $LASTEXITCODE" }
+          if (!(Test-Path "$env:ProgramFiles\ICT App\server\starter-videos\*.mp4")) { throw "The video was not copied beside the server" }
+
+      - name: The video is in the library and can be read
+        shell: pwsh
+        run: |
+          $base = "https://localhost:7700"
+          $items = @()
+          foreach ($i in 1..30) {
+            Start-Sleep 2
+            try {
+              $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
+              $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ })
+              if ($items.Count -gt 0) { break }
+            } catch { Write-Host "not yet: $_" }
+          }
+          $items | Format-List title, kind, className, subject, size, mime
+          if ($items.Count -ne 1) { Get-Content "$env:ProgramData\ICT App\server\events.log" -ErrorAction SilentlyContinue; throw "Expected 1 library item, found $($items.Count)" }
+          $v = $items[0]
+          if ($v.title -ne "Addition of Integers - Part 1" -or $v.className -ne "6" -or $v.subject -ne "Maths" -or $v.kind -ne "video") { $v | ConvertTo-Json; throw "The video was filed wrongly" }
+          $code = curl.exe -k -s -o NUL -w "%{http_code}" -H "authorization: Bearer $token" -H "range: bytes=0-99" "$base/api/v1/files/$($v.fileHash)/raw"
+          if ($code -ne "206") { throw "Reading the video gave $code" }
+          Get-Content "$env:ProgramData\ICT App\server\events.log"
+
+      - name: What the server wrote, if something above went wrong
+        if: failure()
+        shell: pwsh
+        run: |
+          $server = "$env:ProgramFiles\ICT App\server"
+          $data = "$env:ProgramData\ICT App\server"
+          Get-ChildItem $server, "$server\starter-videos", $data -ErrorAction SilentlyContinue | Format-Table FullName, Length
+          foreach ($f in "$data\events.log", "$data\startup.log", "$data\starter-videos.json") { "--- $f"; Get-Content $f -ErrorAction SilentlyContinue }
+          Get-ChildItem "$server\*.log" | ForEach-Object { "--- $($_.Name)"; Get-Content $_ -Tail 60 }
+
+      - name: Running add-videos.bat again adds nothing twice
+        shell: pwsh
+        run: |
+          cmd /c "`"$env:RUNNER_TEMP\ICT App Windows\2-add-videos.bat`" < nul"
+          Start-Sleep 20
+          $base = "https://localhost:7700"
+          $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
+          $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ })
+          if ($items.Count -ne 1) { throw "Expected still 1 library item, found $($items.Count)" }
+
+      - name: Uninstall leaves no service behind
+        shell: pwsh
+        run: |
+          $p = Start-Process "$env:ProgramFiles\ICT App\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
+          if ($p.ExitCode) { exit $p.ExitCode }
+          Start-Sleep 5
+          if (Get-Service ICTServer -ErrorAction SilentlyContinue) { throw "The service is still there after uninstall" }
