@@ -44,6 +44,8 @@ const ACTION: Record<string, string> = {
   'work.delete': 'took away a piece of work',
   'timetable.set': 'booked the lab in the timetable',
   'timetable.clear': 'freed a lab period in the timetable',
+  'show.start': 'started showing a video to the class',
+  'show.stop': 'stopped showing a video',
   'notice.create': 'put up a notice',
   'notice.delete': 'took down a notice',
 };
@@ -80,6 +82,7 @@ export function AuditPanel() {
               {/* The topic is forgotten after 90 days; the line then just says a quiz was asked for. */}
               {e.action === 'ai.quiz.request' && (e.detail as { topic?: string } | null)?.topic && <> on <b className="font-semibold">{(e.detail as { topic: string }).topic}</b></>}
               {e.action === 'ai.ask.request' && (e.detail as { question?: string } | null)?.question && <>: <i>“{shorten((e.detail as { question: string }).question)}”</i></>}
+              {(e.action === 'show.start' || e.action === 'show.stop') && (e.detail as { title?: string } | null)?.title && <>: <b className="font-semibold">{(e.detail as { title: string }).title}</b></>}
               {e.action === 'signin.failed' && e.target && <span className="text-muted-foreground"> as “{e.target}”</span>}
             </span>
           </li>

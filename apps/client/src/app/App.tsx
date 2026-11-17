@@ -8,7 +8,7 @@ import { RelayChip } from '../features/quizzes/RelayChip';
 import { StaffSignIn } from '../features/signin/StaffSignIn';
 import { StudentSignIn } from '../features/signin/StudentSignIn';
 import { AuthShell } from '../ui/auth';
-import { Button, cn } from '../ui/ui';
+import { Button, ConfirmButton, cn } from '../ui/ui';
 import { useApp } from './app-context';
 import type { Phase } from './app-state';
 
@@ -77,8 +77,9 @@ export function App() {
         <div className="flex-1" />
 
         {state.session && <RelayChip />}
-        {server && !state.session && <Button variant="quiet" onClick={() => dispatch({ type: 'forget-server' })}>Change server</Button>}
-        {role && !state.session && <Button variant="quiet" onClick={() => resetDevice()}>Reset device</Button>}
+        {/* Both wipe what this PC knows, and it then has to join the lab again, so they ask first. */}
+        {server && !state.session && <ConfirmButton question="Leave this server? This PC must join the lab again." onConfirm={() => dispatch({ type: 'forget-server' })}>Change server</ConfirmButton>}
+        {role && !state.session && <ConfirmButton question="Wipe this PC's setup? It must be set up again." onConfirm={() => void resetDevice()}>Reset device</ConfirmButton>}
         {person && look && (
           <div className="flex min-w-0 items-center gap-2.5 border-l border-border pl-3">
             <span className={cn('ui-avatar grid size-10 shrink-0 place-items-center rounded-full text-sm font-semibold text-background', look.fill)} aria-hidden>{initials(person.name)}</span>
