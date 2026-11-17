@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { ClipboardList, GraduationCap, House, School, Wrench } from 'lucide-react';
+import { ClipboardList, Film, GraduationCap, House, School, Wrench } from 'lucide-react';
 import type { ContentItem, SchoolSettings } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Shell, SideMenu, type MenuItem } from '../../ui/dashboard';
@@ -14,6 +14,7 @@ import { QuizEditor } from '../quizzes/QuizEditor';
 import { QuizzesPanel } from '../quizzes/QuizzesPanel';
 import { AiQuizMaker, type AiDraft } from '../quizzes/AiQuizMaker';
 import { AskAi } from '../quizzes/AskAi';
+import { VideosPanel } from '../content/VideosPanel';
 import { ContentPanel } from '../content/ContentPanel';
 import { Viewer } from '../content/Viewer';
 import { NoticesPanel } from '../notices/NoticesPanel';
@@ -28,10 +29,11 @@ import { StudentResultsPage } from '../results/StudentResultsPage';
 import { TeachersPanel } from '../results/TeachersPanel';
 
 // The pages in the console's side menu.
-type Page = 'today' | 'teach' | 'reports' | 'school' | 'system';
+type Page = 'today' | 'teach' | 'videos' | 'reports' | 'school' | 'system';
 const MENU: MenuItem<Page>[] = [
   { key: 'today', label: 'Today', icon: House },
   { key: 'teach', label: 'Teach', icon: GraduationCap },
+  { key: 'videos', label: 'Videos', icon: Film },
   { key: 'reports', label: 'Reports', icon: ClipboardList },
   { key: 'school', label: 'School', icon: School },
   { key: 'system', label: 'System', icon: Wrench },
@@ -94,6 +96,9 @@ export function Home() {
         can('teaching.manage') && <SequencesPanel key="sequences" refresh={refresh} />,
         can('teaching.manage') && <WorkPanel key="work" refresh={refresh} onChanged={changed} onOpen={(id) => setView({ kind: 'mark-work', id })} />,
         can('teaching.manage') && <NoticesPanel key="notices" refresh={refresh} />,
+      ],
+      videos: [
+        can('teaching.manage') && <VideosPanel key="videos" refresh={refresh} onOpen={(item) => setView({ kind: 'content', item })} />,
       ],
       reports: [
         can('results.view') && <ReportCardsPanel key="cards" refresh={refresh} />,
