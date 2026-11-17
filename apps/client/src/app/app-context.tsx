@@ -111,6 +111,20 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
     return () => clearInterval(t);
   }, [sessionToken, refreshMe]);
 
+  // The top bar shows the school's name as it was when this PC found the server. Ask again at the start,
+  // at every sign-in and sign-out, and once a minute, so a name changed in Settings reaches every PC.
+  useEffect(() => {
+    if (!api) return;
+    const check = async () => {
+      const health = await api.call('GET /health', {}, undefined).catch(() => null);
+      const known = stateRef.current.settings.server;
+      if (health && known && health.serverId === known.serverId && health.name !== known.name) dispatch({ type: 'server', server: { ...known, name: health.name } });
+    };
+    void check();
+    const t = setInterval(() => void check(), 60_000);
+    return () => clearInterval(t);
+  }, [api, stateRef, sessionToken]);
+
   // The native side fetches library files for the signed-in person. Tell it who that is, and tell it
   // "nobody" on sign-out, so the next person at this PC can never open files as the last one.
   const server = state.settings.server;

@@ -10,7 +10,10 @@ export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, refresh }: { refresh:
   const { call, state } = useApp();
   const can = (p: 'lesson.start' | 'ai.teacher') => state.session?.principal.kind === 'staff' && state.session.principal.permissions.includes(p);
   const canHost = can('lesson.start');
-  const canAi = can('ai.teacher');
+  // The Super Admin can switch AI off for the school; the buttons then go away instead of leading to a refusal.
+  const [aiOn, setAiOn] = useState(true);
+  const mayAi = can('ai.teacher');
+  const canAi = mayAi && aiOn;
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [classId, setClassId] = useState('');
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
@@ -22,6 +25,7 @@ export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, refresh }: { refresh:
     ]);
     setClasses(cls);
     setQuizzes(list);
+    if (mayAi) setAiOn((await call('GET /api/v1/ai/status').catch(() => null))?.enabled ?? true);
   });
   const { run: loadNow } = load;
   useEffect(() => { void loadNow(); }, [loadNow, classId, refresh]);

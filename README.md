@@ -13,6 +13,53 @@ The source of truth is [`docs/ict-app-final-spec.md`](docs/ict-app-final-spec.md
 | **Student** | Sign in by class, roll number and name; quizzes, notes, my work, my books, things to do, how I am doing, ask the AI tutor |
 | **Smart board** | Classroom screen joined to the same server |
 
+## Features
+
+The full list, by who uses it.
+
+**Every PC, once**
+- Pick what the PC is: Server PC (staff), student PC or smart board.
+- Find the lab server and join the lab. Change server and Reset device ask before they wipe anything.
+- The app sizes itself to the screen, from a 1024 wide monitor up to 4K.
+
+**Student**
+- Sign in by class and roll number (and section or name when needed), or with a sign-in card.
+- Home: today's lab period, notices, books, results and things to do.
+- Live quiz: join when the teacher opens it, a clock on every question, the score at the end.
+- My books: PDFs, pictures, videos, sound and web links from the library.
+- Videos: the videos for the student's class, including the ones that come with the app.
+- Things to do: playlists and learning paths, ticked off step by step.
+- My work: open work the teacher set, hand it in, see the mark.
+- How I am doing: quiz results by subject.
+- My notes.
+- Ask a question: an AI tutor that gives hints (needs the AI kit on the server).
+- Settings: text size, stronger colours, easy-to-read letters. They follow the student to any lab PC.
+
+**Teacher**
+- Today: how every student is doing, to print, save as PDF or download for Excel.
+- Quizzes: write, edit, delete; make one with AI; ask AI a question.
+- Lab Mode: run a quiz live, watch students join and answer, end it.
+- Library: add files or web links by class, subject and chapter.
+- Videos: the videos for the teacher's classes.
+- Class show: play a video on every student screen, with a pen to write over it and to hand to a student.
+- Playlists and learning paths made from library items.
+- Work: set it for a class and mark what comes in.
+- Notices for a class.
+- Report cards: made from quiz results and marked work, with remarks, then published and printed.
+- School: timetable bookings, the student list, the lab PCs.
+
+**Super Admin (all of the above, plus)**
+- Teachers: add, change, reset a password, delete.
+- Students: add, change, delete, add from a file, print sign-in cards.
+- Classes and sections.
+- Lab PCs: see which are connected, remove one, lock the lab so no new PC can join.
+- What teachers have done, and an activity log of who did what and when.
+- System: school name, the periods of the day, AI on or off for teachers.
+- Notices for the whole school, and freezing a report card for good.
+
+**Smart board**
+- Joins the same server. Live lessons on the board come in a later stage.
+
 ## System architecture
 
 ```mermaid
