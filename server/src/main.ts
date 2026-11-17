@@ -27,7 +27,7 @@ async function main() {
   const runtime = new AiRuntime(config.ai, nodeSpawner(join(config.dataDir, 'ai.log')));
   // The diary of what happens in the lab (see `just logs`). Each line also goes to this terminal.
   const log = fileEventLog(join(config.dataDir, 'events.log'), systemClock, (line) => console.log(line));
-  const c = createContainer({ db, now: systemClock, version: config.version, dataDir: config.dataDir, ai: { runtime, llm: new LlamaServerLlm(runtime) }, log });
+  const c = createContainer({ db, now: systemClock, version: config.version, dataDir: config.dataDir, starterDir: config.starterDir, ai: { runtime, llm: new LlamaServerLlm(runtime) }, log });
   c.aiQueue.start();
   // A class is told within seconds when the teacher showing them a video has gone quiet.
   setInterval(() => c.shows.sweep(), 5_000).unref();
@@ -35,6 +35,19 @@ async function main() {
   process.on('exit', () => runtime.stop());
   if (config.devAdmin) await c.staffAuth.upsertAccount({ ...config.devAdmin, role: 'super_admin' });
   await consumeBootstrapAdmin(config.bootstrapAdminFile, c.staffAuth);
+
+  // Videos that came with the app go into the library. On a new server there is nobody to own them
+  // until the school makes its Super Admin, so this asks again every few seconds until it is done.
+  const addStarters = async () => {
+    try {
+      if (await c.starter?.sync() !== false) clearInterval(starters);
+    } catch (err) {
+      clearInterval(starters);
+      log('starter.video.failed', { why: err instanceof Error ? err.message : String(err) });
+    }
+  };
+  const starters = setInterval(() => void addStarters(), 10_000).unref();
+  void addStarters();
 
   const { serverId } = c.identity.current();
   const tls = await loadOrCreateTls(config.tlsDir, serverId);

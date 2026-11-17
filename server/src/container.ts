@@ -39,6 +39,7 @@ import { ReportCardService } from './modules/report-cards/report-card.service.js
 import { ContentRepository } from './modules/content/content.repository.js';
 import { ContentService } from './modules/content/content.service.js';
 import { FileStore } from './modules/content/file-store.js';
+import { StarterVideos } from './modules/content/starter-videos.js';
 import { SequenceRepository } from './modules/sequences/sequence.repository.js';
 import { SequenceService } from './modules/sequences/sequence.service.js';
 import { ShowService } from './modules/shows/show.service.js';
@@ -49,7 +50,7 @@ import { AnswerGenerator } from './modules/ai/answer-generator.js';
 import { TutorGenerator } from './modules/ai/tutor-generator.js';
 import { JobQueue, type JobRunners } from './modules/ai/job-queue.js';
 import { JobRepository } from './modules/ai/job.repository.js';
-import type { EventLog } from './core/event-log.js';
+import { noEventLog, type EventLog } from './core/event-log.js';
 import type { Llm } from './modules/ai/llm-client.js';
 import { QuizGenerator } from './modules/ai/quiz-generator.js';
 import { SchoolIdentity } from './modules/system/school-identity.js';
@@ -67,6 +68,8 @@ export function createContainer(opts: {
   version: string;
   // Where uploaded files are kept. Left out in tests, which then use a folder that is thrown away.
   dataDir?: string;
+  // The folder of videos that come with the app. Left out, the server has none to add.
+  starterDir?: string;
   ai?: { runtime: AiRuntimeInfo & { ensureReady?(): Promise<void> }; llm: Llm };
   // The server's diary (events.log). Left out in tests, which then write nothing.
   log?: EventLog;
@@ -118,9 +121,15 @@ export function createContainer(opts: {
   const timetable = new TimetableService(now, repos.timetable, repos.classes, () => repos.settings.periods(), audit);
   const settings = new SettingsService(now, repos.settings, audit, db, (periodId) => timetable.dropPeriod(periodId));
 
+  const fileStore = new FileStore(opts.dataDir ?? mkdtempSync(join(tmpdir(), 'ict-files-')));
+  const firstAdmin = () => db.prepare("SELECT id FROM users WHERE role = 'super_admin' AND status = 'active' ORDER BY created_at LIMIT 1").pluck().get() as string | undefined;
+
   return {
     audit,
     relay,
+    starter: opts.starterDir
+      ? new StarterVideos(opts.starterDir, join(opts.dataDir ?? tmpdir(), 'starter-videos.json'), now, repos.content, fileStore, repos.classes, firstAdmin, opts.log ?? noEventLog)
+      : null,
     identity,
     resolver,
     sessions,
@@ -129,7 +138,7 @@ export function createContainer(opts: {
     settings,
     timetable,
     work: new WorkService(now, repos.work, repos.classes, audit),
-    content: new ContentService(now, repos.content, new FileStore(opts.dataDir ?? mkdtempSync(join(tmpdir(), 'ict-files-'))), repos.classes, audit),
+    content: new ContentService(now, repos.content, fileStore, repos.classes, audit),
     shows: new ShowService(now, repos.content, relay, audit, opts.log, (id) => repos.devices.name(id), (studentId) => repos.sessions.liveStudentDevice(studentId, '', now()) !== undefined),
     sequences: new SequenceService(now, repos.sequences, repos.content, repos.work, repos.classes, audit),
     reportCards: new ReportCardService(now, repos.reportCards, repos.classes, repos.students, results, repos.work, audit),
