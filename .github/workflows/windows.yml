@@ -155,14 +155,14 @@ jobs:
             Start-Sleep 2
             try {
               $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
-              $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck)
+              $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ })
               if ($items.Count -gt 0) { break }
             } catch { Write-Host "not yet: $_" }
           }
           $items | Format-List title, kind, className, subject, size, mime
           if ($items.Count -ne 1) { Get-Content "$env:ProgramData\ICT App\server\events.log" -ErrorAction SilentlyContinue; throw "Expected 1 library item, found $($items.Count)" }
           $v = $items[0]
-          if ($v.title -ne "Addition of Integers - Part 1" -or $v.className -ne "6" -or $v.subject -ne "Maths" -or $v.kind -ne "video") { throw "The video was filed wrongly" }
+          if ($v.title -ne "Addition of Integers - Part 1" -or $v.className -ne "6" -or $v.subject -ne "Maths" -or $v.kind -ne "video") { $v | ConvertTo-Json; throw "The video was filed wrongly" }
           $code = curl.exe -k -s -o NUL -w "%{http_code}" -H "authorization: Bearer $token" -H "range: bytes=0-99" "$base/api/v1/files/$($v.fileHash)/raw"
           if ($code -ne "206") { throw "Reading the video gave $code" }
           Get-Content "$env:ProgramData\ICT App\server\events.log"
@@ -174,7 +174,7 @@ jobs:
           Start-Sleep 20
           $base = "https://localhost:7700"
           $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
-          $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck)
+          $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ })
           if ($items.Count -ne 1) { throw "Expected still 1 library item, found $($items.Count)" }
 
       - name: Uninstall leaves no service behind
