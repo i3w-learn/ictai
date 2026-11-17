@@ -20,7 +20,7 @@ export function HowIAmDoing({ onWork }: { onWork: () => void }) {
     <div className="mx-auto grid w-full max-w-3xl gap-5">
       <PageTitle sub="Only you can see this.">How I am doing</PageTitle>
       <ErrorNote message={load.error} />
-      {nothingYet && <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing to show yet. After your first quiz or piece of work, your results will be here.</p>}
+      {nothingYet && <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing to show yet. After your first quiz or piece of work, your results will be here.</p>}
 
       {p && !nothingYet && (
         <>

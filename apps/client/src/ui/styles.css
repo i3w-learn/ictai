@@ -1,7 +1,11 @@
 /* Design taken from ICT-AI-v2: white surfaces, slate ink, indigo primary, Plus Jakarta Sans.
    The font is bundled (not Google Fonts) because the lab runs without internet. */
 @import '@fontsource-variable/plus-jakarta-sans';
+/* The clay look's own lettering: round and friendly, to match its shapes. */
+@import '@fontsource-variable/fredoka';
+@import '@fontsource-variable/nunito';
 @import 'tailwindcss';
+@import './clay.css';
 
 :root {
   --background: hsl(226 70% 97.5%);
@@ -103,6 +107,8 @@ html[data-contrast='high'] {
   --destructive: hsl(0 80% 35%);
   --success: hsl(152 80% 22%);
 }
+/* The soft glow around the box being typed in is too faint here: a solid line instead. */
+html[data-contrast='high'] :is(input, textarea, select):focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
 @media (prefers-color-scheme: dark) {
   html[data-contrast='high'] {
     --background: hsl(0 0% 0%);

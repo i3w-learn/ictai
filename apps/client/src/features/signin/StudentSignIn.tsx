@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import jsQR from 'jsqr';
 import { sameRoll, type RosterEntry, type SchoolClass, type Section } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, Card, Centered, ErrorNote, Field, PageTitle, useAction, useLatest } from '../../ui/ui';
+import { Button, Card, CARD_LOOK, Centered, ErrorNote, Field, PageTitle, cn, useAction, useLatest } from '../../ui/ui';
 
 // Where the student sits in the school: their class and, when the class has sections, their section.
 type Place = { cls: SchoolClass; section: Section | null };
@@ -20,7 +20,7 @@ const placeLabel = (p: Place) => `Class ${p.cls.name}${p.section ? ` ${p.section
 function Tile({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
     <button
-      className="cursor-pointer rounded-2xl border border-border bg-card px-3 py-6 text-lg font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md"
+      className={cn('cursor-pointer rounded-3xl px-3 py-7 text-xl font-semibold transition-all hover:-translate-y-0.5 hover:text-primary hover:shadow-lg', CARD_LOOK)}
       onClick={onClick}
     >
       {children}
@@ -167,7 +167,7 @@ export function StudentSignIn() {
       )}
 
       {step.at === 'roll' && (
-        <Card className="p-6 sm:p-8">
+        <Card className="p-7 sm:p-9">
           <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); if (rollNo.trim()) void findMe.run(step.place); }}>
             <PageTitle eyebrow={placeLabel(step.place)}>What is your roll number?</PageTitle>
             <Field id="roll-no" label="Roll number" inputMode="numeric" maxLength={16} autoFocus autoComplete="off" className={big} value={rollNo} onChange={(e) => setRollNo(e.target.value)} />
@@ -178,7 +178,7 @@ export function StudentSignIn() {
       )}
 
       {step.at === 'confirm' && (
-        <Card className="grid gap-4 p-6 sm:p-8">
+        <Card className="grid gap-4 p-7 sm:p-9">
           <PageTitle eyebrow={`${placeLabel(step.place)} · Roll ${step.student.rollNo ?? rollNo.trim()}`}>Are you {step.student.name}?</PageTitle>
           <Button className="h-14 text-lg" autoFocus disabled={signIn.busy} onClick={() => signIn.run(step.place, step.student)}>Yes, that is me</Button>
           <Button variant="quiet" onClick={go({ at: 'roll', place: step.place })}>No, go back</Button>
@@ -196,7 +196,7 @@ export function StudentSignIn() {
       )}
 
       {step.at === 'card' && (
-        <Card className="p-6 sm:p-8">
+        <Card className="p-7 sm:p-9">
           <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); if (cardText.trim().length >= 16) void withCard.run(cardText); }}>
             <PageTitle sub="Hold your sign-in card up to the camera, or scan it with the scanner.">Scan your card</PageTitle>
             <CardCamera onRead={(text) => { if (!withCard.busy) void withCard.run(text); }} />

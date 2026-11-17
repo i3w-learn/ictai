@@ -59,13 +59,13 @@ export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, refresh }: { refresh:
       </Select>
 
       {quizzes.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+        <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">
           No quizzes yet. Click <b className="text-foreground">New quiz</b> to write one.
         </p>
       ) : (
         <ul className="grid gap-2">
           {quizzes.map((q) => (
-            <li key={q.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border px-3 py-2">
+            <li key={q.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-border px-3 py-2">
               <span className="min-w-48 flex-1">
                 <span className="font-medium">{q.title}</span>
                 <span className="ml-2 text-xs text-muted-foreground">

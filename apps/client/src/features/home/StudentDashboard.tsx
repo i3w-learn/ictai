@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { BookOpen, Medal, Target } from 'lucide-react';
 import type { ContentItem, MyProgress, Todo } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Block, CoverCard, Empty, ProgressRow, ResultBar } from '../../ui/dashboard';
@@ -51,7 +52,7 @@ export function StudentDashboard({ name, top, go }: { name: string; top?: ReactN
         </Block>
 
         <Block title="My books" action={<Button variant="quiet" onClick={() => go('books')}>See all</Button>}>
-          {books?.length === 0 && <Empty>Nothing here yet. When your teacher adds something for your class, it shows here.</Empty>}
+          {books?.length === 0 && <Empty icon={BookOpen}>Nothing here yet. When your teacher adds something for your class, it shows here.</Empty>}
           {books && books.length > 0 && (
             <div className="grid grid-cols-2 gap-4">
               {books.slice(0, BOOKS).map((b) => (
@@ -62,7 +63,7 @@ export function StudentDashboard({ name, top, go }: { name: string; top?: ReactN
         </Block>
 
         <Block title="My results" action={<Button variant="quiet" onClick={() => go('progress')}>How I am doing</Button>}>
-          {progress && subjects.length === 0 && <Empty>After your first quiz, your results will be here.</Empty>}
+          {progress && subjects.length === 0 && <Empty icon={Medal}>After your first quiz, your results will be here.</Empty>}
           {subjects.length > 0 && (
             <div className="-mx-4 -mt-2 -mb-8 flex gap-4 overflow-x-auto px-4 pt-2 pb-10">
               {subjects.map((s, i) => <ResultBar key={s.subject} label={s.subject} percent={s.average} strong={i === best} />)}
@@ -71,7 +72,7 @@ export function StudentDashboard({ name, top, go }: { name: string; top?: ReactN
         </Block>
 
         <Block title="Things to do" action={<Button variant="quiet" onClick={() => go('todo')}>See all</Button>}>
-          {todo?.length === 0 && <Empty>Nothing to do right now.</Empty>}
+          {todo?.length === 0 && <Empty icon={Target}>Nothing to do right now.</Empty>}
           {lists.length > 0 && (
             <div className="grid gap-4">
               {lists.map((q) => {

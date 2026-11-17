@@ -1,7 +1,7 @@
 import { Monitor, Presentation, Server, type LucideIcon } from 'lucide-react';
 import { useApp } from '../../app/app-context';
 import type { Role } from '../../app/app-state';
-import { Centered, PageTitle } from '../../ui/ui';
+import { CARD_LOOK, Centered, PageTitle, cn } from '../../ui/ui';
 
 const ROLES: { role: Role; title: string; detail: string; icon: LucideIcon }[] = [
   { role: 'console', title: 'Server PC', detail: 'The lab’s main PC. Admin and teachers manage the lab here.', icon: Server },
@@ -18,7 +18,7 @@ export function RolePicker() {
         {ROLES.map((r) => (
           <button
             key={r.role}
-            className="group grid cursor-pointer gap-3 rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md"
+            className={cn('group grid cursor-pointer content-start gap-3 rounded-3xl p-6 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg', CARD_LOOK)}
             onClick={() => dispatch({ type: 'role', role: r.role })}
           >
             <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">

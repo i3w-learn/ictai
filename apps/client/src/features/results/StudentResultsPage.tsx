@@ -46,7 +46,7 @@ export function StudentResultsPage({ studentId, onBack }: { studentId: string; o
           </div>
 
           {data.attempts === 0 ? (
-            <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">No quizzes taken yet.</p>
+            <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">No quizzes taken yet.</p>
           ) : (
             <>
               <Panel title="By subject">

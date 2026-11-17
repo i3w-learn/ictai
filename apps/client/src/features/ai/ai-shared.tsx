@@ -7,7 +7,7 @@ export function AiUnavailable({ status }: { status: AiStatus }) {
   const why = !status.enabled
     ? 'AI is switched off for this school. The Super Admin can switch it on in Settings.'
     : !status.installed ? 'AI is not installed on this server. Ask your Super Admin to install the AI kit.' : null;
-  return why && <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">{why}</p>;
+  return why && <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">{why}</p>;
 }
 
 export const aiUsable = (status: AiStatus) => status.enabled && status.installed;

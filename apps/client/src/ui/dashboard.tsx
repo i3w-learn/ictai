@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { cn } from './ui';
+import { CARD_LOOK, cn } from './ui';
 
 // The area under the top bar: an optional side menu, and the page beside it. The page is the one
 // <main>, which is what a student's text-size choice enlarges.
@@ -18,14 +18,14 @@ export interface MenuItem<K extends string> { key: K; label: string; icon: Lucid
 // The menu down the left side. In a narrow window it shrinks to icons only.
 export function SideMenu<K extends string>({ label, items, current, onPick, footer }: { label: string; items: MenuItem<K>[]; current: K; onPick: (key: K) => void; footer?: ReactNode }) {
   return (
-    <nav aria-label={label} className="no-print flex w-[4.5rem] shrink-0 flex-col gap-1 overflow-y-auto border-r border-border bg-card p-3 lg:w-60 lg:p-4">
+    <nav aria-label={label} className="ui-menu no-print flex w-[4.5rem] shrink-0 flex-col gap-1 overflow-y-auto border-r border-border bg-card p-3 lg:w-60 lg:p-4">
       {items.map(({ key, label: name, icon: Icon }) => {
         const on = key === current;
         return (
           <button
             key={key} type="button" title={name} aria-label={name} aria-current={on ? 'page' : undefined} onClick={() => onPick(key)}
             className={cn(
-              'flex min-h-11 cursor-pointer items-center justify-center gap-3 rounded-xl px-3 text-[15px] transition-colors lg:justify-start',
+              'ui-nav flex min-h-11 cursor-pointer items-center justify-center gap-3 rounded-xl px-3 text-[15px] transition-colors lg:justify-start',
               on ? 'bg-primary/10 font-semibold text-primary' : 'font-medium text-muted-foreground hover:bg-secondary hover:text-foreground',
             )}
           >
@@ -55,11 +55,14 @@ export function Block({ title, first, action, children }: { title: ReactNode; fi
 }
 
 // What a block says when it has nothing to show yet.
-export function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">{children}</p>;
+export function Empty({ children, icon: Icon }: { children: ReactNode; icon?: LucideIcon }) {
+  return (
+    <div className="ui-empty flex items-center justify-center gap-5 rounded-3xl border border-dashed border-border p-7 text-muted-foreground">
+      {Icon && <span className="ui-bubble grid size-14 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary"><Icon className="size-7" strokeWidth={1.75} /></span>}
+      <p className={Icon ? 'max-w-xs' : 'text-center'}>{children}</p>
+    </div>
+  );
 }
-
-const SOFT_CARD = 'border border-card-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.03),0_16px_40px_-20px_rgba(49,46,129,0.2)]';
 
 // A tall rounded bar for one score out of 100. It fills from the bottom as far as the score;
 // `strong` picks one bar out in the main colour.
@@ -68,7 +71,7 @@ export function ResultBar({ label, percent, strong }: { label: string; percent: 
   return (
     <div
       role="img" aria-label={`${label}: ${p} percent`}
-      className={cn('relative flex h-44 w-[4.5rem] shrink-0 flex-col items-center justify-between overflow-hidden rounded-full py-5', strong ? 'bg-primary text-primary-foreground shadow-[0_14px_28px_-10px_var(--primary)]' : SOFT_CARD)}
+      className={cn('ui-bar relative flex h-44 w-[4.5rem] shrink-0 flex-col items-center justify-between overflow-hidden rounded-full py-5', strong ? 'ui-strong bg-primary text-primary-foreground shadow-[0_14px_28px_-10px_var(--primary)]' : CARD_LOOK)}
     >
       {!strong && <span className="absolute inset-x-0 bottom-0 bg-primary/10" style={{ height: `${p}%` }} />}
       <span className="relative max-h-24 rotate-180 truncate text-sm font-medium [writing-mode:vertical-rl]">{label}</span>
@@ -82,7 +85,7 @@ export function ProgressRow({ title, sub, done, total, onClick }: { title: strin
   const p = total > 0 ? Math.round((done / total) * 100) : 0;
   const finished = total > 0 && done >= total;
   return (
-    <button type="button" onClick={onClick} className={cn('grid w-full cursor-pointer gap-2 rounded-3xl px-6 py-4 text-left transition-shadow hover:shadow-lg', SOFT_CARD)}>
+    <button type="button" onClick={onClick} className={cn('ui-row grid w-full cursor-pointer gap-2 rounded-3xl px-6 py-4 text-left transition-shadow hover:shadow-lg', CARD_LOOK)}>
       <span className="grid gap-0.5">
         <span className="truncate text-lg font-semibold">{title}</span>
         {sub && <span className="truncate text-sm text-muted-foreground">{sub}</span>}
@@ -112,7 +115,7 @@ export function CoverCard({ title, kind, colourFrom, icon: Icon, onClick }: { ti
   return (
     <button
       type="button" onClick={onClick} style={{ backgroundColor: coverColour(colourFrom) }}
-      className="relative flex h-44 w-full cursor-pointer flex-col justify-end overflow-hidden rounded-3xl p-5 text-left text-white shadow-[0_16px_32px_-18px_rgba(49,46,129,0.6)] transition-transform hover:-translate-y-0.5"
+      className="ui-cover relative flex h-44 w-full cursor-pointer flex-col justify-end overflow-hidden rounded-3xl p-5 text-left text-white shadow-[0_16px_32px_-18px_rgba(49,46,129,0.6)] transition-transform hover:-translate-y-0.5"
     >
       <Icon className="absolute -top-4 -right-4 size-32 text-white/15" strokeWidth={1.25} aria-hidden />
       <span className="relative text-[11px] font-semibold tracking-[0.14em] text-white/80 uppercase">{kind}</span>

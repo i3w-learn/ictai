@@ -89,7 +89,7 @@ function StaffRow({ member: s, classes, onUpdate, onRemove }: { member: StaffMem
   const disabled = s.status === 'disabled';
 
   return (
-    <li className="grid gap-3 rounded-xl border border-border px-3 py-2">
+    <li className="grid gap-3 rounded-2xl border border-border px-3 py-2">
       <div className="flex flex-wrap items-center gap-3">
         <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">{s.displayName.charAt(0).toUpperCase()}</span>
         <span className={disabled ? 'flex-1 text-muted-foreground line-through' : 'flex-1 font-medium'}>

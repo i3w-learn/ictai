@@ -58,7 +58,7 @@ export function DevicesPanel() {
           : <>The lab is locked: no new PC or board can join. The ones below keep working.</>}
       </p>
       {devices.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">No devices yet. Open the ICT app on a lab PC and it shows up here.</p>
+        <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">No devices yet. Open the ICT app on a lab PC and it shows up here.</p>
       ) : (
         <table className="w-full text-sm">
           <thead>

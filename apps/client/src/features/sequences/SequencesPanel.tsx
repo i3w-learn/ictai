@@ -66,7 +66,7 @@ export function SequencesPanel({ refresh }: { refresh: number }) {
         <div className="flex flex-wrap items-end gap-3">
           <div className="grid gap-1.5" role="radiogroup" aria-label="Kind">
             <span className="text-[13px] font-medium text-muted-foreground">Kind</span>
-            <div className="flex gap-1 rounded-xl border border-border p-1">
+            <div className="flex gap-1 rounded-2xl border border-border p-1">
               {(['playlist', 'path'] as const).map((t) => (
                 <button key={t} type="button" role="radio" aria-checked={form.type === t} onClick={() => setType(t)} className={cn('cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold', form.type === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>{WORDS[t]}</button>
               ))}
@@ -117,11 +117,11 @@ export function SequencesPanel({ refresh }: { refresh: number }) {
       </form>
 
       {list.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground">None yet. Add things to the Library first, then put them in order here.</p>
+        <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">None yet. Add things to the Library first, then put them in order here.</p>
       ) : (
         <ul className="grid gap-2">
           {list.map((q) => (
-            <li key={q.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border px-3 py-2.5">
+            <li key={q.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-border px-3 py-2.5">
               <span className="min-w-56 flex-1">
                 <span className="font-medium">{q.title}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">{[WORDS[q.type], `Class ${q.className}`, q.subject, `${q.steps.length} ${q.steps.length === 1 ? 'step' : 'steps'}`].filter(Boolean).join(' · ')}</span>

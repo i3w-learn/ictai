@@ -11,8 +11,8 @@ export function RelayChip() {
       role="status"
       className={
         online
-          ? 'inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground'
-          : 'inline-flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-xs font-semibold text-destructive'
+          ? 'ui-chip inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground'
+          : 'ui-chip inline-flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-xs font-semibold text-destructive'
       }
     >
       <span className={online ? 'size-2 rounded-full bg-success' : 'size-2 animate-pulse rounded-full bg-destructive'} />

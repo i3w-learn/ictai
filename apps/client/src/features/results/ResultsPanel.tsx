@@ -107,7 +107,7 @@ export function ResultsPanel({ onStudent, refresh }: { onStudent: (studentId: st
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {BANDS.map((b) => (
-              <div key={b} className="rounded-xl border border-border px-4 py-3">
+              <div key={b} className="rounded-2xl border border-border px-4 py-3">
                 <p className="flex items-center gap-2 text-sm text-muted-foreground"><span className={cn('size-2.5 rounded-full', BAND_DOT[b])} />{BAND_LABEL[b]}</p>
                 <p className="font-display text-2xl font-semibold tabular-nums">{data.counts[b]}</p>
               </div>
@@ -122,7 +122,7 @@ export function ResultsPanel({ onStudent, refresh }: { onStudent: (studentId: st
           </p>
 
           {data.students.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">No students yet.</p>
+            <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">No students yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

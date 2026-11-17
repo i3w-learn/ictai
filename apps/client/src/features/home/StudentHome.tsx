@@ -63,11 +63,11 @@ export function StudentHome({ name }: { name: string }) {
   const ask = (
     <button
       type="button" title="Ask a question" aria-current={page === 'ask' ? 'page' : undefined} onClick={() => setPage('ask')}
-      className={cn('flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[hsl(20_85%_42%)] p-3 text-left text-white transition-shadow hover:shadow-lg lg:flex-col lg:items-start lg:p-4', page === 'ask' && 'ring-2 ring-foreground ring-offset-2 ring-offset-card')}
+      className={cn('ui-ask flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[hsl(20_85%_42%)] p-3 text-left text-white transition-shadow hover:shadow-lg lg:flex-col lg:items-start lg:p-4', page === 'ask' && 'ring-2 ring-foreground ring-offset-2 ring-offset-card')}
     >
-      <Sparkles className="size-5 shrink-0 lg:size-6" />
+      <span className="ui-bubble grid size-9 shrink-0 place-items-center rounded-xl bg-white/20 lg:size-12 lg:rounded-2xl"><Sparkles className="size-5 lg:size-6" /></span>
       <span className="hidden lg:block">
-        <span className="block font-semibold">Ask a question</span>
+        <span className="block font-display text-lg font-semibold">Ask a question</span>
         <span className="text-sm text-white/85">Stuck on something? Get a hint in simple words.</span>
       </span>
     </button>

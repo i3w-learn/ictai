@@ -38,7 +38,7 @@ function Card({ className, card }: { className: string; card: SignInCard }) {
   useEffect(() => { void QRCode.toDataURL(card.qrToken, { margin: 1, width: 160 }).then(setQr); }, [card.qrToken]);
 
   return (
-    <div className="flex break-inside-avoid gap-3 rounded-xl border border-border p-3">
+    <div className="flex break-inside-avoid gap-3 rounded-2xl border border-border p-3">
       {qr ? <img src={qr} alt={`QR card for ${card.name}`} className="size-28" /> : <div className="size-28" />}
       <div className="grid content-start gap-1 text-sm">
         <p className="font-semibold">{card.name}</p>

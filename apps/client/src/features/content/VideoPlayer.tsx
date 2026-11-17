@@ -155,7 +155,7 @@ export function VideoPlayer({ src, title, onError, onState, peek, pause, layer, 
   };
 
   if (broken) {
-    return <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">This video cannot be played on this PC. Tell your teacher.</p>;
+    return <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">This video cannot be played on this PC. Tell your teacher.</p>;
   }
 
   // Under the picture the controls are always there; only in full screen do they hide.

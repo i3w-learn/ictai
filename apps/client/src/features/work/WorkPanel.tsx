@@ -3,7 +3,7 @@ import { ClipboardList } from 'lucide-react';
 import type { Assignment, SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { useSections } from '../home/useSections';
-import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, useAction } from '../../ui/ui';
+import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, TextArea, useAction } from '../../ui/ui';
 import { SubjectField } from '../quizzes/SubjectField';
 import { dayShort, endOfDay } from './work';
 
@@ -70,14 +70,7 @@ export function WorkPanel({ onOpen, refresh, onChanged }: { onOpen: (id: string)
           <Field id="work-due" className="w-44" label="Due (optional)" type="date" value={form.due} onChange={(e) => setForm({ ...form, due: e.target.value })} />
           <Field id="work-marks" className="w-24" label="Out of" inputMode="numeric" value={form.maxMarks} onChange={(e) => setForm({ ...form, maxMarks: e.target.value })} />
         </div>
-        <label className="grid gap-1.5" htmlFor="work-instructions">
-          <span className="text-[13px] font-medium text-muted-foreground">What should students do?</span>
-          <textarea
-            id="work-instructions" rows={3} maxLength={4000} placeholder="Answer these in your own words…"
-            className="w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] text-foreground placeholder:text-muted-foreground/60"
-            value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })}
-          />
-        </label>
+        <TextArea id="work-instructions" label="What should students do?" rows={3} maxLength={4000} placeholder="Answer these in your own words…" value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={!!problem || add.busy}><ClipboardList className="size-4" /> Set this work</Button>
           <span className="text-sm text-muted-foreground">{problem}</span>
@@ -86,11 +79,11 @@ export function WorkPanel({ onOpen, refresh, onChanged }: { onOpen: (id: string)
       </form>
 
       {work.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground">No work set yet. Students see new work under My work and write their answer there.</p>
+        <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">No work set yet. Students see new work under My work and write their answer there.</p>
       ) : (
         <ul className="grid gap-2">
           {work.map((w) => (
-            <li key={w.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border px-3 py-2.5">
+            <li key={w.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-border px-3 py-2.5">
               <span className="min-w-56 flex-1">
                 <span className="font-medium">{w.title}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">

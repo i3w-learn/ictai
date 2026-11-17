@@ -26,7 +26,7 @@ export function StudentNotices() {
     <ul className="grid gap-3" aria-label="Notices">
       {notices.map((n) => (
         <li key={n.id}>
-          <Card className="flex items-start gap-4 px-6 py-4">
+          <Card className="ui-tone-butter flex items-start gap-4 px-6 py-4">
             <span className="mt-0.5 grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
               {n.pinned ? <Pin className="size-5" aria-label="Pinned notice" /> : <Megaphone className="size-5" aria-label="Notice" />}
             </span>

@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import { MAX_NOTES_PER_STUDENT, NOTE_BODY_MAX, type Note } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
-import { Button, Card, ConfirmButton, ErrorNote, Field, PageTitle, SectionLabel, cn, useAction, useLatest } from '../../ui/ui';
+import { Button, Card, ConfirmButton, ErrorNote, Field, PageTitle, SectionLabel, TextArea, cn, useAction, useLatest } from '../../ui/ui';
 import { afterSave, BLANK, draftOf, isDirty, saveDraft, snippet, subjectsOf, type Draft, type NotesApi } from './notes';
 
 // How long after the last keystroke a note saves itself.
@@ -138,7 +138,7 @@ export function MyNotes() {
         <nav aria-label="Your notes" className="grid gap-2">
           <SectionLabel>{!loaded ? 'Your notes' : notes.length === 1 ? '1 note' : `${notes.length} notes`}</SectionLabel>
           {loaded && notes.length === 0 && (
-            <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            <p className="rounded-3xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
               No notes yet. Click <b className="text-foreground">New note</b> to write your first one.
             </p>
           )}
@@ -149,7 +149,7 @@ export function MyNotes() {
                   type="button" disabled={busy != null} aria-current={draft?.id === n.id}
                   onClick={() => { if (draft?.id !== n.id) void open(draftOf(n)); }}
                   className={cn(
-                    'grid w-full cursor-pointer gap-0.5 rounded-xl border border-border bg-card px-3 py-2.5 text-left transition-colors hover:border-foreground/25',
+                    'grid w-full cursor-pointer gap-0.5 rounded-2xl border border-border bg-card px-3 py-2.5 text-left transition-colors hover:border-foreground/25',
                     draft?.id === n.id && 'border-primary bg-primary/5',
                   )}
                 >
@@ -175,14 +175,7 @@ export function MyNotes() {
                   value={draft.subject} onChange={(e) => edit({ subject: e.target.value })} />
                 <datalist id="note-subjects">{subjectsOf(notes).map((s) => <option key={s} value={s} />)}</datalist>
               </div>
-              <label className="grid gap-1.5" htmlFor="note-body">
-                <span className="text-[13px] font-medium text-muted-foreground">Your note</span>
-                <textarea
-                  id="note-body" rows={14} maxLength={NOTE_BODY_MAX} placeholder="Write what you learned, in your own words."
-                  className="w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/60"
-                  value={draft.body} onChange={(e) => edit({ body: e.target.value })}
-                />
-              </label>
+              <TextArea id="note-body" label="Your note" rows={14} maxLength={NOTE_BODY_MAX} placeholder="Write what you learned, in your own words." value={draft.body} onChange={(e) => edit({ body: e.target.value })} />
               </fieldset>
               <fieldset disabled={busy != null} className="flex min-w-0 flex-wrap items-center gap-3">
                 <Button type="submit" disabled={!dirty}>Save</Button>
@@ -197,7 +190,7 @@ export function MyNotes() {
             </form>
           </Card>
         ) : (
-          <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+          <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">
             {!loaded ? (load.error ? 'Your notes could not be loaded.' : 'Loading your notes…') : notes.length > 0 ? 'Pick a note to read or change it, or start a new one.' : 'Your notes will open here.'}
           </p>
         )}

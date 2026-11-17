@@ -3,7 +3,7 @@ import { Sparkles } from 'lucide-react';
 import type { AiTutorJob, MyTutor } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
-import { Button, Card, ErrorNote, Note, PageTitle, useAction } from '../../ui/ui';
+import { Button, Card, ErrorNote, Note, PageTitle, TextArea, useAction } from '../../ui/ui';
 
 // PRD student app "Ask": the student types a question and the AI on the Server PC gives a hint in
 // simple words. A few questions a day, one at a time. Nothing leaves the school.
@@ -55,14 +55,7 @@ export function AskTutor() {
       <PageTitle sub="Ask about something you are learning. You get a hint and an explanation, so you can work out the answer yourself.">Ask</PageTitle>
       {off ? <Note>{off}</Note> : (
         <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); if (question.trim() && !waiting && !none) void ask.run(); }}>
-          <label className="grid gap-1.5" htmlFor="tutor-question">
-            <span className="text-[13px] font-medium text-muted-foreground">Your question</span>
-            <textarea
-              id="tutor-question" rows={3} maxLength={600} placeholder="What is a fraction?"
-              className="w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 text-lg text-foreground placeholder:text-muted-foreground/60"
-              value={question} onChange={(e) => setQuestion(e.target.value)}
-            />
-          </label>
+          <TextArea id="tutor-question" label="Your question" rows={3} maxLength={600} placeholder="What is a fraction?" className="text-lg" value={question} onChange={(e) => setQuestion(e.target.value)} />
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" className="h-12 px-6" disabled={!question.trim() || ask.busy || waiting || none}><Sparkles className="size-4" /> Ask</Button>
             {mine && <span className="text-muted-foreground">{none ? `You have asked ${mine.dailyCap} questions today. You can ask more tomorrow.` : `${mine.leftToday} of ${mine.dailyCap} questions left today.`}</span>}
@@ -91,7 +84,7 @@ export function AskTutor() {
           <h2 className="text-lg font-semibold">Your earlier questions</h2>
           <ul className="grid gap-2">
             {earlier.map((j) => (
-              <li key={j.id}><button type="button" disabled={waiting} onClick={() => setJob(j)} className="w-full cursor-pointer rounded-xl border border-border px-3 py-2 text-left hover:border-accent/50 disabled:cursor-not-allowed">{j.request.question}</button></li>
+              <li key={j.id}><button type="button" disabled={waiting} onClick={() => setJob(j)} className="w-full cursor-pointer rounded-2xl border border-border px-3 py-2 text-left hover:border-accent/50 disabled:cursor-not-allowed">{j.request.question}</button></li>
             ))}
           </ul>
         </Card>
