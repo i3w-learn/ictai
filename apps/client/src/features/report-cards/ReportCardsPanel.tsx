@@ -17,6 +17,8 @@ export function ReportCardsPanel({ refresh }: { refresh: number }) {
   const [terms, setTerms] = useState<string[]>([]);
   const [term, setTerm] = useState('');
   const [cards, setCards] = useState<ReportCard[] | null>(null);
+  // The term the cards on screen belong to. The Term box can say something else while a new term is typed.
+  const [shownTerm, setShownTerm] = useState('');
   const [made, setMade] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
 
@@ -30,12 +32,13 @@ export function ReportCardsPanel({ refresh }: { refresh: number }) {
     if (!id) return;
     const t = await call('GET /api/v1/report-cards/terms', { query: { classId: id } });
     setTerms(t);
-    if (t[0]) { setTerm(t[0]); setCards(await call('GET /api/v1/report-cards', { query: { classId: id, term: t[0] } })); }
+    if (t[0]) { setTerm(t[0]); setCards(await call('GET /api/v1/report-cards', { query: { classId: id, term: t[0] } })); setShownTerm(t[0]); }
   });
-  const open = useAction(async (t: string) => { setTerm(t); setMade(null); setCards(await call('GET /api/v1/report-cards', { query: { classId, term: t } })); });
+  const open = useAction(async (t: string) => { setTerm(t); setMade(null); setCards(await call('GET /api/v1/report-cards', { query: { classId, term: t } })); setShownTerm(t); });
   const make = useAction(async () => {
     const r = await call('POST /api/v1/report-cards/make', { body: { classId, term } });
     setCards(r.cards);
+    setShownTerm(term.trim());
     setTerms((list) => (list.includes(term.trim()) ? list : [term.trim(), ...list]));
     setMade([r.made && `${r.made} new`, r.refreshed && `${r.refreshed} ${r.refreshed === 1 ? "draft" : "drafts"} brought up to date`, r.kept && `${r.kept} published or frozen left as they were`].filter(Boolean).join(', ') || 'No students in this class yet');
   });
@@ -54,13 +57,23 @@ export function ReportCardsPanel({ refresh }: { refresh: number }) {
         </label>
         <Field id="cards-term" className="w-52" label="Term" placeholder="Term 1 2026" maxLength={40} value={term} onChange={(e) => { setTerm(e.target.value); setMade(null); }} />
         <Button disabled={!classId || !term.trim() || make.busy} onClick={() => make.run()}>Make report cards</Button>
-        {terms.filter((t) => t !== term.trim()).map((t) => <Button key={t} variant="quiet" onClick={() => void open.run(t)}>Open {t}</Button>)}
+        {terms.filter((t) => t !== shownTerm).map((t) => <Button key={t} variant="quiet" onClick={() => void open.run(t)}>Open {t}</Button>)}
         {printable.length > 0 && <Button variant="quiet" onClick={() => setPrinting(true)}><Printer className="size-4" /> Print {printable.length}</Button>}
       </div>
       <p className="text-sm text-muted-foreground">Cards are made from quiz results and marked work. Making them again brings drafts up to date and leaves published and frozen cards alone.</p>
       {made && <Note>{made}.</Note>}
       <ErrorNote message={loadClasses.error ?? pickClass.error ?? open.error ?? make.error} />
 
+      {cards && cards.length > 0 && (
+        <p className="font-display text-lg font-semibold">
+          Class {classes.find((c) => c.id === classId)?.name} · {shownTerm}
+          {term.trim() !== shownTerm && (
+            <span className="ml-2 font-sans text-sm font-normal text-muted-foreground">
+              These are the {shownTerm} cards.{term.trim() && ` Press Make report cards to make ${term.trim()}.`}
+            </span>
+          )}
+        </p>
+      )}
       {cards && cards.length > 0 && (
         <ul className="grid gap-2">
           {cards.map((c) => <CardRow key={c.id} card={c} onChange={put} />)}
