@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Monitor } from 'lucide-react';
 import type { StudentToday } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Empty } from '../../ui/dashboard';
@@ -24,7 +25,7 @@ export function LabToday() {
   const { now, next } = labNow(periods, clock);
   const main = now ?? next;
   const wide = (
-    <Card className="flex h-44 min-w-56 flex-1 flex-col justify-between p-5" key="main">
+    <Card className="ui-tone-lilac flex h-44 min-w-56 flex-1 flex-col justify-between p-5" key="main">
       {main ? (
         <>
           <span className="self-start rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">{now ? 'Now' : 'Next'}</span>
@@ -41,7 +42,7 @@ export function LabToday() {
       )}
     </Card>
   );
-  if (periods.length === 0) return today ? <Empty>No lab periods for you today.</Empty> : null;
+  if (periods.length === 0) return today ? <Empty icon={Monitor}>No lab periods for you today.</Empty> : null;
   return (
     // A row that scrolls sideways would cut off its cards' shadows. The padding gives them room,
     // and the same margin taken away keeps the row where it was.

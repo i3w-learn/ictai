@@ -88,7 +88,7 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
             key={i}
             disabled={answer.busy}
             onClick={() => void answer.run(i)}
-            className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-border bg-card px-4 text-left text-[16px] font-medium hover:border-primary disabled:opacity-60"
+            className="flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border border-border bg-card px-4 text-left text-[16px] font-medium hover:border-primary disabled:opacity-60"
           >
             <span className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-primary/40 text-sm font-bold text-primary">
               {String.fromCharCode(65 + i)}

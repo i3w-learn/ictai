@@ -3,7 +3,7 @@ import { Megaphone, Pin } from 'lucide-react';
 import type { Notice, SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { useSections } from '../home/useSections';
-import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, useAction } from '../../ui/ui';
+import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, TextArea, useAction } from '../../ui/ui';
 import { endOfDay, whoFor, whenShort } from './notices';
 
 const BLANK = { title: '', body: '', classId: '', sectionId: '', pinned: false, until: '' };
@@ -81,14 +81,7 @@ export function NoticesPanel({ refresh }: { refresh: number }) {
           )}
           <Field id="notice-until" className="w-44" label="Show until (optional)" type="date" value={form.until} onChange={(e) => setForm({ ...form, until: e.target.value })} />
         </div>
-        <label className="grid gap-1.5" htmlFor="notice-body">
-          <span className="text-[13px] font-medium text-muted-foreground">Message (optional)</span>
-          <textarea
-            id="notice-body" rows={2} maxLength={2000}
-            className="w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] text-foreground placeholder:text-muted-foreground/60"
-            value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })}
-          />
-        </label>
+        <TextArea id="notice-body" label="Message (optional)" rows={2} maxLength={2000} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} />
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input id="notice-pinned" type="checkbox" className="size-4 accent-[var(--primary)]" checked={form.pinned} onChange={(e) => setForm({ ...form, pinned: e.target.checked })} />
@@ -101,11 +94,11 @@ export function NoticesPanel({ refresh }: { refresh: number }) {
       </form>
 
       {notices.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground">No notices yet. Students see a notice on their home screen as soon as you put it up.</p>
+        <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">No notices yet. Students see a notice on their home screen as soon as you put it up.</p>
       ) : (
         <ul className="grid gap-2">
           {notices.map((n) => (
-            <li key={n.id} className="flex flex-wrap items-start gap-3 rounded-xl border border-border px-3 py-2.5">
+            <li key={n.id} className="flex flex-wrap items-start gap-3 rounded-2xl border border-border px-3 py-2.5">
               <span className="min-w-56 flex-1">
                 <span className="font-medium">{n.title}</span>
                 {n.pinned && <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary"><Pin className="size-3" /> Pinned</span>}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { ANSWER_MAX, type MyWork as Work } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, Card, ErrorNote, PageTitle, cn, useAction } from '../../ui/ui';
+import { Button, Card, ErrorNote, PageTitle, TextArea, cn, useAction } from '../../ui/ui';
 import { dayShort, sortWork, STATUS_WORDS } from './work';
 
 const TAG = { todo: 'bg-primary/10 text-primary', submitted: 'bg-secondary text-secondary-foreground', marked: 'bg-success/10 text-success' } as const;
@@ -24,7 +24,7 @@ export function MyWork() {
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-5">
       <PageTitle sub="Work your teacher has set for you.">My work</PageTitle>
-      {loaded && work.length === 0 && <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing to do right now. New work from your teacher will show here.</p>}
+      {loaded && work.length === 0 && <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing to do right now. New work from your teacher will show here.</p>}
       <ul className="grid gap-3">
         {sortWork(work).map((w) => (
           <li key={w.id}>
@@ -71,14 +71,7 @@ function OneWork({ work: w, onBack, onChanged }: { work: Work; onBack: () => voi
         </Card>
       ) : (
         <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); if (body.trim() && !same) void send.run(); }}>
-          <label className="grid gap-1.5" htmlFor="work-answer">
-            <span className="text-[13px] font-medium text-muted-foreground">Your answer</span>
-            <textarea
-              id="work-answer" rows={10} maxLength={ANSWER_MAX} placeholder="Write your answer here."
-              className="w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 text-lg leading-relaxed text-foreground placeholder:text-muted-foreground/60"
-              value={body} onChange={(e) => { setBody(e.target.value); setDone(false); }}
-            />
-          </label>
+          <TextArea id="work-answer" label="Your answer" rows={10} maxLength={ANSWER_MAX} placeholder="Write your answer here." className="text-lg" value={body} onChange={(e) => { setBody(e.target.value); setDone(false); }} />
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" className="h-12 px-6" disabled={!body.trim() || same || send.busy}>{w.answer ? 'Hand in again' : 'Hand in'}</Button>
             {w.answer && same && <span className="text-success">{done ? 'Handed in. ' : ''}Your teacher has your answer{w.answer.late ? ' (it was late)' : ''}. You can still change it until it is marked.</span>}

@@ -31,7 +31,7 @@ export function ThingsToDo({ onWork }: { onWork: () => void }) {
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-5">
       <PageTitle sub="Go through the steps in order. A tick shows what you have done.">Things to do</PageTitle>
-      {loaded && todo.length === 0 && <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing to do right now. Your teacher's playlists and learning paths will show here.</p>}
+      {loaded && todo.length === 0 && <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing to do right now. Your teacher's playlists and learning paths will show here.</p>}
       {todo.map((q) => (
         <Card key={q.id} className="grid gap-3 p-5">
           <div className="flex flex-wrap items-baseline gap-2">

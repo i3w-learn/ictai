@@ -43,6 +43,11 @@ export class SessionRepository {
     this.db.prepare('DELETE FROM sessions WHERE kind = ? AND user_id = ?').run(kind, userId);
   }
 
+  // Everyone signed in on one device. For a PC taken out of the lab: nobody can be sitting at it any more.
+  deleteForDevice(deviceId: string) {
+    this.db.prepare('DELETE FROM sessions WHERE device_id = ?').run(deviceId);
+  }
+
   // The lab PC a student is using right now, if it is not `exceptDeviceId`. Dead sessions do not count.
   liveStudentDevice(studentId: string, exceptDeviceId: string, now: number): string | undefined {
     return this.db

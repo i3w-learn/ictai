@@ -139,8 +139,8 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
         </Card>
       ) : url && (
         <>
-          {item.kind === 'image' && <img src={url} alt={item.title} onError={onError} className="mx-auto max-h-[75vh] max-w-full rounded-xl border border-border bg-card" />}
-          {item.kind === 'pdf' && <iframe src={url} title={item.title} className="h-[78vh] w-full rounded-xl border border-border bg-card" />}
+          {item.kind === 'image' && <img src={url} alt={item.title} onError={onError} className="mx-auto max-h-[75vh] max-w-full rounded-2xl border border-border bg-card" />}
+          {item.kind === 'pdf' && <iframe src={url} title={item.title} className="h-[78vh] w-full rounded-2xl border border-border bg-card" />}
           {item.kind === 'video' && (
             <VideoPlayer
               key={url} src={url} title={item.title} onError={onError} peek={peek} onState={showing ? tell : undefined}

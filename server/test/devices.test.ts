@@ -92,6 +92,21 @@ describe('joining the lab', () => {
     expect((await app.inject({ method: 'DELETE', url: `/api/v1/devices/${pc.deviceId}`, headers: admin })).statusCode).toBe(404);
   });
 
+  it('lets a student sign in on another PC once the PC they were on is removed', async () => {
+    const { app, login, auth } = await testServer();
+    const admin = auth(await login('admin', 'admin-pass'));
+    const old = (await app.inject(enrol())).json();
+    const other = (await app.inject(enrol())).json();
+    const cls = (await app.inject({ method: 'POST', url: '/api/v1/classes', headers: admin, payload: { name: '5' } })).json();
+    await app.inject({ method: 'POST', url: '/api/v1/students', headers: admin, payload: { name: 'Asha', classId: cls.id, rollNo: '1' } });
+    const signIn = (pc: { token: string }) => app.inject({ method: 'POST', url: '/api/v1/auth/student/roll', headers: auth(pc.token), payload: { classId: cls.id, rollNo: '1' } });
+    expect((await signIn(old)).statusCode).toBe(201);
+    expect((await signIn(other)).statusCode).toBe(409);
+
+    await app.inject({ method: 'DELETE', url: `/api/v1/devices/${old.deviceId}`, headers: admin });
+    expect((await signIn(other)).statusCode).toBe(201);
+  });
+
   it('expires a device token after 90 unused days, and renews it while in use', async () => {
     const { app, clock, login, auth } = await testServer();
     await login('admin', 'admin-pass');

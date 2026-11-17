@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -18,7 +18,7 @@ export function Button({ variant = 'primary', className, ...props }: ButtonHTMLA
     <button
       {...props}
       className={cn(
-        'inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+        `ui-btn ui-btn-${variant} inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50`,
         BUTTON[variant],
         className,
       )}
@@ -26,13 +26,29 @@ export function Button({ variant = 'primary', className, ...props }: ButtonHTMLA
   );
 }
 
-const CONTROL = 'h-11 w-full rounded-xl border border-border bg-card px-3 text-[15px] text-foreground placeholder:text-muted-foreground/60';
+// Every box you type or pick in looks the same: soft round corners, and a glow in the main colour
+// while you are in it.
+const CONTROL_LOOK = 'ui-control w-full rounded-2xl border border-border bg-card px-4 text-foreground transition-shadow placeholder:text-muted-foreground/60 focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none disabled:opacity-60';
+const CONTROL = `h-11 text-[15px] ${CONTROL_LOOK}`;
+// For the few boxes that are not a Field (an option in the quiz editor, the file picker).
+export const controlClass = CONTROL;
+const LABEL = 'text-[13px] font-medium text-muted-foreground';
 
 export function Field({ label, id, className, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; id: string }) {
   return (
     <label className={cn('grid gap-1.5', className)} htmlFor={id}>
-      <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
+      <span className={LABEL}>{label}</span>
       <input id={id} {...props} className={CONTROL} />
+    </label>
+  );
+}
+
+// A box for longer writing: a note, an answer, a question. `className` sizes its text.
+export function TextArea({ label, id, className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; id: string }) {
+  return (
+    <label className="grid gap-1.5" htmlFor={id}>
+      <span className={LABEL}>{label}</span>
+      <textarea id={id} {...props} className={cn(CONTROL_LOOK, 'resize-y py-3 text-[15px] leading-relaxed', className)} />
     </label>
   );
 }
@@ -41,9 +57,12 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
   return <select {...props} className={cn(CONTROL, 'w-auto min-w-48', className)} />;
 }
 
+// The look of a card, for things that are cards but not a <div> (a big button to tap, a tall bar).
+export const CARD_LOOK = 'ui-card border border-card-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.03),0_16px_40px_-20px_rgba(49,46,129,0.2)]';
+
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={cn('rounded-3xl border border-card-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.03),0_16px_40px_-20px_rgba(49,46,129,0.2)]', className)}>
+    <div className={cn('rounded-3xl', CARD_LOOK, className)}>
       {children}
     </div>
   );

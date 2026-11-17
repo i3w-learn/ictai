@@ -24,7 +24,7 @@ export function MarkWork({ id, onBack }: { id: string; onBack: () => void }) {
         <span className="text-sm text-muted-foreground tabular-nums">{a.handedIn} of {a.students} handed in · {a.marked} marked</span>
       </div>
       {a.instructions && <Card className="p-4"><p className="text-sm whitespace-pre-wrap text-muted-foreground">{a.instructions}</p></Card>}
-      {detail.answers.length === 0 && <p className="rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground">No students in this class yet.</p>}
+      {detail.answers.length === 0 && <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">No students in this class yet.</p>}
       <ul className="grid gap-3">
         {detail.answers.map((s) => <AnswerRow key={s.studentId} workId={id} maxMarks={a.maxMarks} row={s} onMarked={setDetail} />)}
       </ul>
@@ -42,7 +42,7 @@ function AnswerRow({ workId, maxMarks, row, onMarked }: { workId: string; maxMar
   const changed = !row.mark || row.mark.marks !== n || row.mark.comment !== comment.trim();
 
   return (
-    <li className="grid gap-3 rounded-xl border border-border bg-card px-4 py-3">
+    <li className="grid gap-3 rounded-2xl border border-border bg-card px-4 py-3">
       <div className="flex flex-wrap items-baseline gap-2">
         <span className="font-semibold">{row.name}</span>
         {row.rollNo && <span className="text-xs text-muted-foreground">Roll {row.rollNo}</span>}

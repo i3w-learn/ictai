@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { AI_QUESTION_MAX, type AiAskRequest } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, ErrorNote, Note, Panel, Select, useAction } from '../../ui/ui';
+import { Button, ErrorNote, Note, Panel, Select, TextArea, useAction } from '../../ui/ui';
 import { AiUnavailable, LANGUAGES } from '../ai/ai-shared';
 import { useAiJob } from '../ai/useAiJob';
 
@@ -35,14 +35,7 @@ export function AskAi({ onBack }: { onBack: () => void }) {
         <>
           <Panel title="What do you want to ask?">
             <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); if (canAsk) void ask.run(); }}>
-              <label className="grid gap-1.5" htmlFor="ask-question">
-                <span className="text-[13px] font-medium text-muted-foreground">Your question</span>
-                <textarea
-                  id="ask-question" rows={4} maxLength={AI_QUESTION_MAX} placeholder="Why does the moon change shape during the month?"
-                  className="w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/60"
-                  value={question} onChange={(e) => setQuestion(e.target.value)}
-                />
-              </label>
+              <TextArea id="ask-question" label="Your question" rows={4} maxLength={AI_QUESTION_MAX} placeholder="Why does the moon change shape during the month?" value={question} onChange={(e) => setQuestion(e.target.value)} />
               <div className="flex flex-wrap items-end gap-3">
                 <label className="grid gap-1.5">
                   <span className="text-[13px] font-medium text-muted-foreground">Answer in</span>
@@ -79,7 +72,7 @@ export function AskAi({ onBack }: { onBack: () => void }) {
             <Panel title="Earlier questions">
               <ul className="grid gap-2">
                 {earlier.map((j) => (
-                  <li key={j.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border px-3 py-2">
+                  <li key={j.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-border px-3 py-2">
                     <span className="min-w-48 flex-1 truncate font-medium">{j.request.question}</span>
                     <span className="text-xs text-muted-foreground">{LANGUAGES[j.request.language]}</span>
                     <Button variant="quiet" disabled={ai.waiting} onClick={() => ai.follow(j)}>Show answer</Button>

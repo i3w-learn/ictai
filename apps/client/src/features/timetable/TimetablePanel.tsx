@@ -55,7 +55,7 @@ export function TimetablePanel({ refresh }: { refresh: number }) {
   if (grid.periods.length === 0) {
     return (
       <Panel title="Timetable">
-        <p className="rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground">
+        <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">
           No periods yet. The Super Admin adds the periods of the school day in <b className="text-foreground">Settings</b>; then the lab can be booked here.
         </p>
       </Panel>

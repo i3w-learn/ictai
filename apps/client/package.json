@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/fredoka": "^5.3.0",
+    "@fontsource-variable/nunito": "^5.3.0",
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@ict/contracts": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",

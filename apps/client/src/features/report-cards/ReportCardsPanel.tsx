@@ -89,7 +89,7 @@ function CardRow({ card: c, onChange }: { card: ReportCard; onChange: (c: Report
   const q = c.marks.quizzes;
 
   return (
-    <li className="grid gap-2 rounded-xl border border-border px-3 py-2.5">
+    <li className="grid gap-2 rounded-2xl border border-border px-3 py-2.5">
       <div className="flex flex-wrap items-center gap-3">
         <span className="min-w-44 flex-1">
           <span className="font-medium">{c.student.name}</span>
@@ -127,7 +127,7 @@ function CardsSheet({ cards, onClose }: { cards: ReportCard[]; onClose: () => vo
         <Button variant="quiet" onClick={onClose}>Close</Button>
       </div>
       {cards.map((c) => (
-        <article key={c.id} className="mx-auto mb-8 max-w-2xl break-after-page rounded-xl border border-border p-6 print:border-0 print:p-0">
+        <article key={c.id} className="mx-auto mb-8 max-w-2xl break-after-page rounded-2xl border border-border p-6 print:border-0 print:p-0">
           <h3 className="font-display text-2xl font-semibold">Report card · {c.term}</h3>
           <p className="mt-1 text-lg">{c.student.name}</p>
           <p className="text-sm text-muted-foreground">{[`Class ${c.student.className}${c.student.sectionName ? ` ${c.student.sectionName}` : ''}`, c.student.rollNo && `Roll ${c.student.rollNo}`].filter(Boolean).join(' · ')}</p>

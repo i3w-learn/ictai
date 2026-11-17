@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import type { SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, ErrorNote, Field, Note, Panel, Select, useAction } from '../../ui/ui';
+import { Button, ErrorNote, Field, Note, Panel, Select, useAction, controlClass } from '../../ui/ui';
 import { SubjectField, useMySubjects } from './SubjectField';
 import type { AiDraft } from './AiQuizMaker';
 
@@ -130,7 +130,7 @@ export function QuizEditor({ quizId, draft, onDone }: { quizId: string | null; d
                 />
                 <input
                   aria-label={`Option ${oi + 1}`} placeholder={`Option ${oi + 1}`}
-                  className="h-11 w-full rounded-xl border border-border bg-card px-3 text-[15px]"
+                  className={controlClass}
                   value={o} onChange={(e) => update(i, { options: q.options.map((x, k) => (k === oi ? e.target.value : x)) })}
                 />
               </div>

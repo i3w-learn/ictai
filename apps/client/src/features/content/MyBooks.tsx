@@ -23,7 +23,7 @@ export function MyBooks() {
   return (
     <div className="mx-auto grid w-full max-w-4xl gap-5">
       <PageTitle sub="Books, pictures and videos your teachers have added for your class.">My books</PageTitle>
-      {loaded && items.length === 0 && <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing here yet. When your teacher adds something for your class, it shows here.</p>}
+      {loaded && items.length === 0 && <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing here yet. When your teacher adds something for your class, it shows here.</p>}
       {shelve(items).map((shelf) => (
         <section key={shelf.subject} className="grid gap-3">
           <h2 className="font-display text-xl font-semibold">{shelf.subject}</h2>

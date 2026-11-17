@@ -14,10 +14,10 @@ export function StaffSignIn() {
   });
 
   return (
-    <Card className="mx-auto mt-10 w-full max-w-md p-6 sm:p-8">
+    <Card className="mx-auto mt-10 w-full max-w-md p-7 sm:p-9">
       <div className="mb-7 text-center">
-        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-foreground">
-          <GraduationCap className="size-7 text-background" strokeWidth={1.75} />
+        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary shadow-[0_8px_20px_-8px_var(--primary)]">
+          <GraduationCap className="size-7 text-primary-foreground" strokeWidth={1.75} />
         </div>
         <h1 className="font-display text-3xl font-semibold">Welcome back</h1>
         <p className="mt-1 text-sm text-muted-foreground">Sign in to manage the lab</p>
