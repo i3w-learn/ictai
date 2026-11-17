@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { quizRoom, type StudentRunState } from '@ict/contracts';
 import { useApp, useLiveState } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
-import { Button, Centered, ErrorNote, PageTitle, useAction, useLatest } from '../../ui/ui';
+import { Hourglass, Medal, type LucideIcon } from 'lucide-react';
+import { Button, Card, Centered, ErrorNote, PageTitle, useAction, useLatest } from '../../ui/ui';
 
 // A student taking a Lab Mode quiz at their own pace (v2's Join page).
 // The server keeps each question's clock and says which question the student is on (`current`),
@@ -44,29 +45,34 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
     </div>
   );
 
+  // Waiting and score screens: one card in the middle, so the page is not bare text.
+  const stage = (Icon: LucideIcon, children: ReactNode) => (
+    <Centered>
+      <Card className="mx-auto grid w-full max-w-xl justify-items-center gap-6 p-8 text-center sm:p-12">
+        <div className="flex size-16 items-center justify-center rounded-3xl bg-primary text-primary-foreground shadow-[0_8px_20px_-8px_var(--primary)]">
+          <Icon className="size-8" aria-hidden />
+        </div>
+        <span className="font-display text-lg font-semibold text-muted-foreground">{run.title}</span>
+        {children}
+      </Card>
+    </Centered>
+  );
+
   if (run.status === 'lobby') {
-    return (
-      <Centered>
-        {header}
-        <PageTitle sub="Your teacher will start the quiz soon. Keep this screen open.">You're in!</PageTitle>
-      </Centered>
-    );
+    return stage(Hourglass, <PageTitle sub="Your teacher will start the quiz soon. Keep this screen open.">You're in!</PageTitle>);
   }
 
   if (run.finished || run.status === 'ended' || !current) {
-    return (
-      <Centered>
-        {header}
-        <PageTitle
-          eyebrow={run.status === 'ended' ? 'Quiz ended' : 'Quiz done'}
-          sub={run.status === 'ended' ? 'Your teacher has ended the quiz.' : 'Wait for your teacher to end the quiz.'}
-        >
-          {run.score == null ? 'Handing in…' : `You scored ${run.score} out of ${run.totalMarks}`}
-        </PageTitle>
-        <ErrorNote message={liveError ?? finish.error ?? timeUp.error} />
-        <div><Button variant="quiet" onClick={onExit}>Back to home</Button></div>
-      </Centered>
-    );
+    return stage(Medal, <>
+      <PageTitle
+        eyebrow={run.status === 'ended' ? 'Quiz ended' : 'Quiz done'}
+        sub={run.status === 'ended' ? 'Your teacher has ended the quiz.' : 'Wait for your teacher to end the quiz.'}
+      >
+        {run.score == null ? 'Handing in…' : `You scored ${run.score} out of ${run.totalMarks}`}
+      </PageTitle>
+      <ErrorNote message={liveError ?? finish.error ?? timeUp.error} />
+      <Button onClick={onExit}>Back to home</Button>
+    </>);
   }
 
   const q = run.questions[current.index]!;

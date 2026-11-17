@@ -63,8 +63,8 @@ export function SettingsPanel({ onSaved }: { onSaved: (saved: SchoolSettings) =>
         {form.periods.map((p, i) => (
           <div key={i} className="flex flex-wrap items-end gap-3">
             <Field id={`period-${i}-name`} className="w-48" label={i === 0 ? 'Name' : `Period ${i + 1} name`} value={p.name} maxLength={40} onChange={(e) => setPeriod(i, { name: e.target.value })} />
-            <Field id={`period-${i}-start`} className="w-32" label="Starts" type="time" value={p.start} onChange={(e) => setPeriod(i, { start: e.target.value })} />
-            <Field id={`period-${i}-end`} className="w-32" label="Ends" type="time" value={p.end} onChange={(e) => setPeriod(i, { end: e.target.value })} />
+            <Field id={`period-${i}-start`} className="w-40" label="Starts" type="time" value={p.start} onChange={(e) => setPeriod(i, { start: e.target.value })} />
+            <Field id={`period-${i}-end`} className="w-40" label="Ends" type="time" value={p.end} onChange={(e) => setPeriod(i, { end: e.target.value })} />
             <Button type="button" variant="quiet" aria-label={`Remove ${p.name || `period ${i + 1}`}`} onClick={() => change({ periods: form.periods.filter((_, k) => k !== i) })}><Trash2 className="size-4" /></Button>
           </div>
         ))}
