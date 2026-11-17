@@ -77,7 +77,9 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
 
   const q = run.questions[current.index]!;
   return (
-    <Centered>
+    // Packed closer than other pages: the clock, the question and all four answers should fit on a small
+    // lab monitor without scrolling, even with the student's text set to Very large.
+    <div className="mx-auto grid w-full max-w-3xl gap-3">
       {header}
       <Countdown
         // A fresh word from the server starts the clock again.
@@ -88,7 +90,7 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
       />
       <p className="text-sm text-muted-foreground">Question {current.index + 1} of {run.questions.length}</p>
       <h1 className="font-display text-2xl font-semibold text-balance">{q.text}</h1>
-      <div className="grid gap-3">
+      <div className="mt-1 grid gap-2">
         {q.options.map((o, i) => (
           <button
             key={i}
@@ -104,7 +106,7 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
         ))}
       </div>
       <ErrorNote message={liveError ?? answer.error ?? timeUp.error} />
-    </Centered>
+    </div>
   );
 }
 
