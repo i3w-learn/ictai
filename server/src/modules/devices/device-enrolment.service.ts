@@ -68,6 +68,9 @@ export class DeviceEnrolmentService {
   // once, and so does the sign-in of any student sitting at it.
   remove(by: StaffPrincipal, id: string) {
     if (!this.devices.retire(id)) throw new AppError(404, 'NOT_FOUND', 'That device is not in the lab.');
+    // The student who was on it is signed out for real, not just cut off: otherwise they would count
+    // as still sitting there, and every other PC would turn them away until that sign-in ran out.
+    this.sessions.deleteForDevice(id);
     this.audit.record({ kind: 'staff', id: by.userId }, 'device.remove', id, {});
   }
 
