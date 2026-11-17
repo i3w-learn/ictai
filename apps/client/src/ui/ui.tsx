@@ -29,10 +29,10 @@ export function Button({ variant = 'primary', className, ...props }: ButtonHTMLA
 // Every box you type or pick in looks the same: soft round corners, and a glow in the main colour
 // while you are in it.
 const CONTROL_LOOK = 'ui-control w-full rounded-2xl border border-border bg-card px-4 text-foreground transition-shadow placeholder:text-muted-foreground/60 focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none disabled:opacity-60';
-const CONTROL = `h-11 text-[15px] ${CONTROL_LOOK}`;
+const CONTROL = `h-11 text-[0.9375rem] ${CONTROL_LOOK}`;
 // For the few boxes that are not a Field (an option in the quiz editor, the file picker).
 export const controlClass = CONTROL;
-const LABEL = 'text-[13px] font-medium text-muted-foreground';
+const LABEL = 'text-[0.8125rem] font-medium text-muted-foreground';
 
 export function Field({ label, id, className, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; id: string }) {
   return (
@@ -48,7 +48,7 @@ export function TextArea({ label, id, className, ...props }: TextareaHTMLAttribu
   return (
     <label className="grid gap-1.5" htmlFor={id}>
       <span className={LABEL}>{label}</span>
-      <textarea id={id} {...props} className={cn(CONTROL_LOOK, 'resize-y py-3 text-[15px] leading-relaxed', className)} />
+      <textarea id={id} {...props} className={cn(CONTROL_LOOK, 'resize-y py-3 text-[0.9375rem] leading-relaxed', className)} />
     </label>
   );
 }
@@ -89,7 +89,7 @@ export function SectionLabel({ children }: { children: ReactNode }) {
 export function PageTitle({ eyebrow, children, sub }: { eyebrow?: ReactNode; children: ReactNode; sub?: ReactNode }) {
   return (
     <div className="grid gap-2">
-      {eyebrow && <p className="text-[15px] font-medium text-secondary-foreground">{eyebrow}</p>}
+      {eyebrow && <p className="text-[0.9375rem] font-medium text-secondary-foreground">{eyebrow}</p>}
       <h1 className="font-display text-3xl font-semibold tracking-tight text-balance">{children}</h1>
       {sub && <p className="text-muted-foreground">{sub}</p>}
     </div>

@@ -75,7 +75,7 @@ export function ContentPanel({ onOpen, refresh, onChanged }: { onOpen: (item: Co
           <div className="flex flex-wrap items-end gap-3">
             <Field id="content-title" className="w-72" label="Title" placeholder="Water cycle diagram" maxLength={120} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             <label className="grid gap-1.5">
-              <span className="text-[13px] font-medium text-muted-foreground">Class</span>
+              <span className="text-[0.8125rem] font-medium text-muted-foreground">Class</span>
               <Select aria-label="Library class" value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })}>
                 <option value="">Choose a class</option>
                 {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
@@ -86,7 +86,7 @@ export function ContentPanel({ onOpen, refresh, onChanged }: { onOpen: (item: Co
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <label className="grid gap-1.5" htmlFor="content-file">
-              <span className="text-[13px] font-medium text-muted-foreground">A file: PDF, picture, video or sound (up to {sizeWords(MAX_FILE_BYTES)})</span>
+              <span className="text-[0.8125rem] font-medium text-muted-foreground">A file: PDF, picture, video or sound (up to {sizeWords(MAX_FILE_BYTES)})</span>
               <input
                 id="content-file" ref={picker} type="file" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.mp4,.webm,.mp3,.wav,.ogg,.m4a"
                 className="h-11 rounded-2xl border border-border bg-card px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-3 file:py-1"

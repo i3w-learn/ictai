@@ -51,7 +51,7 @@ export function WorkPanel({ onOpen, refresh, onChanged }: { onOpen: (id: string)
         <div className="flex flex-wrap items-end gap-3">
           <Field id="work-title" className="w-72" label="Title" placeholder="Fractions worksheet" maxLength={120} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <label className="grid gap-1.5">
-            <span className="text-[13px] font-medium text-muted-foreground">Class</span>
+            <span className="text-[0.8125rem] font-medium text-muted-foreground">Class</span>
             <Select aria-label="Work for class" value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value, sectionId: '' })}>
               <option value="">Choose a class</option>
               {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
@@ -59,7 +59,7 @@ export function WorkPanel({ onOpen, refresh, onChanged }: { onOpen: (id: string)
           </label>
           {sections.length > 0 && (
             <label className="grid gap-1.5">
-              <span className="text-[13px] font-medium text-muted-foreground">Section</span>
+              <span className="text-[0.8125rem] font-medium text-muted-foreground">Section</span>
               <Select aria-label="Work for section" className="min-w-32" value={form.sectionId} onChange={(e) => setForm({ ...form, sectionId: e.target.value })}>
                 <option value="">All sections</option>
                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}

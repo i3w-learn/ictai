@@ -96,7 +96,7 @@ export function QuizEditor({ quizId, draft, onDone }: { quizId: string | null; d
         <div className="flex flex-wrap items-end gap-3">
           <Field id="quiz-title" className="w-72" label="Title" placeholder="Science weekly test" value={meta.title} onChange={(e) => setMeta({ ...meta, title: e.target.value })} />
           <label className="grid gap-1.5">
-            <span className="text-[13px] font-medium text-muted-foreground">Class</span>
+            <span className="text-[0.8125rem] font-medium text-muted-foreground">Class</span>
             <Select aria-label="Class" value={meta.classId} onChange={(e) => setMeta({ ...meta, classId: e.target.value })}>
               <option value="">Choose a class</option>
               {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}

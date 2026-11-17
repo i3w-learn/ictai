@@ -161,7 +161,7 @@ function ScopeFields({ classes, classIds, subjects, onChange, idPrefix = 'new' }
   return (
     <div className="flex flex-wrap items-end gap-6">
       <div className="grid gap-1.5">
-        <span className="text-[13px] font-medium text-muted-foreground">Classes</span>
+        <span className="text-[0.8125rem] font-medium text-muted-foreground">Classes</span>
         {classes.length === 0 ? (
           <span className="text-sm text-muted-foreground">Add a class in Students first.</span>
         ) : (

@@ -51,7 +51,7 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
           <Panel title="What should the quiz be about?">
             <div className="flex flex-wrap items-end gap-3">
               <label className="grid gap-1.5">
-                <span className="text-[13px] font-medium text-muted-foreground">Class</span>
+                <span className="text-[0.8125rem] font-medium text-muted-foreground">Class</span>
                 <Select aria-label="Class" value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })}>
                   <option value="">Choose a class</option>
                   {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
@@ -61,7 +61,7 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
               <Field id="ai-topic" className="w-64" label="Topic" placeholder="Fractions" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} />
               <Field id="ai-count" className="w-32" label="Questions" inputMode="numeric" value={form.count} onChange={(e) => setForm({ ...form, count: e.target.value })} />
               <label className="grid gap-1.5">
-                <span className="text-[13px] font-medium text-muted-foreground">Language</span>
+                <span className="text-[0.8125rem] font-medium text-muted-foreground">Language</span>
                 <Select aria-label="Language" className="min-w-40" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value as AiQuizRequest['language'] })}>
                   {Object.entries(LANGUAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </Select>

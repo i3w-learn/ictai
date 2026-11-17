@@ -17,7 +17,7 @@ export function SubjectField({ id, value, onChange, placeholder }: { id: string;
   const options = shown && !subjects.includes(shown) ? [...subjects, shown] : subjects;
   return (
     <label className="grid gap-1.5">
-      <span className="text-[13px] font-medium text-muted-foreground">Subject</span>
+      <span className="text-[0.8125rem] font-medium text-muted-foreground">Subject</span>
       <Select id={id} aria-label="Subject" value={shown} onChange={(e) => onChange(e.target.value)}>
         <option value="">Choose a subject</option>
         {options.map((s) => <option key={s} value={s}>{s}</option>)}

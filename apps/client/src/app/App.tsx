@@ -69,8 +69,8 @@ export function App() {
             <GraduationCap className="size-5 text-primary-foreground" strokeWidth={2} />
           </div>
           <div className="min-w-0 leading-tight">
-            <p className="ui-school truncate font-display text-[17px] font-semibold tracking-tight">{server?.name ?? 'ICT App'}</p>
-            <p className="ui-device truncate text-[12px] text-muted-foreground">{[server && 'ICT App', role && ROLE_LABEL[role], device?.name].filter(Boolean).join(' · ')}</p>
+            <p className="ui-school truncate font-display text-[1.0625rem] font-semibold tracking-tight">{server?.name ?? 'ICT App'}</p>
+            <p className="ui-device truncate text-[0.75rem] text-muted-foreground">{[server && 'ICT App', role && ROLE_LABEL[role], device?.name].filter(Boolean).join(' · ')}</p>
           </div>
         </div>
 
@@ -83,8 +83,8 @@ export function App() {
           <div className="flex min-w-0 items-center gap-2.5 border-l border-border pl-3">
             <span className={cn('ui-avatar grid size-10 shrink-0 place-items-center rounded-full text-sm font-semibold text-background', look.fill)} aria-hidden>{initials(person.name)}</span>
             <div className="hidden min-w-0 leading-tight sm:block">
-              <p className="truncate text-[15px] font-semibold">{person.name}</p>
-              <p className={cn('text-[12px] font-semibold', look.text)}>{look.label}</p>
+              <p className="truncate text-[0.9375rem] font-semibold">{person.name}</p>
+              <p className={cn('text-[0.75rem] font-semibold', look.text)}>{look.label}</p>
             </div>
           </div>
         )}

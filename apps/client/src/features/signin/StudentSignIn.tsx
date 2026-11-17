@@ -144,7 +144,7 @@ export function StudentSignIn() {
   return (
     <Centered narrow={step.at !== 'class' && step.at !== 'section' && step.at !== 'who'}>
       {step.at === 'class' && (
-        <>
+        <Card className="grid gap-6 p-7 sm:p-9">
           <PageTitle eyebrow="Sign in">Which class are you in?</PageTitle>
           <div className={tiles}>
             {classes.map((c) => <Tile key={c.id} onClick={() => openClass.run(c)}>{c.name}</Tile>)}
@@ -153,17 +153,17 @@ export function StudentSignIn() {
             <p className="text-muted-foreground">No classes yet. Ask your teacher to add your class on the server PC.</p>
           )}
           <div><Button variant="quiet" onClick={go({ at: 'card' })}>Scan my card</Button></div>
-        </>
+        </Card>
       )}
 
       {step.at === 'section' && (
-        <>
+        <Card className="grid gap-6 p-7 sm:p-9">
           <PageTitle eyebrow={`Class ${step.cls.name}`}>Which section?</PageTitle>
           <div className={tiles}>
             {step.sections.map((x) => <Tile key={x.id} onClick={() => setStep({ at: 'roll', place: { cls: step.cls, section: x } })}>{x.name}</Tile>)}
           </div>
           <div><Button variant="quiet" onClick={startOver}>Back</Button></div>
-        </>
+        </Card>
       )}
 
       {step.at === 'roll' && (
@@ -186,13 +186,13 @@ export function StudentSignIn() {
       )}
 
       {step.at === 'who' && (
-        <>
+        <Card className="grid gap-6 p-7 sm:p-9">
           <PageTitle eyebrow={`${placeLabel(step.place)} · Roll ${rollNo.trim()}`}>Which one are you?</PageTitle>
           <div className={tiles}>
             {step.students.map((x) => <Tile key={x.id} onClick={() => { if (!signIn.busy) void signIn.run(step.place, x); }}>{x.name}</Tile>)}
           </div>
           <div><Button variant="quiet" onClick={go({ at: 'roll', place: step.place })}>Back</Button></div>
-        </>
+        </Card>
       )}
 
       {step.at === 'card' && (

@@ -77,6 +77,10 @@
 
 @layer base {
   * { @apply border-border; }
+  /* Everything is sized from this one number, so the whole app grows with the screen: normal size on a
+     small lab monitor, up to one and a half times on a big one. Width and height both count, so a wide
+     but short window does not get text too tall to fit. */
+  html { font-size: clamp(16px, min(0.9vw, 1.6vh), 24px); }
   body { @apply bg-background text-foreground font-sans antialiased; }
   :focus-visible { @apply outline-2 outline-offset-2 outline-ring; }
 }

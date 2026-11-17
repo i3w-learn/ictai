@@ -70,8 +70,8 @@ export function TimetablePanel({ refresh }: { refresh: number }) {
         <table className="w-full min-w-[720px] border-separate border-spacing-1 text-sm">
           <thead>
             <tr>
-              <th className="w-36 px-2 py-1 text-left text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">Period</th>
-              {SCHOOL_DAYS.map((d) => <th key={d} className="px-2 py-1 text-left text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">{d}</th>)}
+              <th className="w-36 px-2 py-1 text-left text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">Period</th>
+              {SCHOOL_DAYS.map((d) => <th key={d} className="px-2 py-1 text-left text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">{d}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -112,7 +112,7 @@ export function TimetablePanel({ refresh }: { refresh: number }) {
           <strong>{SCHOOL_DAYS[open.day - 1]} · {open.period.name} <span className="font-normal text-muted-foreground tabular-nums">({open.period.start} to {open.period.end})</span></strong>
           <div className="flex flex-wrap items-end gap-3">
             <label className="grid gap-1.5">
-              <span className="text-[13px] font-medium text-muted-foreground">Class</span>
+              <span className="text-[0.8125rem] font-medium text-muted-foreground">Class</span>
               <Select aria-label="Class with the lab" value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value, sectionId: '' })}>
                 <option value="">Choose a class</option>
                 {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
@@ -120,7 +120,7 @@ export function TimetablePanel({ refresh }: { refresh: number }) {
             </label>
             {sections.length > 0 && (
               <label className="grid gap-1.5">
-                <span className="text-[13px] font-medium text-muted-foreground">Section</span>
+                <span className="text-[0.8125rem] font-medium text-muted-foreground">Section</span>
                 <Select aria-label="Section with the lab" className="min-w-32" value={form.sectionId} onChange={(e) => setForm({ ...form, sectionId: e.target.value })}>
                   <option value="">All sections</option>
                   {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}

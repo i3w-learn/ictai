@@ -38,7 +38,7 @@ export function AskAi({ onBack }: { onBack: () => void }) {
               <TextArea id="ask-question" label="Your question" rows={4} maxLength={AI_QUESTION_MAX} placeholder="Why does the moon change shape during the month?" value={question} onChange={(e) => setQuestion(e.target.value)} />
               <div className="flex flex-wrap items-end gap-3">
                 <label className="grid gap-1.5">
-                  <span className="text-[13px] font-medium text-muted-foreground">Answer in</span>
+                  <span className="text-[0.8125rem] font-medium text-muted-foreground">Answer in</span>
                   <Select aria-label="Answer in" className="min-w-40" value={language} onChange={(e) => setLanguage(e.target.value as AiAskRequest['language'])}>
                     {Object.entries(LANGUAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </Select>
@@ -54,7 +54,7 @@ export function AskAi({ onBack }: { onBack: () => void }) {
 
           {job && (
             <Panel title="Your question">
-              <p className="text-[15px] font-medium whitespace-pre-wrap">{job.request.question}</p>
+              <p className="text-[0.9375rem] font-medium whitespace-pre-wrap">{job.request.question}</p>
               {job.status === 'queued' && <Note>You are number {job.position} in line. Your answer starts after the ones before it.</Note>}
               {job.status === 'running' && <Note>Writing your answer… this can take a minute. You can keep working; it will be under Earlier questions.</Note>}
               {ai.trouble && <Note>{ai.trouble}</Note>}
@@ -91,7 +91,7 @@ export function AskAi({ onBack }: { onBack: () => void }) {
 function Answer({ text }: { text: string }) {
   return (
     <div className="grid gap-3">
-      <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{text}</p>
+      <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap">{text}</p>
       <p className="text-sm text-muted-foreground">The AI can be wrong. Check the answer before you teach it.</p>
     </div>
   );

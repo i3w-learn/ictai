@@ -64,7 +64,7 @@ export function NoticesPanel({ refresh }: { refresh: number }) {
         <div className="flex flex-wrap items-end gap-3">
           <Field id="notice-title" className="w-72" label="Title" placeholder="Holiday on Friday" maxLength={120} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <label className="grid gap-1.5">
-            <span className="text-[13px] font-medium text-muted-foreground">For</span>
+            <span className="text-[0.8125rem] font-medium text-muted-foreground">For</span>
             <Select aria-label="Notice for" value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value, sectionId: '' })}>
               {limited ? <option value="">Choose a class</option> : <option value="">Whole school</option>}
               {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
@@ -72,7 +72,7 @@ export function NoticesPanel({ refresh }: { refresh: number }) {
           </label>
           {sections.length > 0 && (
             <label className="grid gap-1.5">
-              <span className="text-[13px] font-medium text-muted-foreground">Section</span>
+              <span className="text-[0.8125rem] font-medium text-muted-foreground">Section</span>
               <Select aria-label="Notice section" className="min-w-32" value={form.sectionId} onChange={(e) => setForm({ ...form, sectionId: e.target.value })}>
                 <option value="">All sections</option>
                 {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
