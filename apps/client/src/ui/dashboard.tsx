@@ -25,7 +25,7 @@ export function SideMenu<K extends string>({ label, items, current, onPick, foot
           <button
             key={key} type="button" title={name} aria-label={name} aria-current={on ? 'page' : undefined} onClick={() => onPick(key)}
             className={cn(
-              'ui-nav flex min-h-11 cursor-pointer items-center justify-center gap-3 rounded-xl px-3 text-[15px] transition-colors lg:justify-start',
+              'ui-nav flex min-h-11 cursor-pointer items-center justify-center gap-3 rounded-xl px-3 text-[0.9375rem] transition-colors lg:justify-start',
               on ? 'bg-primary/10 font-semibold text-primary' : 'font-medium text-muted-foreground hover:bg-secondary hover:text-foreground',
             )}
           >
@@ -118,7 +118,7 @@ export function CoverCard({ title, kind, colourFrom, icon: Icon, onClick }: { ti
       className="ui-cover relative flex h-44 w-full cursor-pointer flex-col justify-end overflow-hidden rounded-3xl p-5 text-left text-white shadow-[0_16px_32px_-18px_rgba(49,46,129,0.6)] transition-transform hover:-translate-y-0.5"
     >
       <Icon className="absolute -top-4 -right-4 size-32 text-white/15" strokeWidth={1.25} aria-hidden />
-      <span className="relative text-[11px] font-semibold tracking-[0.14em] text-white/80 uppercase">{kind}</span>
+      <span className="relative text-[0.6875rem] font-semibold tracking-[0.14em] text-white/80 uppercase">{kind}</span>
       <span className="relative line-clamp-3 font-display text-xl leading-tight font-semibold">{title}</span>
     </button>
   );

@@ -65,7 +65,7 @@ export function SequencesPanel({ refresh }: { refresh: number }) {
       <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); if (!problem) void save.run(); }}>
         <div className="flex flex-wrap items-end gap-3">
           <div className="grid gap-1.5" role="radiogroup" aria-label="Kind">
-            <span className="text-[13px] font-medium text-muted-foreground">Kind</span>
+            <span className="text-[0.8125rem] font-medium text-muted-foreground">Kind</span>
             <div className="flex gap-1 rounded-2xl border border-border p-1">
               {(['playlist', 'path'] as const).map((t) => (
                 <button key={t} type="button" role="radio" aria-checked={form.type === t} onClick={() => setType(t)} className={cn('cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold', form.type === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>{WORDS[t]}</button>
@@ -74,7 +74,7 @@ export function SequencesPanel({ refresh }: { refresh: number }) {
           </div>
           <Field id="seq-title" className="w-64" label="Title" placeholder="Fractions week" maxLength={120} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <label className="grid gap-1.5">
-            <span className="text-[13px] font-medium text-muted-foreground">Class</span>
+            <span className="text-[0.8125rem] font-medium text-muted-foreground">Class</span>
             <Select aria-label="Playlist class" value={form.classId} onChange={(e) => setClass(e.target.value)}>
               <option value="">Choose a class</option>
               {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
@@ -87,7 +87,7 @@ export function SequencesPanel({ refresh }: { refresh: number }) {
         {form.classId && (
           <div className="flex flex-wrap items-end gap-3">
             <label className="grid gap-1.5">
-              <span className="text-[13px] font-medium text-muted-foreground">Add a step</span>
+              <span className="text-[0.8125rem] font-medium text-muted-foreground">Add a step</span>
               <Select aria-label="Step to add" className="min-w-72" value={pick} onChange={(e) => setPick(e.target.value)}>
                 <option value="">{choices.length ? 'Choose from the library' + (form.type === 'path' ? ' or the work' : '') : 'Nothing in this class\'s library yet'}</option>
                 {choices.map((c) => <option key={`${c.kind}:${c.refId}`} value={`${c.kind}:${c.refId}`}>{c.title}</option>)}

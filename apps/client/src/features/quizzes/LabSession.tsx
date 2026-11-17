@@ -62,7 +62,7 @@ export function LabSession({ runId, onExit }: { runId: string; onExit: () => voi
         <Panel title={run.status === 'ended' ? 'Leaderboard' : 'Live progress'}>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+              <tr className="border-b border-border text-left text-[0.6875rem] tracking-[0.14em] text-muted-foreground uppercase">
                 <th className="w-10 py-2.5 pr-3 font-semibold">#</th>
                 <th className="py-2.5 pr-3 font-semibold">Student</th>
                 <th className="py-2.5 pr-3 font-semibold">Answered</th>

@@ -58,7 +58,7 @@ export function SettingsPanel({ onSaved }: { onSaved: (saved: SchoolSettings) =>
       </div>
 
       <div className="grid gap-2">
-        <span className="text-[13px] font-medium text-muted-foreground">Periods of the school day</span>
+        <span className="text-[0.8125rem] font-medium text-muted-foreground">Periods of the school day</span>
         {form.periods.length === 0 && <p className="text-sm text-muted-foreground">No periods yet. Add the lab periods so the timetable can use them.</p>}
         {form.periods.map((p, i) => (
           <div key={i} className="flex flex-wrap items-end gap-3">

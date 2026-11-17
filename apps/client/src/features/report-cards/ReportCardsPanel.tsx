@@ -46,7 +46,7 @@ export function ReportCardsPanel({ refresh }: { refresh: number }) {
     <Panel title="Report cards">
       <div className="flex flex-wrap items-end gap-3">
         <label className="grid gap-1.5">
-          <span className="text-[13px] font-medium text-muted-foreground">Class</span>
+          <span className="text-[0.8125rem] font-medium text-muted-foreground">Class</span>
           <Select aria-label="Report cards for class" value={classId} onChange={(e) => void pickClass.run(e.target.value)}>
             <option value="">Choose a class</option>
             {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
