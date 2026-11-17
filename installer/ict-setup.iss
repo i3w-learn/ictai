@@ -112,7 +112,10 @@ begin
     'You will use this to sign in to the console. The password needs at least 8 characters.');
   AdminPage.Add('Username:', False);
   AdminPage.Add('Password:', True);
-  AdminPage.Values[0] := 'admin';
+  // An install with no questions (/VERYSILENT) has nobody to type these, so they may be given
+  // on the command line: /AdminUser=name /AdminPassword=secret
+  AdminPage.Values[0] := ExpandConstant('{param:AdminUser|admin}');
+  AdminPage.Values[1] := ExpandConstant('{param:AdminPassword|}');
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;

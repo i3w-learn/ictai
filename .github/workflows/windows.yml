@@ -101,6 +101,7 @@ jobs:
   install-test:
     needs: installer
     runs-on: windows-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -112,24 +113,18 @@ jobs:
         shell: pwsh
         run: |
           $exe = (Get-ChildItem setup/ICT-Setup-*.exe).FullName
-          $p = Start-Process $exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=$env:RUNNER_TEMP\setup.log" -Wait -PassThru
+          $p = Start-Process $exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/AdminPassword=admin-pass-1", "/LOG=$env:RUNNER_TEMP\setup.log" -Wait -PassThru
           if ($p.ExitCode) { Get-Content "$env:RUNNER_TEMP\setup.log" -Tail 40; exit $p.ExitCode }
           $server = "$env:ProgramFiles\ICT App\server"
           foreach ($f in "node.exe", "server.cjs", "ict-server.exe", "ict-server.xml") { if (!(Test-Path "$server\$f")) { throw "Missing after install: $f" } }
           if ((Get-Content "$env:ProgramFiles\ICT App\install-role.txt") -ne "console") { throw "The role file does not say console" }
           Get-Service ICTServer | Format-List Name, Status, StartType
 
-      # A silent install has nobody to type the first admin's password, so it is given here,
-      # the same way the installer's own page gives it.
-      - name: Make the first Super Admin and start the server
+      - name: The server runs as a Windows service
         shell: pwsh
         run: |
           $server = "$env:ProgramFiles\ICT App\server"
           $data = "$env:ProgramData\ICT App\server"
-          & "$server\ict-server.exe" stop
-          Start-Sleep 3
-          Set-Content -NoNewline -Encoding ascii "$data\bootstrap-admin.json" '{"username":"admin","password":"admin-pass-1"}'
-          & "$server\ict-server.exe" start
           foreach ($i in 1..30) {
             Start-Sleep 2
             curl.exe -k -s --fail https://localhost:7700/health
