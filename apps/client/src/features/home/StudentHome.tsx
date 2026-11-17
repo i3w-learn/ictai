@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, ChartColumn, House, ListChecks, NotebookPen, PencilLine, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { BookOpen, Film, ChartColumn, House, ListChecks, NotebookPen, PencilLine, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { DEFAULT_PREFS, type StudentPrefs, type StudentRunState } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Shell, SideMenu, type MenuItem } from '../../ui/dashboard';
@@ -18,11 +18,12 @@ import { AskTutor } from '../tutor/AskTutor';
 import { MyWork } from '../work/MyWork';
 import { StudentDashboard } from './StudentDashboard';
 
-type Page = 'home' | 'todo' | 'books' | 'work' | 'progress' | 'notes' | 'settings' | 'ask';
+type Page = 'home' | 'todo' | 'books' | 'videos' | 'work' | 'progress' | 'notes' | 'settings' | 'ask';
 const MENU: MenuItem<Exclude<Page, 'ask'>>[] = [
   { key: 'home', label: 'Home', icon: House },
   { key: 'todo', label: 'Things to do', icon: ListChecks },
   { key: 'books', label: 'My books', icon: BookOpen },
+  { key: 'videos', label: 'Videos', icon: Film },
   { key: 'work', label: 'My work', icon: PencilLine },
   { key: 'progress', label: 'How I am doing', icon: ChartColumn },
   { key: 'notes', label: 'My notes', icon: NotebookPen },
@@ -86,6 +87,7 @@ export function StudentHome({ name }: { name: string }) {
       )}
       {page === 'todo' && <ThingsToDo onWork={() => setPage('work')} />}
       {page === 'books' && <MyBooks />}
+      {page === 'videos' && <MyBooks key="videos" videos />}
       {page === 'work' && <MyWork />}
       {page === 'progress' && <HowIAmDoing onWork={() => setPage('work')} />}
       {page === 'notes' && <MyNotes />}

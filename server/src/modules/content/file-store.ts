@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { appendFileSync, closeSync, createReadStream, existsSync, mkdirSync, openSync, readSync, readdirSync, renameSync, rmSync, statSync, statfsSync } from 'node:fs';
+import { appendFileSync, closeSync, copyFileSync, createReadStream, existsSync, mkdirSync, openSync, readSync, readdirSync, renameSync, rmSync, statSync, statfsSync } from 'node:fs';
 import { join } from 'node:path';
 import { CHUNK_BYTES } from '@ict/contracts';
 
@@ -24,6 +24,11 @@ export class FileStore {
 
   append(partId: string, bytes: Buffer) {
     appendFileSync(this.partPath(partId), bytes);
+  }
+
+  // Brings in a file that is already on this PC (a video that came with the app), as if it had been uploaded.
+  copyIn(partId: string, from: string) {
+    copyFileSync(from, this.partPath(partId));
   }
 
   discard(partId: string) {

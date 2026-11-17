@@ -9,6 +9,8 @@ export interface Config {
   lockFile: string;
   startupLog: string;
   bootstrapAdminFile: string;
+  // Videos that come with the app: the installer puts them beside the server program.
+  starterDir: string;
   apiPort: number;
   beaconPort: number;
   devAdmin: { username: string; password: string } | null;
@@ -33,6 +35,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     lockFile: join(dataDir, 'server.lock'),
     startupLog: join(dataDir, 'startup.log'),
     bootstrapAdminFile: join(dataDir, 'bootstrap-admin.json'),
+    starterDir: resolve(env.ICT_STARTER_DIR ?? 'starter-videos'),
     apiPort: Number(env.ICT_PORT ?? PORTS.api),
     beaconPort: Number(env.ICT_BEACON_PORT ?? PORTS.beacon),
     devAdmin:
