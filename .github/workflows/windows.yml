@@ -65,6 +65,21 @@ jobs:
           Invoke-WebRequest "https://nodejs.org/dist/v$env:NODE_VERSION/win-x64/node.exe" -OutFile "$stage/server/node.exe"
           Invoke-WebRequest "https://github.com/winsw/winsw/releases/download/$env:WINSW_VERSION/WinSW-x64.exe" -OutFile "$stage/server/ict-server.exe"
 
+      # Videos that come with the app. They are too big for the code, so they are kept as the files
+      # of a GitHub release named "starter-videos" (in this repo, or in the repo named by the
+      # STARTER_VIDEOS_REPO variable, read with the STARTER_VIDEOS_TOKEN secret when it is private).
+      # No such release: the installer is built without videos.
+      - name: Fetch starter videos
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.STARTER_VIDEOS_TOKEN || github.token }}
+          VIDEOS_REPO: ${{ vars.STARTER_VIDEOS_REPO || github.repository }}
+        run: |
+          New-Item -ItemType Directory -Force stage/server/starter-videos | Out-Null
+          gh release download starter-videos --repo $env:VIDEOS_REPO --pattern "*.mp4" --pattern "*.webm" --dir stage/server/starter-videos
+          if ($LASTEXITCODE) { Write-Host "No starter videos found; building without them."; $global:LASTEXITCODE = 0 }
+          Get-ChildItem stage/server/starter-videos | ForEach-Object { "{0}  {1:N0} MB" -f $_.Name, ($_.Length / 1MB) }
+
       - name: Smoke-test the staged server
         shell: pwsh
         run: |

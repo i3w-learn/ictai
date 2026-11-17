@@ -9,21 +9,21 @@ import { Viewer } from './Viewer';
 export const KIND_ICON: Record<ContentKind, typeof FileText> = { pdf: FileText, image: Image, video: Film, audio: Music, link: Link2 };
 
 // PRD student app "My books": everything the teachers have put in the library for this student's class,
-// by subject and chapter. Tap one to open it.
-export function MyBooks() {
+// by subject and chapter. Tap one to open it. With `videos`, the same page holds the videos only.
+export function MyBooks({ videos = false }: { videos?: boolean }) {
   const { call } = useApp();
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState<ContentItem | null>(null);
-  const load = useAction(async () => { setItems(await call('GET /api/v1/content/mine')); setLoaded(true); });
+  const load = useAction(async () => { const all = await call('GET /api/v1/content/mine'); setItems(videos ? all.filter((i) => i.kind === 'video') : all); setLoaded(true); });
   const { run: loadNow } = load;
   useEffect(() => { void loadNow(); }, [loadNow]);
 
   if (open) return <Viewer item={open} onBack={() => setOpen(null)} />;
   return (
     <div className="mx-auto grid w-full max-w-4xl gap-5">
-      <PageTitle sub="Books, pictures and videos your teachers have added for your class.">My books</PageTitle>
-      {loaded && items.length === 0 && <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">Nothing here yet. When your teacher adds something for your class, it shows here.</p>}
+      <PageTitle sub={videos ? 'Videos for your class. Tap one to watch it.' : 'Books, pictures and videos your teachers have added for your class.'}>{videos ? 'Videos' : 'My books'}</PageTitle>
+      {loaded && items.length === 0 && <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">{videos ? 'No videos yet. When there is a video for your class, it shows here.' : 'Nothing here yet. When your teacher adds something for your class, it shows here.'}</p>}
       {shelve(items).map((shelf) => (
         <section key={shelf.subject} className="grid gap-3">
           <h2 className="font-display text-xl font-semibold">{shelf.subject}</h2>
