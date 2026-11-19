@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { startingPlace, turnPage } from './show-pages';
+import { pageWords, startingPlace, turnPage } from './show-pages';
 
 describe('turnPage', () => {
   it('goes on and back one page', () => {
@@ -23,5 +23,14 @@ describe('startingPlace', () => {
   });
   it('starts a whiteboard blank at page 1 of 1, however many pages it had', () => {
     expect(startingPlace('whiteboard', { page: 3, pages: 4 })).toEqual({ page: 1, pages: 1 });
+  });
+});
+
+describe('pageWords', () => {
+  it('says the page and how many there are', () => {
+    expect(pageWords(3, 120)).toBe('Page 3 of 120');
+  });
+  it('says only the page while the count is not known', () => {
+    expect(pageWords(3, null)).toBe('Page 3');
   });
 });

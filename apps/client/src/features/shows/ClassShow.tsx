@@ -1,10 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { MonitorPlay, Pause, Pencil, Volume2, VolumeX } from 'lucide-react';
-import { Show, showPosition, showRoom, type ScreenEvent } from '@ict/contracts';
+import { Show, showPosition, showRoom, WHITEBOARD_ASPECT, type ContentItem, type ScreenEvent } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { useLatest } from '../../ui/ui';
 import { useFileUrl } from '../content/useFileUrl';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from './Ink';
+import type { InkBoard } from './ink-board';
+import { pageWords } from './show-pages';
+
+// pdf.js is big, so it is fetched only when the teacher first shows a book.
+const PdfPages = lazy(() => import('../content/PdfPages').then((m) => ({ default: m.PdfPages })));
 
 // A show as this screen received it: what the server said, and when (on this PC's own stopwatch).
 export interface LiveShow { show: Show; gotAt: number }
@@ -49,9 +54,122 @@ export function useClassShow(): LiveShow | null {
 // she gives the pen to can write on it for the whole class to see. The screen underneath is kept as it was, so a half-written answer
 // is still there when the teacher stops showing.
 export function ClassShow({ live }: { live: LiveShow }) {
-  // Pages (PDF, picture, whiteboard) come in later tasks; for now only a video is shown.
-  const item = live.show.kind === 'video' ? live.show.item : null;
-  return item ? <ClassVideo live={live} item={item} /> : null;
+  const { show } = live;
+  if (show.kind === 'video') return show.item ? <ClassVideo live={live} item={show.item} /> : null;
+  if (show.kind !== 'whiteboard' && !show.item) return null;
+  // A new show starts afresh: nothing left over from the last one (a book that would not open, say).
+  return <ClassPages key={show.id} live={live} />;
+}
+
+// A PDF, a picture or a blank whiteboard, on the page the teacher is on, with the writing of that
+// page only. The student with the pen may write on it at any time.
+function ClassPages({ live }: { live: LiveShow }) {
+  const { show } = live;
+  const { call, state } = useApp();
+  const me = state.session?.principal;
+  const myId = me?.kind === 'student' ? me.studentId : '';
+  const board = useInk(show, myId, me?.kind === 'student' ? me.name : '');
+  const inkProblem = useInkProblem(board);
+  const hasPen = !!myId && show.pen?.studentId === myId;
+  const [picked, setPicked] = useState<InkTools>({ tool: 'pen', colour: 'blue', width: 'medium' });
+  const tools: InkTools = hasPen ? picked : { ...picked, tool: null };
+  const [failed, setFailed] = useState(false);
+  const title = show.item?.title ?? 'Whiteboard';
+
+  // Tells the server how the show is going on this PC, for its diary, as for a video. Each is said
+  // once for this show (also when React runs an effect twice, as it does in development).
+  const said = useRef(new Set<ScreenEvent>());
+  const showId = show.id;
+  const say = useLatest((event: ScreenEvent) => {
+    if (said.current.has(event)) return;
+    said.current.add(event);
+    void call('POST /api/v1/shows/:id/screen', { params: { id: showId }, body: { event, position: 0, behind: 0 } }).catch(() => undefined);
+  });
+  useEffect(() => { say.current('opened'); }, [say]);
+  const ready = () => say.current('ready');
+  const fail = () => { setFailed(true); say.current('failed'); };
+
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={`Your teacher is showing: ${title}`}>
+      <div className="flex flex-wrap items-center gap-3 px-5 py-3">
+        <MonitorPlay className="size-5 shrink-0 text-white/70" />
+        <p className="min-w-48 flex-1 text-lg font-semibold">{title}</p>
+        {show.kind !== 'image' && <p className="text-lg font-semibold tabular-nums" role="status">{pageWords(show.page, show.pages)}</p>}
+        <p className="text-sm text-white/70">{show.byName} is showing this to Class {show.className}</p>
+        {!failed && hasPen && (
+          <div className="flex flex-wrap items-center gap-2 rounded-full bg-primary px-4 py-1 text-sm font-semibold text-primary-foreground" role="status">
+            <Pencil className="size-4" />
+            <span>You have the pen. Write on the page.</span>
+            <InkToolbar tools={tools} onTools={setPicked} />
+          </div>
+        )}
+        {!failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{inkProblem}</p>}
+      </div>
+      <div className="relative min-h-0 flex-1">
+        {show.kind === 'whiteboard' ? (
+          <ShownBoard board={board} tools={tools} own={myId} onReady={ready} />
+        ) : show.item && (
+          <ShownFile item={show.item} page={show.page} board={board} tools={tools} own={myId} failed={failed} onReady={ready} onFail={fail} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface PageProps { board: InkBoard | null; tools: InkTools; own: string; onReady: () => void }
+
+// A blank 16:9 board, as big as fits, with plain bars where the screen has another shape: a line
+// lands in the same place on every screen.
+function ShownBoard({ board, tools, own, onReady }: PageProps) {
+  const told = useLatest(onReady);
+  useEffect(() => { told.current(); }, [told]);
+  return (
+    <div className="absolute inset-0 grid place-items-center p-3 [container-type:size]">
+      <div className="relative aspect-video w-[min(100cqw,calc(100cqh*16/9))] rounded-lg bg-white">
+        <InkLayer board={board} aspect={WHITEBOARD_ASPECT} tools={tools} own={own} />
+      </div>
+    </div>
+  );
+}
+
+// A book on the teacher's page, or a picture, shown whole, with the writing laid over it.
+function ShownFile({ item, page, board, tools, own, failed, onReady, onFail }: PageProps & {
+  item: ContentItem; page: number; failed: boolean; onFail: () => void;
+}) {
+  // A streamed file that cannot be read is fetched whole instead; past that, the screen says so.
+  const { url, percent, error, onError } = useFileUrl(item, { streamPdf: true });
+  const [aspect, setAspect] = useState<number | null>(null);
+  const told = useLatest(onFail);
+  useEffect(() => { if (error) told.current(); }, [told, error]);
+  const broken = onError ?? onFail;
+  const layer = <InkLayer board={board} aspect={aspect} tools={tools} own={own} />;
+
+  if (failed || error) {
+    const what = item.kind === 'pdf' ? 'This book cannot be opened' : 'This picture cannot be shown';
+    return <p className="absolute inset-0 grid place-items-center p-8 text-center text-lg text-white/80">{what} on this PC. Tell your teacher.</p>;
+  }
+  if (!url) return <p className="absolute inset-0 grid place-items-center text-lg text-white/80" role="status">Opening… {percent}%</p>;
+  if (item.kind === 'image') {
+    return (
+      <>
+        <img
+          src={url} alt={item.title} onError={broken} className="absolute inset-0 size-full object-contain" onContextMenu={(e) => e.preventDefault()}
+          onLoad={(e) => { const { naturalWidth: w, naturalHeight: h } = e.currentTarget; if (w && h) setAspect(w / h); onReady(); }}
+        />
+        {layer}
+      </>
+    );
+  }
+  return (
+    <div className="absolute inset-0 text-white/80">
+      <Suspense fallback={<p className="grid h-full place-items-center" role="status">Opening…</p>}>
+        <PdfPages
+          url={url} page={page} onPages={() => undefined} onError={broken} layer={layer}
+          onAspect={(a) => { setAspect(a); onReady(); }}
+        />
+      </Suspense>
+    </div>
+  );
 }
 
 function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow['show']['item']> }) {

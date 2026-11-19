@@ -14,3 +14,9 @@ export function turnPage(page: number, by: number, pages: number | null): number
 export function startingPlace(kind: ShowKind, at: { page: number; pages?: number }): { page: number; pages?: number } {
   return kind === 'whiteboard' ? { page: 1, pages: 1 } : at;
 }
+
+// The page a student's screen says it is on: "Page 3 of 120", or "Page 3" while the teacher's app
+// has not yet counted the pages.
+export function pageWords(page: number, pages: number | null): string {
+  return pages ? `Page ${page} of ${pages}` : `Page ${page}`;
+}
