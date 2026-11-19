@@ -56,7 +56,9 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
   };
 
   // --- Writing on what is shown, while it is being shown ---
-  const board = useInk(showing ? live : null, 'teacher', staff ? me.displayName : '');
+  // On the teacher's screen the writing goes on the page she is on (a picture has one page).
+  const inkPage = item.kind === 'pdf' ? page : item.kind === 'image' ? 1 : undefined;
+  const board = useInk(showing ? live : null, 'teacher', staff ? me.displayName : '', inkPage);
   const inkProblem = useInkProblem(board);
   const [picked, setPicked] = useState<InkTools>({ tool: null, colour: 'red', width: 'medium' });
   const [aspect, setAspect] = useState<number | null>(null);
@@ -66,9 +68,12 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
   const toolbar = showing && <InkToolbar tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />;
   // The pen's bar over a page or a picture, dark like the video player's.
   const darkBar = toolbar && <div className="flex justify-center rounded-2xl bg-[hsl(222_30%_10%)] px-3 py-1.5">{toolbar}</div>;
+  // The teacher's PDF and picture take the height the window has left, so the whole page, the pen's
+  // bar and the page buttons are all on screen together, with no scrolling.
+  const fill = staff && (item.kind === 'pdf' || item.kind === 'image');
 
   return (
-    <div className="mx-auto grid w-full max-w-5xl gap-4">
+    <div className={fill ? 'mx-auto flex h-full w-full max-w-5xl flex-col gap-4' : 'mx-auto grid w-full max-w-5xl gap-4'}>
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button>
         <h1 className="min-w-48 flex-1 font-display text-2xl font-semibold">{item.title}</h1>
@@ -117,24 +122,25 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
         </Card>
       ) : url && (
         <>
-          {item.kind === 'image' && (
-            <div className="grid gap-3">
+          {item.kind === 'image' && (staff ? (
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
               {darkBar}
-              {/* The writing layer covers the picture exactly; a ring, not a border, so the two line up. */}
-              <div className="relative mx-auto w-fit max-w-full">
+              {/* The picture is drawn whole, as big as the box allows. The writing layer covers the same
+                  box and finds the picture in it from its shape, as on a video. */}
+              <div className="relative min-h-64 flex-1 overflow-hidden rounded-2xl border border-border bg-card">
                 <img
                   src={url} alt={item.title} onError={onError}
                   onLoad={(e) => { const { naturalWidth: w, naturalHeight: h } = e.currentTarget; if (w && h) setAspect(w / h); }}
-                  className="block max-h-[75vh] max-w-full rounded-2xl bg-card ring-1 ring-border"
+                  className="absolute inset-0 size-full object-contain"
                 />
                 <InkLayer board={board} aspect={aspect} tools={tools} />
               </div>
             </div>
-          )}
+          ) : <img src={url} alt={item.title} onError={onError} className="mx-auto block max-h-[75vh] max-w-full rounded-2xl bg-card ring-1 ring-border" />)}
           {item.kind === 'pdf' && (staff ? (
-            <div className="grid gap-3">
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
               {darkBar}
-              <div className="h-[78vh] w-full overflow-hidden rounded-2xl border border-border bg-card">
+              <div className="min-h-64 w-full flex-1 overflow-hidden rounded-2xl border border-border bg-card">
                 <Suspense fallback={<p className="grid h-full place-items-center text-muted-foreground" role="status">Opening…</p>}>
                   <PdfPages
                     url={url} page={page} onPages={counted} onAspect={setAspect}

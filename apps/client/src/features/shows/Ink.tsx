@@ -20,8 +20,10 @@ const RUB_REACH = INK_SCALE * 0.02;
 export interface InkTools { tool: 'pen' | 'eraser' | null; colour: InkColour; width: InkWidth }
 
 // The writing on the show `show`, kept in step with the server for as long as the screen is up.
-// `me` is who writes on this screen: 'teacher', or the student's id.
-export function useInk(show: { id: string; classId: string; inkRev: number; page: number } | null, by: string, byName: string): InkBoard | null {
+// `me` is who writes on this screen: 'teacher', or the student's id. The board is on the show's page,
+// or on `page` when given: the teacher's screen passes its own page, so her writing goes on the page in
+// front of her the moment she turns, not when the server's answer comes back.
+export function useInk(show: { id: string; classId: string; inkRev: number; page: number } | null, by: string, byName: string, page?: number): InkBoard | null {
   const { relay, call } = useApp();
   const id = show?.id ?? null;
   const classId = show?.classId ?? null;
@@ -52,8 +54,8 @@ export function useInk(show: { id: string; classId: string; inkRev: number; page
   // channel is down for a while.
   const rev = show?.inkRev ?? 0;
   useEffect(() => board?.expect(rev), [board, rev]);
-  const page = show?.page ?? 1;
-  useEffect(() => board?.setPage(page), [board, page]);
+  const on = page ?? show?.page ?? 1;
+  useEffect(() => board?.setPage(on), [board, on]);
   return board;
 }
 
@@ -231,8 +233,8 @@ export function InkToolbar({ tools, onTools, onWipe }: { tools: InkTools; onTool
   const Round = 'grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-white hover:bg-white/15 focus-visible:outline-white';
   const pick = (tool: 'pen' | 'eraser') => onTools({ ...tools, tool: tools.tool === tool ? null : tool });
   return (
-    <div className="flex flex-wrap items-center gap-1" role="toolbar" aria-label="Write on the video">
-      <button type="button" className={cn(Round, tools.tool === 'pen' && 'bg-white/25')} onClick={() => pick('pen')} aria-pressed={tools.tool === 'pen'} aria-label="Pen: write on the video"><Pencil className="size-5" /></button>
+    <div className="flex flex-wrap items-center gap-1" role="toolbar" aria-label="Pen tools">
+      <button type="button" className={cn(Round, tools.tool === 'pen' && 'bg-white/25')} onClick={() => pick('pen')} aria-pressed={tools.tool === 'pen'} aria-label="Pen: write on the page"><Pencil className="size-5" /></button>
       {tools.tool === 'pen' && (
         <>
           {INK_COLOURS.map((c) => (

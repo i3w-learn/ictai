@@ -26,7 +26,7 @@ export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate
   const sent = useRef(0);
   const [pageError, setPageError] = useState<string | null>(null);
 
-  const ended = () => { showId.current = null; kind.current = null; setShowing(false); setLive(null); };
+  const ended = () => { showId.current = null; kind.current = null; setShowing(false); setLive(null); setPageError(null); };
   // A call about show `id` failed. Says whether it was dealt with here.
   const lost = (e: unknown, id: string): boolean => {
     if (!(e instanceof ApiCallError) || showId.current !== id) return false;

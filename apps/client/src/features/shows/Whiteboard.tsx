@@ -45,13 +45,14 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
   };
 
   // --- Writing ---
-  const board = useInk(showing ? live : null, 'teacher', myName);
+  const board = useInk(showing ? live : null, 'teacher', myName, here.page);
   const inkProblem = useInkProblem(board);
   const [tools, setTools] = useState<InkTools>({ tool: 'pen', colour: 'blue', width: 'medium' });
   const watching = live?.watching ?? [];
 
   return (
-    <div className="mx-auto grid w-full max-w-5xl gap-4">
+    // As tall as the window has room for, so the board, the pen's bar and the page buttons all fit.
+    <div className="mx-auto flex h-full w-full max-w-5xl flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button>
         <h1 className="min-w-48 flex-1 font-display text-2xl font-semibold">Whiteboard</h1>
@@ -86,15 +87,17 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
       )}
       <ErrorNote message={load.error ?? host.error ?? inkProblem} />
 
-      <div className="grid gap-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
         {showing && (
           <div className="flex justify-center rounded-2xl bg-[hsl(222_30%_10%)] px-3 py-1.5">
             <InkToolbar tools={tools} onTools={setTools} onWipe={() => board?.clear()} />
           </div>
         )}
-        {/* As wide as fits, but short enough that the page buttons stay on screen. */}
-        <div className="relative mx-auto aspect-video w-full max-w-[calc(70vh*16/9)] rounded-2xl bg-white ring-1 ring-border">
-          <InkLayer board={board} aspect={WHITEBOARD_ASPECT} tools={showing ? tools : { ...tools, tool: null }} />
+        {/* The board takes the room that is left, and is as big as fits in it at its wide shape. */}
+        <div className="grid min-h-64 flex-1 place-items-center [container-type:size]">
+          <div className="relative aspect-video w-[min(100cqw,calc(100cqh*16/9))] rounded-2xl bg-white ring-1 ring-border">
+            <InkLayer board={board} aspect={WHITEBOARD_ASPECT} tools={showing ? tools : { ...tools, tool: null }} />
+          </div>
         </div>
         {showing && (
           <div className="flex flex-wrap items-center justify-center gap-4">
