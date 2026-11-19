@@ -42,7 +42,9 @@ import { FileStore } from './modules/content/file-store.js';
 import { StarterVideos } from './modules/content/starter-videos.js';
 import { SequenceRepository } from './modules/sequences/sequence.repository.js';
 import { SequenceService } from './modules/sequences/sequence.service.js';
+import { ShowPenService } from './modules/shows/show-pen.service.js';
 import { ShowService } from './modules/shows/show.service.js';
+import { ShowStore } from './modules/shows/show.store.js';
 import { Relay } from './relay/relay.js';
 import { aiNotInstalled } from './core/errors.js';
 import { AiService, type AiRuntimeInfo } from './modules/ai/ai.service.js';
@@ -122,6 +124,11 @@ export function createContainer(opts: {
   const settings = new SettingsService(now, repos.settings, audit, db, (periodId) => timetable.dropPeriod(periodId));
 
   const fileStore = new FileStore(opts.dataDir ?? mkdtempSync(join(tmpdir(), 'ict-files-')));
+  // Is this student signed in on a lab PC right now? A student who has left cannot hold the pen.
+  const signedIn = (studentId: string) => repos.sessions.liveStudentDevice(studentId, '', now()) !== undefined;
+  const showStore = new ShowStore(now, repos.content, signedIn, opts.log);
+  const showPens = new ShowPenService(showStore, relay, signedIn, opts.log);
+
   const firstAdmin = () => db.prepare("SELECT id FROM users WHERE role = 'super_admin' AND status = 'active' ORDER BY created_at LIMIT 1").pluck().get() as string | undefined;
 
   return {
@@ -139,7 +146,8 @@ export function createContainer(opts: {
     timetable,
     work: new WorkService(now, repos.work, repos.classes, audit),
     content: new ContentService(now, repos.content, fileStore, repos.classes, audit),
-    shows: new ShowService(now, repos.content, relay, audit, opts.log, (id) => repos.devices.name(id), (studentId) => repos.sessions.liveStudentDevice(studentId, '', now()) !== undefined, (id) => repos.classes.name(id)),
+    shows: new ShowService(now, showStore, showPens, repos.content, repos.classes, repos.devices, relay, audit, opts.log),
+    showPens,
     sequences: new SequenceService(now, repos.sequences, repos.content, repos.work, repos.classes, audit),
     reportCards: new ReportCardService(now, repos.reportCards, repos.classes, repos.students, results, repos.work, audit),
     staffAuth: new StaffAuthService(now, repos.staff, sessions, new FailureLimiter(now), audit),
