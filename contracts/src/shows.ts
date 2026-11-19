@@ -66,6 +66,11 @@ export type ScreenReport = z.infer<typeof ScreenReport>;
 // The most reports one student's screen may make about one show. Past that they are dropped.
 export const SCREEN_REPORTS_MAX = 100;
 
+// Where a student's ask for the pen stands: not asked, waiting for the teacher, or the teacher
+// said "not now" (until she asks again or the show ends).
+export const PenAsk = z.enum(['none', 'waiting', 'refused']);
+export type PenAsk = z.infer<typeof PenAsk>;
+
 export const Show = z.object({
   id: z.string(),
   classId: z.string(),
@@ -93,6 +98,11 @@ export const Show = z.object({
   pen: z.object({ studentId: z.string(), name: z.string() }).nullable().default(null),
   // The students whose screens have the video open. Only the teacher is told.
   watching: z.array(z.object({ studentId: z.string(), name: z.string() })).optional(),
+  // The students asking for the pen, the one who asked first at the top. Only the teacher is told.
+  asks: z.array(z.object({ studentId: z.string(), name: z.string() })).optional(),
+  // For the student this state was made for: has she asked for the pen, and did the teacher say
+  // "not now"? Defaults keep a newer screen working with an older server, which knows no asking.
+  myAsk: PenAsk.default('none'),
 });
 export type Show = z.infer<typeof Show>;
 
@@ -161,6 +171,8 @@ export const InkEvent = z.discriminatedUnion('kind', [
 export type InkEvent = z.infer<typeof InkEvent>;
 
 export const StrokeParams = z.object({ id: Id, strokeId: Id });
+// One student's ask for the pen on show `id`.
+export const AskParams = z.object({ id: Id, studentId: Id });
 // Give the pen to a student whose screen has the video open, or take it back with null.
 export const PenGive = z.object({ studentId: Id.nullable() });
 export type PenGive = z.infer<typeof PenGive>;

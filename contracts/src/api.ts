@@ -18,7 +18,7 @@ import { SchoolSettings, StudentPrefs } from './settings.js';
 import { SlotInput, SlotQuery, StudentToday, Timetable } from './timetable.js';
 import { ContentItem, ContentQuery, FileChunk, FileChunkParams, FinishUpload, LinkInput, StartUpload, UploadChunk, UploadTicket } from './content.js';
 import { Sequence, SequenceInput, Todo } from './sequences.js';
-import { Ink, InkAdd, PenGive, ScreenReport, Show, ShowPage, ShowStart, ShowUpdate, StrokeParams } from './shows.js';
+import { AskParams, Ink, InkAdd, PenGive, ScreenReport, Show, ShowPage, ShowStart, ShowUpdate, StrokeParams } from './shows.js';
 import { CardRemarks, CardStatusChange, CardsQuery, MakeCards, MakeCardsResult, ReportCard } from './report-cards.js';
 import { Assignment, AssignmentDetail, AssignmentInput, MarkInput, MarkParams, MyWork, WorkAnswer } from './work.js';
 import { NewTeacher, SetPassword, StaffMember, UpdateTeacher } from './staff.js';
@@ -148,6 +148,9 @@ export const API = {
   'DELETE /api/v1/shows/:id/ink/:strokeId': { summary: 'Rub out one line. The teacher any line; a student only their own', access: { kind: 'signed-in' }, params: StrokeParams, status: 204 },
   'DELETE /api/v1/shows/:id/ink': { summary: 'Wipe all the writing off the video', access: staff('lesson.present'), params: IdParams, status: 204 },
   'PUT /api/v1/shows/:id/pen': { summary: 'Give the pen to one student, or take it back', access: staff('lesson.present'), params: IdParams, body: PenGive, status: 200, response: Show },
+  'POST /api/v1/shows/:id/pen/ask': { summary: 'A student asks the teacher for the pen', access: student, params: IdParams, status: 204 },
+  'DELETE /api/v1/shows/:id/pen/ask': { summary: 'A student takes back their ask', access: student, params: IdParams, status: 204 },
+  'DELETE /api/v1/shows/:id/pen/asks/:studentId': { summary: 'The teacher says not now to a student who asked', access: staff('lesson.present'), params: AskParams, status: 204 },
   'GET /api/v1/shows/mine': { summary: "What the teacher is showing the student's class right now, if anything", access: student, status: 200, response: Show.nullable() },
 
   // Playlists and learning paths (staff), and the student's "Things to do".

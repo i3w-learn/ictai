@@ -39,6 +39,10 @@ interface Live {
   strokes: Map<string, InkStroke>;
   inkRev: number;
   pen: { studentId: string; name: string } | null;
+  // The students asking for the pen, by id, in the order they asked; and those the teacher said
+  // "not now" to, until they ask again.
+  asks: Map<string, string>;
+  refused: Set<string>;
 }
 
 // "Show to class". One show per class at a time, kept in memory: it is about the lesson going on now,
@@ -69,7 +73,7 @@ export class ShowService {
       prefix: 'show',
       // A student listens to their own class only; a teacher to the classes she teaches.
       canJoin: (p, classId) => (p.kind === 'student' ? p.classId === classId : p.kind === 'staff' && seesClass(scopeOf(p), classId)),
-      snapshot: (p, classId) => this.forClass(classId, p.kind === 'staff'),
+      snapshot: (p, classId) => this.forClass(classId, p.kind === 'staff', p.kind === 'student' ? p.studentId : undefined),
     });
   }
 
@@ -84,7 +88,7 @@ export class ShowService {
     }
     const live: Live = {
       id: randomUUID(), ...what, page: 1, by: actor.userId, byName: actor.displayName, playing: false, position: 0, rate: 1, at: now, heardAt: now,
-      reports: new Map(), watching: new Map(), strokes: new Map(), inkRev: 0, pen: null,
+      reports: new Map(), watching: new Map(), strokes: new Map(), inkRev: 0, pen: null, asks: new Map(), refused: new Set(),
     };
     this.byClass.set(live.classId, live);
     this.audit.record({ kind: 'staff', id: actor.userId }, 'show.start', live.item?.id ?? live.classId, { title: this.title(live), kind: live.kind, classId: live.classId });
@@ -218,17 +222,55 @@ export class ShowService {
       const name = live.watching.get(studentId);
       if (!name || !this.signedIn(studentId)) throw new AppError(409, 'NOT_WATCHING', "That student's screen does not have the video open.");
       live.pen = { studentId, name };
+      live.asks.delete(studentId);
+      live.refused.delete(studentId);
       this.log('show.pen.given', { show: short(live.id), student: name });
     }
     this.relay.notify(showRoom(live.classId));
     return this.view(live, true);
   }
 
-  forStudent(me: StudentPrincipal): Show | null {
-    return this.forClass(me.classId);
+  // --- Asking for the pen ---
+
+  // A student asks the teacher for the pen. Asking again while waiting, or while holding the pen,
+  // changes nothing and tells nobody.
+  ask(me: StudentPrincipal, id: string) {
+    const live = this.seen(me, id);
+    if (live.pen?.studentId === me.studentId || live.asks.has(me.studentId)) return;
+    // Her screen clearly has the show open, so she can be given the pen.
+    live.watching.set(me.studentId, me.name);
+    live.asks.set(me.studentId, me.name);
+    live.refused.delete(me.studentId);
+    this.log('show.pen.asked', { show: short(live.id), student: me.name });
+    this.relay.notify(showRoom(live.classId));
   }
 
-  forClass(classId: string, forTeacher = false): Show | null {
+  // A student takes back her ask (or clears a "not now").
+  unask(me: StudentPrincipal, id: string) {
+    const live = this.seen(me, id);
+    const asked = live.asks.delete(me.studentId);
+    const refused = live.refused.delete(me.studentId);
+    if (!asked && !refused) return;
+    this.relay.notify(showRoom(live.classId));
+  }
+
+  // The teacher says "not now" to one asker. Her screen says so until she asks again.
+  refuse(actor: StaffPrincipal, id: string, studentId: string) {
+    const live = this.mine(actor, id);
+    const name = live.asks.get(studentId);
+    if (name === undefined) return;
+    live.asks.delete(studentId);
+    live.refused.add(studentId);
+    this.log('show.pen.refused', { show: short(live.id), student: name });
+    this.relay.notify(showRoom(live.classId));
+  }
+
+  forStudent(me: StudentPrincipal): Show | null {
+    return this.forClass(me.classId, false, me.studentId);
+  }
+
+  // `studentId` is the student the state is for, who is told where her own ask stands.
+  forClass(classId: string, forTeacher = false, studentId?: string): Show | null {
     const live = this.byClass.get(classId);
     if (!live) return null;
     // Gone quiet (the teacher's app closed or lost the network), or its item left the library: over.
@@ -243,7 +285,9 @@ export class ShowService {
       this.log('show.pen.taken', { show: short(live.id), student: live.pen.name });
       live.pen = null;
     }
-    return this.view(live, forTeacher);
+    // Nor is one asking for it.
+    for (const asker of live.asks.keys()) if (!this.signedIn(asker)) live.asks.delete(asker);
+    return this.view(live, forTeacher, studentId);
   }
 
   // Ends shows that have gone quiet and tells their classes. Called on a timer by the server.
@@ -329,11 +373,15 @@ export class ShowService {
     return live.item?.title ?? 'Whiteboard';
   }
 
-  private view(live: Live, forTeacher = false): Show {
+  private view(live: Live, forTeacher = false, studentId?: string): Show {
     return {
       id: live.id, classId: live.classId, className: live.className, kind: live.kind, item: live.item, byName: live.byName,
       page: live.page, pages: live.pages, playing: live.playing, position: live.position, rate: live.rate, at: live.at, now: this.now(), inkRev: live.inkRev, pen: live.pen,
-      ...(forTeacher ? { watching: [...live.watching].map(([studentId, name]) => ({ studentId, name })) } : {}),
+      myAsk: studentId === undefined ? 'none' : live.asks.has(studentId) ? 'waiting' : live.refused.has(studentId) ? 'refused' : 'none',
+      ...(forTeacher ? {
+        watching: [...live.watching].map(([studentId, name]) => ({ studentId, name })),
+        asks: [...live.asks].map(([studentId, name]) => ({ studentId, name })),
+      } : {}),
     };
   }
 }

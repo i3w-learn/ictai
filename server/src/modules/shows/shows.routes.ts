@@ -15,5 +15,8 @@ export function showRoutes(app: FastifyInstance, deps: { shows: ShowService }) {
   route(app, 'DELETE /api/v1/shows/:id/ink/:strokeId', ({ params, principal }) => shows.erase(principal!, params.id, params.strokeId));
   route(app, 'DELETE /api/v1/shows/:id/ink', ({ params, principal }) => shows.clear(asStaff(principal), params.id));
   route(app, 'PUT /api/v1/shows/:id/pen', ({ params, body, principal }) => shows.givePen(asStaff(principal), params.id, body.studentId));
+  route(app, 'POST /api/v1/shows/:id/pen/ask', ({ params, principal }) => shows.ask(asStudent(principal), params.id));
+  route(app, 'DELETE /api/v1/shows/:id/pen/ask', ({ params, principal }) => shows.unask(asStudent(principal), params.id));
+  route(app, 'DELETE /api/v1/shows/:id/pen/asks/:studentId', ({ params, principal }) => shows.refuse(asStaff(principal), params.id, params.studentId));
   route(app, 'GET /api/v1/shows/mine', ({ principal }) => shows.forStudent(asStudent(principal)));
 }

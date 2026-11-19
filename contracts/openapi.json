@@ -9216,6 +9216,33 @@
                           "name"
                         ]
                       }
+                    },
+                    "asks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name"
+                        ]
+                      }
+                    },
+                    "myAsk": {
+                      "default": "none",
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "waiting",
+                        "refused"
+                      ]
                     }
                   },
                   "required": [
@@ -9489,6 +9516,33 @@
                           "name"
                         ]
                       }
+                    },
+                    "asks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name"
+                        ]
+                      }
+                    },
+                    "myAsk": {
+                      "default": "none",
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "waiting",
+                        "refused"
+                      ]
                     }
                   },
                   "required": [
@@ -9806,6 +9860,33 @@
                           "name"
                         ]
                       }
+                    },
+                    "asks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name"
+                        ]
+                      }
+                    },
+                    "myAsk": {
+                      "default": "none",
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "waiting",
+                        "refused"
+                      ]
                     }
                   },
                   "required": [
@@ -10542,6 +10623,33 @@
                           "name"
                         ]
                       }
+                    },
+                    "asks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name"
+                        ]
+                      }
+                    },
+                    "myAsk": {
+                      "default": "none",
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "waiting",
+                        "refused"
+                      ]
                     }
                   },
                   "required": [
@@ -10559,6 +10667,163 @@
                 }
               }
             }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shows/{id}/pen/ask": {
+      "post": {
+        "summary": "A student asks the teacher for the pen",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "A student takes back their ask",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shows/{id}/pen/asks/{studentId}": {
+      "delete": {
+        "summary": "The teacher says not now to a student who asked",
+        "x-access": {
+          "kind": "staff",
+          "permission": "lesson.present"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
           },
           "default": {
             "description": "Error",
@@ -10775,6 +11040,33 @@
                           "name"
                         ]
                       }
+                    },
+                    "asks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name"
+                        ]
+                      }
+                    },
+                    "myAsk": {
+                      "default": "none",
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "waiting",
+                        "refused"
+                      ]
                     }
                   },
                   "required": [
