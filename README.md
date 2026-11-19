@@ -23,7 +23,7 @@ The full list, by who uses it.
 - The app sizes itself to the screen, from a 1024 wide monitor up to 4K.
 
 **Student**
-- Sign in by class and roll number (and section or name when needed), or with a sign-in card.
+- Sign in by class and roll number (and section or name when needed).
 - Home: today's lab period, notices, books, results and things to do.
 - Live quiz: join when the teacher opens it, a clock on every question, the score at the end.
 - My books: PDFs, pictures, videos, sound and web links from the library.
@@ -50,7 +50,7 @@ The full list, by who uses it.
 
 **Super Admin (all of the above, plus)**
 - Teachers: add, change, reset a password, delete.
-- Students: add, change, delete, add from a file, print sign-in cards.
+- Students: add, change, delete, add from a file.
 - Classes and sections.
 - Lab PCs: see which are connected, remove one, lock the lab so no new PC can join.
 - What teachers have done, and an activity log of who did what and when.

@@ -160,7 +160,7 @@ export function createContainer(opts: {
     progress: new ProgressService(now, results, repos.work),
     notes: new NoteService(now, repos.notes),
     notices: new NoticeService(now, repos.notices, repos.classes, audit),
-    studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, new FailureLimiter(now), audit, repos.sessions, repos.devices),
+    studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, audit, repos.sessions, repos.devices),
   };
 }
 

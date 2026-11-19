@@ -37,9 +37,6 @@ export const Student = z.object({
 });
 export type Student = z.infer<typeof Student>;
 
-// The QR token is shown once, when the card is made; only its hash is stored.
-export const CreatedStudent = Student.extend({ qrToken: z.string() });
-
 // What the sign-in screen on a lab PC may see: names only.
 export const RosterEntry = z.object({ id: z.string(), name: z.string(), rollNo: z.string().nullable(), sectionId: z.string().nullable() });
 export type RosterEntry = z.infer<typeof RosterEntry>;
@@ -48,10 +45,6 @@ export type RosterEntry = z.infer<typeof RosterEntry>;
 // section yet is matched in every section of the class.
 export const sameRoll = (s: RosterEntry, sectionId: string | null, rollNo: string) =>
   s.rollNo !== null && rollKey(s.rollNo) === rollKey(rollNo) && (s.sectionId === sectionId || s.sectionId === null);
-
-// A printable sign-in card. Making cards replaces each student's old QR token.
-export const SignInCard = z.object({ studentId: z.string(), name: z.string(), rollNo: z.string().nullable(), qrToken: z.string() });
-export type SignInCard = z.infer<typeof SignInCard>;
 
 // A class list read from a spreadsheet file (spec 4.1). Rows are checked one by one on the
 // server, so one bad row is reported and the rest are still added.

@@ -73,7 +73,6 @@ describe('teacher classes and subjects', () => {
     expect((await inject('POST', '/api/v1/students', teacher, { name: 'New', classId: c8.id })).statusCode).toBe(403);
     expect((await inject('PATCH', `/api/v1/students/${kabir.id}`, teacher, { name: 'K' })).statusCode).toBe(403);
     expect((await inject('DELETE', `/api/v1/students/${kabir.id}`, teacher)).statusCode).toBe(403);
-    expect((await inject('POST', `/api/v1/classes/${c8.id}/cards`, teacher)).statusCode).toBe(403);
     expect((await inject('POST', `/api/v1/classes/${c7.id}/promote`, teacher, { toClassId: c8.id })).statusCode).toBe(403);
     expect((await inject('PATCH', `/api/v1/students/${asha.id}`, teacher, { name: 'Asha V' })).statusCode).toBe(200);
   });
