@@ -60,6 +60,6 @@ export function buildApp(c: Container, opts: AppOptions = {}) {
   reportCardRoutes(app, { reportCards: c.reportCards });
   contentRoutes(app, { content: c.content });
   sequenceRoutes(app, { sequences: c.sequences });
-  showRoutes(app, { shows: c.shows });
+  showRoutes(app, { shows: c.shows, pens: c.showPens });
   return app;
 }

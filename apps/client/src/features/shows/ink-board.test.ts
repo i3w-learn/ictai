@@ -15,7 +15,7 @@ function setup(by = 'teacher') {
     all: vi.fn(async () => structuredClone(server)),
     add: vi.fn(async (body: InkAdd) => { if (fail) throw fail; sent.push(structuredClone(body)); }),
     erase: vi.fn(async (id: string) => { erased.push(id); }),
-    clear: vi.fn(async () => undefined),
+    clear: vi.fn(async (_page: number) => undefined),
   };
   let n = 0;
   const board = new InkBoard(SHOW, api, { by, byName: 'Me' }, () => `mine-${++n}`);
@@ -199,12 +199,13 @@ describe('InkBoard', () => {
   });
 
   it('wipes only the current page when this screen wipes', () => {
-    const { board, drawn } = setup();
+    const { board, drawn, api } = setup();
     board.expect(0);
     board.take({ kind: 'add', show: SHOW, rev: 1, stroke: line('a', [1, 1, 1], 'teacher', 1) });
     board.take({ kind: 'add', show: SHOW, rev: 2, stroke: line('b', [2, 2, 2], 'teacher', 2) });
     board.setPage(2);
     board.clear();
+    expect(api.clear).toHaveBeenCalledWith(2); // the page on this screen, not whatever the server is on
     expect(drawn()).toEqual([]);
     board.setPage(1);
     expect(drawn().map((s) => s.id)).toEqual(['a']);

@@ -1,9 +1,13 @@
 import { lazy, Suspense, useRef, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, MonitorPlay } from 'lucide-react';
-import type { ContentItem } from '@ict/contracts';
+import { ArrowLeft, MonitorPlay } from 'lucide-react';
+import { canShow as showable, type ContentItem, type ShowableKind } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, Card, ErrorNote, Note, Select } from '../../ui/ui';
+import { Button, Card, ErrorNote, Note } from '../../ui/ui';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from '../shows/Ink';
+import { PageRail } from '../shows/PageRail';
+import { PenRail } from '../shows/PenRail';
+import { PenRequests } from '../shows/PenRequests';
+import { PenRow } from '../shows/PenRow';
 import { turnPage } from '../shows/show-pages';
 import { useShowHost } from '../shows/useShowHost';
 import { KIND_WORDS, sizeWords } from './files';
@@ -14,11 +18,11 @@ import { VideoPlayer, type PlayerState } from './VideoPlayer';
 const PdfPages = lazy(() => import('./PdfPages').then((m) => ({ default: m.PdfPages })));
 
 // What the teacher is told about a show, before and while it is on.
-const SHOW_WORDS = {
+const SHOW_WORDS: Record<ShowableKind, { before: string; during: string }> = {
   video: { before: 'The video opens on every student PC of the class and follows what you do here.', during: 'When you play, pause or skip, their screens do the same.' },
   pdf: { before: 'The book opens on every student PC of the class, on the page you are on.', during: 'When you turn the page, their screens turn too.' },
   image: { before: 'The picture opens on every student PC of the class.', during: '' },
-} as const;
+};
 
 // Opens one library item: a picture as a picture, a PDF page by page (students: in the built-in
 // reader), video and sound with their own players. A teacher who may host lessons can also show a
@@ -31,8 +35,8 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
   const { url, percent, error, onError } = useFileUrl(item, { streamPdf: staff });
 
   // --- Show to class ---
-  const canShow = staff && me.permissions.includes('lesson.present') && (item.kind === 'video' || item.kind === 'pdf' || item.kind === 'image');
-  const words = item.kind === 'video' || item.kind === 'pdf' || item.kind === 'image' ? SHOW_WORDS[item.kind] : null;
+  const canShow = staff && me.permissions.includes('lesson.present') && showable(item.kind);
+  const words = showable(item.kind) ? SHOW_WORDS[item.kind] : null;
   // Asks the player where it is right now.
   const peek = useRef<(() => PlayerState) | null>(null);
   const host = useShowHost({ contentId: item.id }, peek);
@@ -64,29 +68,14 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
   const [aspect, setAspect] = useState<number | null>(null);
   const pause = useRef<(() => void) | null>(null);
   const tools: InkTools = showing ? picked : { ...picked, tool: null };
-  const watching = live?.watching ?? [];
   const toolbar = showing && <InkToolbar tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />;
   // The teacher's PDF and picture get the whole window: one slim row of buttons on top, and under it
   // the page as tall as the window allows, with the pen down its left side and the page buttons down
   // its right. A page is tall and a board is wide, so the sides are where there is room to spare.
   const fill = staff && (item.kind === 'pdf' || item.kind === 'image');
-  const penRail = showing && (
-    <div className="flex shrink-0 flex-col items-center justify-center rounded-2xl bg-[hsl(222_30%_10%)] px-1.5 py-3">
-      <InkToolbar vertical tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />
-    </div>
-  );
+  const penRail = showing && <PenRail tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />;
   // Who has the pen, and the way to give it or take it back.
-  const penGiving = live?.pen ? (
-    <>
-      <span className="flex h-11 items-center text-base"><b>{live.pen.name}</b>&nbsp;has the pen.</span>
-      <Button variant="quiet" disabled={host.busy.pen} onClick={() => host.givePen(null)}>Take the pen back</Button>
-    </>
-  ) : (
-    <Select aria-label="Give the pen to a student" className="w-auto rounded-full !text-base" value="" disabled={host.busy.pen || watching.length === 0} onChange={(e) => { if (e.target.value) void host.givePen(e.target.value); }}>
-      <option value="">{watching.length ? 'Give the pen to…' : 'No student screen has it open yet'}</option>
-      {watching.map((w) => <option key={w.studentId} value={w.studentId}>{w.name}</option>)}
-    </Select>
-  );
+  const penGiving = <PenRow host={host} />;
 
   return (
     <div className={fill ? 'flex h-full w-full flex-col gap-3' : 'mx-auto grid w-full max-w-5xl gap-4'}>
@@ -123,6 +112,7 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
           </div>
         )
       )}
+      {showing && <PenRequests host={host} />}
       <ErrorNote message={host.error ?? inkProblem} />
       <ErrorNote message={bookError} />
 
@@ -168,11 +158,7 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
                   />
                 </Suspense>
               </div>
-              <div className="flex w-36 shrink-0 flex-col items-stretch justify-center gap-3">
-                <Button variant="quiet" className="min-h-20 flex-col text-base" disabled={page <= 1} onClick={() => go(-1)}><ChevronLeft className="size-6" /> Previous</Button>
-                <span className="text-center text-lg font-semibold tabular-nums" role="status">Page {page} of {pages ?? '…'}</span>
-                <Button className="min-h-20 flex-col text-base" disabled={pages === null || page >= pages} onClick={() => go(1)}><ChevronRight className="size-6" /> Next</Button>
-              </div>
+              <PageRail page={page} pages={pages} onGo={go} />
             </div>
           ) : <iframe src={url} title={item.title} className="h-[78vh] w-full rounded-2xl border border-border bg-card" />)}
           {item.kind === 'video' && (

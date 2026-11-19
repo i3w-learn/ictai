@@ -350,6 +350,14 @@ describe('Writing on the video', () => {
     void ravi;
   });
 
+  it('leaves the pen with its holder when it cannot be given to a student who is not watching', async () => {
+    const { asha, kabir, pen, mine } = await lesson();
+    await pen(asha.id);
+    const res = await pen(kabir.id);
+    expect(res.json()).toMatchObject({ code: 'NOT_WATCHING', message: "That student's screen does not have the show open." });
+    expect(await mine(asha.as)).toMatchObject({ pen: { studentId: asha.id, name: 'Asha' } });
+  });
+
   it('does not let a student write on a playing video, or touch a line that is not theirs', async () => {
     const { ravi, asha, id, line, pen, move, inject, ink } = await lesson();
     await pen(asha.id);
@@ -544,7 +552,38 @@ describe('Writing on pages', () => {
     const res = await line(asha.as, 1);
     expect(res.statusCode).toBe(409);
     expect(res.json()).toMatchObject({ code: 'WRONG_PAGE', message: 'Your teacher has moved to another page.' });
-    expect((await line(ravi, 1)).json()).toMatchObject({ code: 'WRONG_PAGE' });
+  });
+
+  it("wipes the page the teacher's screen asks for, even when the server has already moved on", async () => {
+    const { ravi, asha, c7, screen, id, line, ink, turn, inject } = await book();
+    const pc = screen(asha.token, c7.id);
+    await line(ravi, 1);
+    await turn(ravi, id, { page: 2 });
+    await line(ravi, 2);
+    // She pressed Wipe on page 1 just before her page turn reached the server.
+    expect((await inject('DELETE', `/api/v1/shows/${id}/ink?page=1`, ravi)).statusCode).toBe(204);
+    expect(pc.events.at(-1)).toMatchObject({ kind: 'clear', page: 1 });
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([2]);
+  });
+
+  it('lets the teacher write on the page in front of her before the server hears of her page turn', async () => {
+    const { ravi, asha, id, line, ink, inject, turn } = await book();
+    expect((await line(ravi, 2)).statusCode).toBe(204); // the show is still on page 1 at the server
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([2]);
+    expect((await line(ravi, 13)).statusCode).toBe(400); // the book has 12 pages
+    await inject('PUT', `/api/v1/shows/${id}/pen`, ravi, { studentId: asha.id });
+    expect((await line(asha.as, 2)).json()).toMatchObject({ code: 'WRONG_PAGE' }); // a student still may not
+    await turn(ravi, id, { page: 3 });
+    expect((await line(ravi, 1)).statusCode).toBe(204);
+  });
+
+  it("wipes the show's current page for an older teacher's app that does not say the page", async () => {
+    const { ravi, id, line, ink, turn, inject } = await book();
+    await line(ravi, 1);
+    await turn(ravi, id, { page: 2 });
+    await line(ravi, 2);
+    await inject('DELETE', `/api/v1/shows/${id}/ink`, ravi);
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([1]);
   });
 
   it('lets the student with the pen write on a PDF at any time', async () => {
@@ -592,5 +631,103 @@ describe('Writing on pages', () => {
     const before = pc.got.length;
     await turn(ravi, id, { page: 4 });
     expect(pc.got).toHaveLength(before);
+  });
+});
+
+describe('Asking for the pen', () => {
+  // Ravi is showing Class 7 the video. Asha and Meera are in Class 7.
+  async function lesson() {
+    const s = await school();
+    await s.inject('POST', '/api/v1/students', s.admin, { name: 'Meera', classId: s.c7.id, rollNo: '2' });
+    const device = await s.enrolDevice('lab_pc');
+    const signedIn = (await s.inject('POST', '/api/v1/auth/student/roll', s.auth(device), { classId: s.c7.id, rollNo: '2' })).json();
+    const meera = { token: signedIn.token as string, as: s.auth(signedIn.token), id: signedIn.principal.studentId as string };
+    const id = (await s.start(s.ravi)).json().id as string;
+    const ask = (who: object) => s.inject('POST', `/api/v1/shows/${id}/pen/ask`, who);
+    const unask = (who: object) => s.inject('DELETE', `/api/v1/shows/${id}/pen/ask`, who);
+    const refuse = (studentId: string, who: object = s.ravi) => s.inject('DELETE', `/api/v1/shows/${id}/pen/asks/${studentId}`, who);
+    const pen = (studentId: string | null) => s.inject('PUT', `/api/v1/shows/${id}/pen`, s.ravi, { studentId });
+    // What the teacher's screen is told when it joins the class's room now.
+    const asks = () => (s.screen(s.raviToken, s.c7.id).last() as unknown as { asks: { studentId: string; name: string }[] }).asks;
+    const myAsk = async (who: object) => (await s.mine(who)).myAsk as string;
+    return { ...s, meera, id, ask, unask, refuse, pen, asks, myAsk };
+  }
+
+  it("puts the student in the teacher's list and tells only that student she is waiting", async () => {
+    const { asha, meera, c7, ask, screen, asks, myAsk } = await lesson();
+    const ashaPc = screen(asha.token, c7.id);
+    const meeraPc = screen(meera.token, c7.id);
+    expect(await myAsk(asha.as)).toBe('none');
+    expect((await ask(asha.as)).statusCode).toBe(204);
+    expect(asks()).toEqual([{ studentId: asha.id, name: 'Asha' }]);
+    expect(await myAsk(asha.as)).toBe('waiting');
+    expect(ashaPc.last()).toMatchObject({ myAsk: 'waiting' });
+    expect((ashaPc.last() as { asks?: object[] }).asks).toBeUndefined(); // who is asking is for the teacher only
+    expect(meeraPc.last()).toMatchObject({ myAsk: 'none' });
+    expect(await myAsk(meera.as)).toBe('none');
+  });
+
+  it('keeps the askers in the order they asked, and lets the teacher allow one while the other waits', async () => {
+    const { asha, meera, ask, pen, asks, myAsk, mine } = await lesson();
+    await ask(meera.as);
+    await ask(asha.as);
+    expect(asks().map((a) => a.name)).toEqual(['Meera', 'Asha']);
+    const given = await pen(asha.id); // the asker's screen has the video open, so she can be given the pen
+    expect(given.json()).toMatchObject({ pen: { studentId: asha.id }, asks: [{ studentId: meera.id }] });
+    expect(await mine(asha.as)).toMatchObject({ pen: { studentId: asha.id }, myAsk: 'none' });
+    expect(await myAsk(meera.as)).toBe('waiting');
+  });
+
+  it('says "not now" to an asker until she asks again, and lets a student take back her ask', async () => {
+    const { asha, meera, ask, unask, refuse, asks, myAsk, c7, screen } = await lesson();
+    await ask(asha.as);
+    await ask(meera.as);
+    const ashaPc = screen(asha.token, c7.id);
+    expect((await refuse(asha.id)).statusCode).toBe(204);
+    expect(ashaPc.last()).toMatchObject({ myAsk: 'refused' });
+    expect(asks()).toEqual([{ studentId: meera.id, name: 'Meera' }]);
+    expect(await myAsk(asha.as)).toBe('refused');
+    await ask(asha.as);
+    expect(await myAsk(asha.as)).toBe('waiting');
+    expect(asks().map((a) => a.name)).toEqual(['Meera', 'Asha']);
+
+    expect((await unask(meera.as)).statusCode).toBe(204);
+    expect(await myAsk(meera.as)).toBe('none');
+    expect(asks().map((a) => a.name)).toEqual(['Asha']);
+  });
+
+  it('keeps asking to its own class, and "not now" to the teacher', async () => {
+    const { asha, kabir, ask, unask, refuse } = await lesson();
+    expect((await ask(kabir.as)).statusCode).toBe(404); // another class
+    expect((await unask(kabir.as)).statusCode).toBe(404);
+    await ask(asha.as);
+    expect((await refuse(asha.id, asha.as)).statusCode).toBe(403); // a student cannot say "not now"
+  });
+
+  it('drops a student who signs out from the list', async () => {
+    const { asha, meera, ask, inject, asks, myAsk } = await lesson();
+    await ask(asha.as);
+    await ask(meera.as);
+    await inject('POST', '/api/v1/auth/logout', asha.as);
+    expect(await myAsk(meera.as)).toBe('waiting');
+    expect(asks()).toEqual([{ studentId: meera.id, name: 'Meera' }]);
+  });
+
+  it('sends nothing new to the screens when a student asks again while waiting', async () => {
+    const { raviToken, asha, c7, ask, screen } = await lesson();
+    const teachersPc = screen(raviToken, c7.id);
+    await ask(asha.as);
+    const before = teachersPc.got.length;
+    expect((await ask(asha.as)).statusCode).toBe(204);
+    expect(teachersPc.got).toHaveLength(before);
+  });
+
+  it('works on a whiteboard too, and writes the asks in the diary', async () => {
+    const { ravi, asha, c7, board, inject, diary } = await lesson();
+    const id = (await board(ravi, c7.id)).json().id as string;
+    diary.length = 0;
+    expect((await inject('POST', `/api/v1/shows/${id}/pen/ask`, asha.as)).statusCode).toBe(204);
+    expect((await inject('DELETE', `/api/v1/shows/${id}/pen/asks/${asha.id}`, ravi)).statusCode).toBe(204);
+    expect(diary.map((l) => l.replace(/show="[^"]+" /, ''))).toEqual(['show.pen.asked student="Asha"', 'show.pen.refused student="Asha"']);
   });
 });
