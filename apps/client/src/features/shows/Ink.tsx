@@ -34,7 +34,7 @@ export function useInk(show: { id: string; classId: string; inkRev: number; page
       all: () => call('GET /api/v1/shows/:id/ink', { params }),
       add: (body) => call('POST /api/v1/shows/:id/ink', { params, body }),
       erase: (strokeId) => call('DELETE /api/v1/shows/:id/ink/:strokeId', { params: { id, strokeId } }),
-      clear: () => call('DELETE /api/v1/shows/:id/ink', { params }),
+      clear: (page) => call('DELETE /api/v1/shows/:id/ink', { params, query: { page: String(page) } }),
     }, { by, byName });
   }, [call, id, by, byName]);
 

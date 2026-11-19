@@ -10226,7 +10226,7 @@
                     "default": 1,
                     "type": "integer",
                     "minimum": 1,
-                    "maximum": 9007199254740991
+                    "maximum": 5000
                   },
                   "colour": {
                     "type": "string",
@@ -10295,7 +10295,7 @@
         }
       },
       "delete": {
-        "summary": "Wipe all the writing off the video",
+        "summary": "Wipe all the writing off one page: ?page=, or the page the show is on",
         "x-access": {
           "kind": "staff",
           "permission": "lesson.present"
@@ -10309,6 +10309,14 @@
           {
             "name": "id",
             "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"

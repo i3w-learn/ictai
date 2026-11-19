@@ -28,9 +28,11 @@ export type ShowStart = z.infer<typeof ShowStart>;
 
 // Move every screen to `page`. The teacher's app sends `pages` once for a PDF, after opening the file
 // and counting its pages. A whiteboard sends `pages` one higher to add a page.
+// The most pages any show may have, so a page number from a screen is never unbounded.
+export const SHOW_PAGES_MAX = 5000;
 export const ShowPage = z.object({
-  page: z.number().int().min(1).max(5000),
-  pages: z.number().int().min(1).max(5000).optional(),
+  page: z.number().int().min(1).max(SHOW_PAGES_MAX),
+  pages: z.number().int().min(1).max(SHOW_PAGES_MAX).optional(),
 });
 export type ShowPage = z.infer<typeof ShowPage>;
 // The most pages a whiteboard may have, so one show cannot fill the server's memory.
@@ -142,7 +144,7 @@ const numbers = (maxPoints: number) =>
 // More of one line. The first message for a `strokeId` starts the line.
 // `page` is the page of the show the line is written on.
 // An older student PC sends no page; it only knows videos, which have one page.
-export const InkAdd = z.object({ strokeId: Id, page: z.number().int().min(1).default(1), colour: InkColour, width: InkWidth, points: numbers(INK_BATCH_MAX) });
+export const InkAdd = z.object({ strokeId: Id, page: z.number().int().min(1).max(SHOW_PAGES_MAX).default(1), colour: InkColour, width: InkWidth, points: numbers(INK_BATCH_MAX) });
 export type InkAdd = z.infer<typeof InkAdd>;
 
 export const InkStroke = z.object({
@@ -171,6 +173,10 @@ export const InkEvent = z.discriminatedUnion('kind', [
 export type InkEvent = z.infer<typeof InkEvent>;
 
 export const StrokeParams = z.object({ id: Id, strokeId: Id });
+// Which page to wipe: the one on the teacher's screen, which may be a step ahead of the server's.
+// An older teacher's app says no page; then the page the show is on is wiped.
+export const InkClearQuery = z.object({ page: z.coerce.number().int().min(1).max(SHOW_PAGES_MAX).optional() });
+export type InkClearQuery = z.infer<typeof InkClearQuery>;
 // One student's ask for the pen on show `id`.
 export const AskParams = z.object({ id: Id, studentId: Id });
 // Give the pen to a student whose screen has the video open, or take it back with null.

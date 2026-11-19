@@ -5,7 +5,8 @@ export interface InkApi {
   all(): Promise<Ink>;
   add(body: InkAdd): Promise<void>;
   erase(strokeId: string): Promise<void>;
-  clear(): Promise<void>;
+  // Wipes one page of the show.
+  clear(page: number): Promise<void>;
 }
 
 // The pen's points are gathered and sent this often, not one request per point.
@@ -176,11 +177,13 @@ export class InkBoard {
     this.api.erase(strokeId).catch(() => void this.load());
   }
 
-  // Wipes the page this screen is on; the server wipes the page the show is on, which is the same.
+  // Wipes the page this screen is on. The page is sent along: the server may not have heard of a
+  // page turn made a moment ago, and must not wipe the page the teacher just left.
   clear() {
-    this.forgetPage(this.page);
+    const page = this.page;
+    this.forgetPage(page);
     this.changed();
-    this.api.clear().catch(() => void this.load());
+    this.api.clear(page).catch(() => void this.load());
   }
 
   private soon() {

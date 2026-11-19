@@ -18,7 +18,7 @@ import { SchoolSettings, StudentPrefs } from './settings.js';
 import { SlotInput, SlotQuery, StudentToday, Timetable } from './timetable.js';
 import { ContentItem, ContentQuery, FileChunk, FileChunkParams, FinishUpload, LinkInput, StartUpload, UploadChunk, UploadTicket } from './content.js';
 import { Sequence, SequenceInput, Todo } from './sequences.js';
-import { AskParams, Ink, InkAdd, PenGive, ScreenReport, Show, ShowPage, ShowStart, ShowUpdate, StrokeParams } from './shows.js';
+import { AskParams, Ink, InkAdd, InkClearQuery, PenGive, ScreenReport, Show, ShowPage, ShowStart, ShowUpdate, StrokeParams } from './shows.js';
 import { CardRemarks, CardStatusChange, CardsQuery, MakeCards, MakeCardsResult, ReportCard } from './report-cards.js';
 import { Assignment, AssignmentDetail, AssignmentInput, MarkInput, MarkParams, MyWork, WorkAnswer } from './work.js';
 import { NewTeacher, SetPassword, StaffMember, UpdateTeacher } from './staff.js';
@@ -146,7 +146,7 @@ export const API = {
   'GET /api/v1/shows/:id/ink': { summary: 'All the writing on the video right now', access: { kind: 'signed-in' }, params: IdParams, status: 200, response: Ink },
   'POST /api/v1/shows/:id/ink': { summary: 'Write on the video: more of one pen line. The teacher, or the student who has the pen', access: { kind: 'signed-in' }, params: IdParams, body: InkAdd, status: 204 },
   'DELETE /api/v1/shows/:id/ink/:strokeId': { summary: 'Rub out one line. The teacher any line; a student only their own', access: { kind: 'signed-in' }, params: StrokeParams, status: 204 },
-  'DELETE /api/v1/shows/:id/ink': { summary: 'Wipe all the writing off the video', access: staff('lesson.present'), params: IdParams, status: 204 },
+  'DELETE /api/v1/shows/:id/ink': { summary: "Wipe all the writing off one page: ?page=, or the page the show is on", access: staff('lesson.present'), params: IdParams, query: InkClearQuery, status: 204 },
   'PUT /api/v1/shows/:id/pen': { summary: 'Give the pen to one student, or take it back', access: staff('lesson.present'), params: IdParams, body: PenGive, status: 200, response: Show },
   'POST /api/v1/shows/:id/pen/ask': { summary: 'A student asks the teacher for the pen', access: student, params: IdParams, status: 204 },
   'DELETE /api/v1/shows/:id/pen/ask': { summary: 'A student takes back their ask', access: student, params: IdParams, status: 204 },

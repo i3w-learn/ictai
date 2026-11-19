@@ -544,7 +544,38 @@ describe('Writing on pages', () => {
     const res = await line(asha.as, 1);
     expect(res.statusCode).toBe(409);
     expect(res.json()).toMatchObject({ code: 'WRONG_PAGE', message: 'Your teacher has moved to another page.' });
-    expect((await line(ravi, 1)).json()).toMatchObject({ code: 'WRONG_PAGE' });
+  });
+
+  it("wipes the page the teacher's screen asks for, even when the server has already moved on", async () => {
+    const { ravi, asha, c7, screen, id, line, ink, turn, inject } = await book();
+    const pc = screen(asha.token, c7.id);
+    await line(ravi, 1);
+    await turn(ravi, id, { page: 2 });
+    await line(ravi, 2);
+    // She pressed Wipe on page 1 just before her page turn reached the server.
+    expect((await inject('DELETE', `/api/v1/shows/${id}/ink?page=1`, ravi)).statusCode).toBe(204);
+    expect(pc.events.at(-1)).toMatchObject({ kind: 'clear', page: 1 });
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([2]);
+  });
+
+  it('lets the teacher write on the page in front of her before the server hears of her page turn', async () => {
+    const { ravi, asha, id, line, ink, inject, turn } = await book();
+    expect((await line(ravi, 2)).statusCode).toBe(204); // the show is still on page 1 at the server
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([2]);
+    expect((await line(ravi, 13)).statusCode).toBe(400); // the book has 12 pages
+    await inject('PUT', `/api/v1/shows/${id}/pen`, ravi, { studentId: asha.id });
+    expect((await line(asha.as, 2)).json()).toMatchObject({ code: 'WRONG_PAGE' }); // a student still may not
+    await turn(ravi, id, { page: 3 });
+    expect((await line(ravi, 1)).statusCode).toBe(204);
+  });
+
+  it("wipes the show's current page for an older teacher's app that does not say the page", async () => {
+    const { ravi, id, line, ink, turn, inject } = await book();
+    await line(ravi, 1);
+    await turn(ravi, id, { page: 2 });
+    await line(ravi, 2);
+    await inject('DELETE', `/api/v1/shows/${id}/ink`, ravi);
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([1]);
   });
 
   it('lets the student with the pen write on a PDF at any time', async () => {

@@ -177,8 +177,15 @@ export class ShowService {
     const live = this.seen(p, id);
     const who = this.writer(p, live);
     if (p.kind === 'student' && live.playing) throw new AppError(409, 'SHOW_PLAYING', 'You can write when your teacher pauses the video.');
-    // The screens show one page; a line for any other page is about something no longer on show.
-    if (input.page !== live.page) throw new AppError(409, 'WRONG_PAGE', 'Your teacher has moved to another page.');
+    if (p.kind === 'staff') {
+      // The teacher writes on the page in front of her, which may be a step ahead of the server's
+      // when her page turn is still on its way. Any page the show has will do.
+      const last = live.kind === 'video' ? 1 : live.pages;
+      if (last !== null && input.page > last) throw new AppError(400, 'BAD_REQUEST', 'There is no such page.');
+    } else if (input.page !== live.page) {
+      // A student's screen follows the teacher's; a line for any other page is about something no longer on show.
+      throw new AppError(409, 'WRONG_PAGE', 'Your teacher has moved to another page.');
+    }
     let stroke = live.strokes.get(input.strokeId);
     if (stroke && stroke.by !== who.by) throw new AppError(403, 'FORBIDDEN', 'That line is not yours.');
     if (!stroke) {
@@ -207,10 +214,12 @@ export class ShowService {
     this.say(live, { kind: 'erase', show: live.id, rev: live.inkRev, strokeId });
   }
 
-  clear(actor: StaffPrincipal, id: string) {
+  // Wipes `page`: the page on the teacher's screen. An older teacher's app says none; then the page the show is on.
+  clear(actor: StaffPrincipal, id: string, page?: number) {
     const live = this.mine(actor, id);
-    if ([...live.strokes.values()].some((x) => x.page === live.page)) this.log('show.ink.cleared', { show: short(live.id), by: actor.displayName });
-    this.wipe(live);
+    const on = page ?? live.page;
+    if ([...live.strokes.values()].some((x) => x.page === on)) this.log('show.ink.cleared', { show: short(live.id), by: actor.displayName });
+    this.wipe(live, on);
   }
 
   // One student at a time holds the pen. Giving it to another takes it from the first.
@@ -340,13 +349,13 @@ export class ShowService {
     return { by: p.studentId, byName: p.name };
   }
 
-  // Wipes the writing on the page the show is on; other pages keep theirs.
-  private wipe(live: Live) {
-    const here = [...live.strokes].filter(([, x]) => x.page === live.page);
+  // Wipes the writing on one page (the page the show is on, unless told); other pages keep theirs.
+  private wipe(live: Live, page = live.page) {
+    const here = [...live.strokes].filter(([, x]) => x.page === page);
     if (!here.length) return;
     for (const [id] of here) live.strokes.delete(id);
     live.inkRev += 1;
-    this.say(live, { kind: 'clear', show: live.id, rev: live.inkRev, page: live.page });
+    this.say(live, { kind: 'clear', show: live.id, rev: live.inkRev, page });
   }
 
   private say(live: Live, event: InkEvent) {
