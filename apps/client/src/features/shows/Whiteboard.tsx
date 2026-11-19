@@ -58,14 +58,14 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
         <h1 className="min-w-48 flex-1 font-display text-2xl font-semibold">Whiteboard</h1>
         {showing ? (
           <div className="flex flex-wrap items-center gap-3" role="status">
-            <span className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 font-semibold text-primary"><MonitorPlay className="size-5" /> Class {live?.className} can see this board now</span>
+            <span className="flex h-11 items-center gap-2 rounded-full bg-primary/10 px-5 text-base font-semibold text-primary"><MonitorPlay className="size-5 shrink-0" /> Class {live?.className} can see this board now</span>
           {live?.pen ? (
             <>
-              <span><b>{live.pen.name}</b> has the pen.</span>
+              <span className="flex h-11 items-center text-base"><b>{live.pen.name}</b>&nbsp;has the pen.</span>
               <Button variant="quiet" disabled={host.busy.pen} onClick={() => host.givePen(null)}>Take the pen back</Button>
             </>
           ) : (
-            <Select aria-label="Give the pen to a student" className="w-auto" value="" disabled={host.busy.pen || watching.length === 0} onChange={(e) => { if (e.target.value) void host.givePen(e.target.value); }}>
+            <Select aria-label="Give the pen to a student" className="w-auto rounded-full !text-base" value="" disabled={host.busy.pen || watching.length === 0} onChange={(e) => { if (e.target.value) void host.givePen(e.target.value); }}>
               <option value="">{watching.length ? 'Give the pen to…' : 'No student screen has it open yet'}</option>
               {watching.map((w) => <option key={w.studentId} value={w.studentId}>{w.name}</option>)}
             </Select>
@@ -74,7 +74,7 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3" title="A blank board opens on every student PC of the class.">
-          <Select aria-label="Class to show the whiteboard to" className="w-auto" value={classId} onChange={(e) => setPickedClass(e.target.value)}>
+          <Select aria-label="Class to show the whiteboard to" className="w-auto rounded-full !text-base" value={classId} onChange={(e) => setPickedClass(e.target.value)}>
             <option value="">Choose a class</option>
             {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
           </Select>
@@ -88,7 +88,7 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
           page buttons down its right, so none of the window's height is spent on them. */}
       <div className="flex min-h-0 flex-1 gap-3">
         {showing && (
-          <div className="flex shrink-0 flex-col items-center rounded-2xl bg-[hsl(222_30%_10%)] px-1.5 py-3">
+          <div className="flex shrink-0 flex-col items-center justify-center rounded-2xl bg-[hsl(222_30%_10%)] px-1.5 py-3">
             <InkToolbar vertical tools={tools} onTools={setTools} onWipe={() => board?.clear()} />
           </div>
         )}
