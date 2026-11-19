@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, MonitorPlay, Plus } from 'lucide-react';
+import { ArrowLeft, MonitorPlay, Plus } from 'lucide-react';
 import { WHITEBOARD_ASPECT, WHITEBOARD_PAGES_MAX, type SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Select, useAction } from '../../ui/ui';
-import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from './Ink';
+import { InkLayer, useInk, useInkProblem, type InkTools } from './Ink';
+import { PageRail } from './PageRail';
+import { PenRail } from './PenRail';
 import { PenAsks, PenRow } from './PenRow';
 import { turnPage } from './show-pages';
 import { useShowHost } from './useShowHost';
@@ -78,23 +80,16 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
       {/* The board in the middle, as big as fits at its wide shape; the pen down its left side and the
           page buttons down its right, so none of the window's height is spent on them. */}
       <div className="flex min-h-0 flex-1 gap-3">
-        {showing && (
-          <div className="flex shrink-0 flex-col items-center justify-center rounded-2xl bg-[hsl(222_30%_10%)] px-1.5 py-3">
-            <InkToolbar vertical tools={tools} onTools={setTools} onWipe={() => board?.clear()} />
-          </div>
-        )}
+        {showing && <PenRail tools={tools} onTools={setTools} onWipe={() => board?.clear()} />}
         <div className="grid min-h-64 min-w-0 flex-1 place-items-center [container-type:size]">
           <div className="relative aspect-video w-[min(100cqw,calc(100cqh*16/9))] rounded-2xl bg-white ring-1 ring-border">
             <InkLayer board={board} aspect={WHITEBOARD_ASPECT} tools={showing ? tools : { ...tools, tool: null }} />
           </div>
         </div>
         {showing && (
-          <div className="flex w-36 shrink-0 flex-col items-stretch justify-center gap-3">
-            <Button variant="quiet" className="min-h-20 flex-col text-base" disabled={here.page <= 1} onClick={() => go(-1)}><ChevronLeft className="size-6" /> Previous</Button>
-            <span className="text-center text-lg font-semibold tabular-nums" role="status">Page {here.page} of {here.pages}</span>
-            <Button className="min-h-20 flex-col text-base" disabled={here.page >= here.pages} onClick={() => go(1)}><ChevronRight className="size-6" /> Next</Button>
+          <PageRail page={here.page} pages={here.pages} onGo={go}>
             <Button variant="quiet" className="min-h-16 flex-col text-base" disabled={here.pages >= WHITEBOARD_PAGES_MAX} onClick={addPage}><Plus className="size-5" /> Add page</Button>
-          </div>
+          </PageRail>
         )}
       </div>
     </div>

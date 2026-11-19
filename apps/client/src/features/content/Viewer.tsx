@@ -1,9 +1,11 @@
 import { lazy, Suspense, useRef, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, MonitorPlay } from 'lucide-react';
+import { ArrowLeft, MonitorPlay } from 'lucide-react';
 import { canShow as showable, type ContentItem, type ShowableKind } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, Card, ErrorNote, Note } from '../../ui/ui';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from '../shows/Ink';
+import { PageRail } from '../shows/PageRail';
+import { PenRail } from '../shows/PenRail';
 import { PenAsks, PenRow } from '../shows/PenRow';
 import { turnPage } from '../shows/show-pages';
 import { useShowHost } from '../shows/useShowHost';
@@ -70,11 +72,7 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
   // the page as tall as the window allows, with the pen down its left side and the page buttons down
   // its right. A page is tall and a board is wide, so the sides are where there is room to spare.
   const fill = staff && (item.kind === 'pdf' || item.kind === 'image');
-  const penRail = showing && (
-    <div className="flex shrink-0 flex-col items-center justify-center rounded-2xl bg-[hsl(222_30%_10%)] px-1.5 py-3">
-      <InkToolbar vertical tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />
-    </div>
-  );
+  const penRail = showing && <PenRail tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />;
   // Who has the pen, and the way to give it or take it back.
   const penGiving = <PenRow host={host} />;
 
@@ -159,11 +157,7 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
                   />
                 </Suspense>
               </div>
-              <div className="flex w-36 shrink-0 flex-col items-stretch justify-center gap-3">
-                <Button variant="quiet" className="min-h-20 flex-col text-base" disabled={page <= 1} onClick={() => go(-1)}><ChevronLeft className="size-6" /> Previous</Button>
-                <span className="text-center text-lg font-semibold tabular-nums" role="status">Page {page} of {pages ?? '…'}</span>
-                <Button className="min-h-20 flex-col text-base" disabled={pages === null || page >= pages} onClick={() => go(1)}><ChevronRight className="size-6" /> Next</Button>
-              </div>
+              <PageRail page={page} pages={pages} onGo={go} />
             </div>
           ) : <iframe src={url} title={item.title} className="h-[78vh] w-full rounded-2xl border border-border bg-card" />)}
           {item.kind === 'video' && (
