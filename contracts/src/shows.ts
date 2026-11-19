@@ -154,8 +154,8 @@ export type InkColour = z.infer<typeof InkColour>;
 export const INK_WIDTHS = ['thin', 'medium', 'thick'] as const;
 export const InkWidth = z.enum(INK_WIDTHS);
 export type InkWidth = z.infer<typeof InkWidth>;
-// Limits, so no screen can fill the server's memory: points in one line, lines on one show, and
-// points in one message.
+// Limits, so no screen can fill the server's memory: points in one line, lines on one page of a
+// show, and points in one message.
 export const INK_POINTS_MAX = 2000;
 export const INK_STROKES_MAX = 300;
 export const INK_BATCH_MAX = 300;

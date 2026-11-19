@@ -47,7 +47,8 @@ export interface Platform {
   onRelay(listener: (e: RelayEvent) => void): () => void;
   /**
    * Library files as a stream. `setFileSource` says which server and signed-in person files are fetched
-   * for (null = nobody). `fileUrl` is then an address a picture, video or sound player can be pointed at.
+   * for (null = nobody). `fileUrl` is then an address a picture, video or sound player can be pointed at,
+   * and that the teacher's PDF reader reads part by part, so a big book opens before it has all arrived.
    * Left out where there is no native side (tests, the browser harness): screens then fetch in pieces.
    */
   setFileSource?(source: { baseUrl: string; certFp: string; token: string } | null): Promise<void>;
