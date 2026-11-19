@@ -44,8 +44,8 @@ const ACTION: Record<string, string> = {
   'work.delete': 'took away a piece of work',
   'timetable.set': 'booked the lab in the timetable',
   'timetable.clear': 'freed a lab period in the timetable',
-  'show.start': 'started showing a video to the class',
-  'show.stop': 'stopped showing a video',
+  'show.start': 'started showing to the class',
+  'show.stop': 'stopped showing',
   'notice.create': 'put up a notice',
   'notice.delete': 'took down a notice',
 };
