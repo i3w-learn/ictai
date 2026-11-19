@@ -21,7 +21,7 @@ export interface InkTools { tool: 'pen' | 'eraser' | null; colour: InkColour; wi
 
 // The writing on the show `show`, kept in step with the server for as long as the screen is up.
 // `me` is who writes on this screen: 'teacher', or the student's id.
-export function useInk(show: { id: string; classId: string; inkRev: number } | null, by: string, byName: string): InkBoard | null {
+export function useInk(show: { id: string; classId: string; inkRev: number; page: number } | null, by: string, byName: string): InkBoard | null {
   const { relay, call } = useApp();
   const id = show?.id ?? null;
   const classId = show?.classId ?? null;
@@ -52,6 +52,8 @@ export function useInk(show: { id: string; classId: string; inkRev: number } | n
   // channel is down for a while.
   const rev = show?.inkRev ?? 0;
   useEffect(() => board?.expect(rev), [board, rev]);
+  const page = show?.page ?? 1;
+  useEffect(() => board?.setPage(page), [board, page]);
   return board;
 }
 

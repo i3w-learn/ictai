@@ -49,6 +49,12 @@ export function useClassShow(): LiveShow | null {
 // she gives the pen to can write on it for the whole class to see. The screen underneath is kept as it was, so a half-written answer
 // is still there when the teacher stops showing.
 export function ClassShow({ live }: { live: LiveShow }) {
+  // Pages (PDF, picture, whiteboard) come in later tasks; for now only a video is shown.
+  const item = live.show.kind === 'video' ? live.show.item : null;
+  return item ? <ClassVideo live={live} item={item} /> : null;
+}
+
+function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow['show']['item']> }) {
   const { show } = live;
   const { call, state } = useApp();
   const me = state.session?.principal;
@@ -60,7 +66,7 @@ export function ClassShow({ live }: { live: LiveShow }) {
   // With the pen, the pen is in hand at once; it works while the teacher has the video paused.
   const [picked, setPicked] = useState<InkTools>({ tool: 'pen', colour: 'blue', width: 'medium' });
   const tools: InkTools = hasPen && !show.playing ? picked : { ...picked, tool: null };
-  const { url, percent, error, onError } = useFileUrl(show.item);
+  const { url, percent, error, onError } = useFileUrl(item);
   const video = useRef<HTMLVideoElement>(null);
   const latest = useLatest(live);
   const [muted, setMuted] = useState(false);
@@ -141,10 +147,10 @@ export function ClassShow({ live }: { live: LiveShow }) {
   const sound = () => { const v = video.current; if (!v) return; v.muted = !v.muted; setMuted(v.muted); };
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={`Your teacher is showing: ${show.item.title}`}>
+    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={`Your teacher is showing: ${item.title}`}>
       <div className="flex flex-wrap items-center gap-3 px-5 py-3">
         <MonitorPlay className="size-5 shrink-0 text-white/70" />
-        <p className="min-w-48 flex-1 text-lg font-semibold">{show.item.title}</p>
+        <p className="min-w-48 flex-1 text-lg font-semibold">{item.title}</p>
         <p className="text-sm text-white/70">{show.byName} is showing this to Class {show.className}</p>
         {/* These sit up here, never on the picture: a lesson often has writing right at its bottom edge. */}
         {url && !failed && waiting && (
