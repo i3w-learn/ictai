@@ -80,7 +80,7 @@ export const Show = z.object({
   // The page every screen is on (1 for a video), and how many pages there are, once known: a
   // whiteboard always, a picture 1, a PDF after the teacher's app has counted them, a video never.
   page: z.number().int().min(1),
-  pages: z.number().int().nullable(),
+  pages: z.number().int().min(1).nullable(),
   // Server clock when the teacher was at `position`, and server clock now. A screen works out where
   // the video should be from these two, so it never needs its own clock to be right.
   at: z.number(),
@@ -129,7 +129,8 @@ const numbers = (maxPoints: number) =>
   z.array(z.number().int().min(0).max(INK_SCALE)).max(maxPoints * 3).refine((a) => a.length % 3 === 0, 'Points come in threes: x, y, pressure.');
 
 // More of one line. The first message for a `strokeId` starts the line.
-export const InkAdd = z.object({ strokeId: Id, colour: InkColour, width: InkWidth, points: numbers(INK_BATCH_MAX) });
+// `page` is the page of the show the line is written on.
+export const InkAdd = z.object({ strokeId: Id, page: z.number().int().min(1), colour: InkColour, width: InkWidth, points: numbers(INK_BATCH_MAX) });
 export type InkAdd = z.infer<typeof InkAdd>;
 
 export const InkStroke = z.object({
@@ -137,6 +138,7 @@ export const InkStroke = z.object({
   // 'teacher', or the id of the student who wrote it.
   by: z.string(),
   byName: z.string(),
+  page: z.number().int().min(1),
   colour: InkColour,
   width: InkWidth,
   points: z.array(z.number()),
@@ -151,7 +153,8 @@ export type Ink = z.infer<typeof Ink>;
 export const InkEvent = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('add'), show: z.string(), rev: z.number(), stroke: InkStroke }),
   z.object({ kind: z.literal('erase'), show: z.string(), rev: z.number(), strokeId: z.string() }),
-  z.object({ kind: z.literal('clear'), show: z.string(), rev: z.number() }),
+  // Only the writing on `page` is gone.
+  z.object({ kind: z.literal('clear'), show: z.string(), rev: z.number(), page: z.number().int().min(1) }),
 ]);
 export type InkEvent = z.infer<typeof InkEvent>;
 

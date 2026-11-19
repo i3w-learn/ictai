@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { CHUNK_BYTES, INK_BATCH_MAX, INK_POINTS_MAX, INK_STROKES_MAX, SCREEN_REPORTS_MAX, SHOW_STALE_MS, showPosition, showRoom } from '@ict/contracts';
+import { CHUNK_BYTES, INK_BATCH_MAX, INK_POINTS_MAX, INK_SHOW_STROKES_MAX, INK_STROKES_MAX, SCREEN_REPORTS_MAX, SHOW_STALE_MS, showPosition, showRoom } from '@ict/contracts';
 import { testServer } from './helpers.js';
 
 const mp4 = (size = 2000) => Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(size - 12, 1)]);
@@ -274,7 +274,7 @@ describe('Writing on the video', () => {
     const id = (await s.start(s.ravi)).json().id as string;
     await s.inject('POST', `/api/v1/shows/${id}/screen`, s.asha.as, { event: 'opened' });
     const line = (who: object, points: number[], strokeId: string = randomUUID(), look: object = {}) =>
-      s.inject('POST', `/api/v1/shows/${id}/ink`, who, { strokeId, colour: 'red', width: 'medium', points, ...look });
+      s.inject('POST', `/api/v1/shows/${id}/ink`, who, { strokeId, colour: 'red', width: 'medium', points, page: 1, ...look });
     const ink = async (who: object) => (await s.inject('GET', `/api/v1/shows/${id}/ink`, who)).json();
     const pen = (studentId: string | null, who: object = s.ravi) => s.inject('PUT', `/api/v1/shows/${id}/pen`, who, { studentId });
     return { ...s, id, line, ink, pen };
@@ -288,11 +288,11 @@ describe('Writing on the video', () => {
     expect((await line(ravi, [200, 300, 7000], strokeId)).statusCode).toBe(204);
     // Each message carries only the new part of the line.
     expect(pc.events).toEqual([
-      { kind: 'add', show: id, rev: 1, stroke: { id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', points: [100, 200, 5000, 150, 250, 6000] } },
-      { kind: 'add', show: id, rev: 2, stroke: { id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', points: [200, 300, 7000] } },
+      { kind: 'add', show: id, rev: 1, stroke: { id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', page: 1, points: [100, 200, 5000, 150, 250, 6000] } },
+      { kind: 'add', show: id, rev: 2, stroke: { id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', page: 1, points: [200, 300, 7000] } },
     ]);
     expect(pc.got).toHaveLength(1); // the whole state is not sent again for a pen line
-    expect(await ink(asha.as)).toEqual({ rev: 2, strokes: [{ id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', points: [100, 200, 5000, 150, 250, 6000, 200, 300, 7000] }] });
+    expect(await ink(asha.as)).toEqual({ rev: 2, strokes: [{ id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', page: 1, points: [100, 200, 5000, 150, 250, 6000, 200, 300, 7000] }] });
     expect(await mine(asha.as)).toMatchObject({ inkRev: 2, pen: null });
   });
 
@@ -303,7 +303,7 @@ describe('Writing on the video', () => {
     await move(ravi, id, { playing: false, position: 0 });
     expect((await ink(ravi)).strokes).toHaveLength(1);
     await move(ravi, id, { playing: true, position: 0 });
-    expect(pc.events.at(-1)).toEqual({ kind: 'clear', show: id, rev: 2 });
+    expect(pc.events.at(-1)).toEqual({ kind: 'clear', show: id, rev: 2, page: 1 });
     expect(await ink(ravi)).toEqual({ rev: 2, strokes: [] });
 
     await move(ravi, id, { playing: false, position: 0 });
@@ -466,7 +466,9 @@ describe('Showing pages', () => {
     await turn(ravi, id, { page: 1, pages: 12 });
     expect((await turn(ravi, id, { page: 13 })).statusCode).toBe(400);
     expect((await turn(ravi, id, { page: 0 })).statusCode).toBe(400);
-    expect((await move(ravi, id, { playing: true, position: 0 })).json().message).toBe('Only a video plays.');
+    const notVideo = await move(ravi, id, { playing: true, position: 0 });
+    expect(notVideo.statusCode).toBe(400);
+    expect(notVideo.json().message).toBe('Only a video plays.');
     const videoShow = (await start(ravi)).json().id;
     const res = await turn(ravi, videoShow, { page: 2 });
     expect(res.statusCode).toBe(400);
@@ -490,5 +492,97 @@ describe('Showing pages', () => {
     expect(res.json().message).toBe('Only a video, PDF or picture can be shown to the class.');
     const link = (await inject('POST', '/api/v1/content/links', admin, { title: 'Site', url: 'https://example.org', classId: c7.id, subject: 'Maths' })).json();
     expect((await start(ravi, link.id)).json().message).toBe('Only a video, PDF or picture can be shown to the class.');
+  });
+});
+
+describe('Writing on pages', () => {
+  // Ravi shows Class 7 a 12-page PDF; Asha's screen has it open.
+  async function book() {
+    const s = await school();
+    const file = await s.upload(s.admin, pdf(), { title: 'Maths book', classId: s.c7.id, subject: 'Maths' });
+    const id = (await s.start(s.ravi, file.id)).json().id as string;
+    await s.turn(s.ravi, id, { page: 1, pages: 12 });
+    await s.inject('POST', `/api/v1/shows/${id}/screen`, s.asha.as, { event: 'opened' });
+    const line = (who: object, page: number, strokeId: string = randomUUID()) =>
+      s.inject('POST', `/api/v1/shows/${id}/ink`, who, { strokeId, colour: 'red', width: 'medium', points: [1, 1, 1], page });
+    const ink = async (who: object) => (await s.inject('GET', `/api/v1/shows/${id}/ink`, who)).json();
+    return { ...s, id, line, ink };
+  }
+
+  it("keeps each page's writing when the teacher turns away and back", async () => {
+    const { ravi, id, line, ink, turn } = await book();
+    await line(ravi, 1);
+    await turn(ravi, id, { page: 2 });
+    await line(ravi, 2);
+    await turn(ravi, id, { page: 1 });
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([1, 2]);
+  });
+
+  it('wipes only the page the teacher is on', async () => {
+    const { ravi, asha, c7, screen, id, line, ink, turn, inject } = await book();
+    const pc = screen(asha.token, c7.id);
+    await line(ravi, 1);
+    await turn(ravi, id, { page: 2 });
+    await line(ravi, 2);
+    expect((await inject('DELETE', `/api/v1/shows/${id}/ink`, ravi)).statusCode).toBe(204);
+    expect(pc.events.at(-1)).toMatchObject({ kind: 'clear', page: 2 });
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([1]);
+  });
+
+  it('refuses a line for a page the show is not on', async () => {
+    const { ravi, asha, id, line, turn, inject } = await book();
+    await inject('PUT', `/api/v1/shows/${id}/pen`, ravi, { studentId: asha.id });
+    await turn(ravi, id, { page: 3 });
+    const res = await line(asha.as, 1);
+    expect(res.statusCode).toBe(409);
+    expect(res.json()).toMatchObject({ code: 'WRONG_PAGE', message: 'Your teacher has moved to another page.' });
+    expect((await line(ravi, 1)).json()).toMatchObject({ code: 'WRONG_PAGE' });
+  });
+
+  it('lets the student with the pen write on a PDF at any time', async () => {
+    const { ravi, asha, id, line, inject } = await book();
+    await inject('PUT', `/api/v1/shows/${id}/pen`, ravi, { studentId: asha.id });
+    expect((await line(asha.as, 1)).statusCode).toBe(204);
+  });
+
+  it('caps lines per page and per show', async () => {
+    const { ravi, id, line, turn } = await book();
+    for (let n = 0; n < INK_STROKES_MAX; n += 1) await line(ravi, 1);
+    expect((await line(ravi, 1)).json()).toMatchObject({ code: 'INK_FULL' });
+    await turn(ravi, id, { page: 2 });
+    expect((await line(ravi, 2)).statusCode).toBe(204);
+    for (let page = 2; page <= INK_SHOW_STROKES_MAX / INK_STROKES_MAX; page += 1) {
+      await turn(ravi, id, { page });
+      for (let n = page === 2 ? 1 : 0; n < INK_STROKES_MAX; n += 1) await line(ravi, page);
+    }
+    await turn(ravi, id, { page: 6 });
+    expect((await line(ravi, 6)).json()).toMatchObject({ code: 'INK_FULL' });
+  });
+
+  it("still wipes a video's writing when it plays or jumps", async () => {
+    const { ravi, start, move, inject } = await school();
+    const id = (await start(ravi)).json().id as string;
+    const send = () => inject('POST', `/api/v1/shows/${id}/ink`, ravi, { strokeId: randomUUID(), colour: 'red', width: 'medium', points: [1, 1, 1], page: 1 });
+    const count = async () => (await inject('GET', `/api/v1/shows/${id}/ink`, ravi)).json().strokes.length;
+    await send();
+    await move(ravi, id, { playing: true, position: 0 });
+    expect(await count()).toBe(0);
+    await move(ravi, id, { playing: false, position: 0 });
+    await send();
+    await move(ravi, id, { playing: false, position: 60 });
+    expect(await count()).toBe(0);
+  });
+
+  it('counts a page turn as "still here", and sends nothing when the same page is repeated', async () => {
+    const { ravi, asha, c7, clock, id, turn, screen, mine } = await book();
+    const pc = screen(asha.token, c7.id);
+    for (let n = 0; n < 3; n += 1) {
+      clock.t += SHOW_STALE_MS * 0.6;
+      expect((await turn(ravi, id, { page: n + 2 })).statusCode).toBe(200);
+    }
+    expect(await mine(asha.as)).toMatchObject({ id, page: 4 }); // well past SHOW_STALE_MS since the start
+    const before = pc.got.length;
+    await turn(ravi, id, { page: 4 });
+    expect(pc.got).toHaveLength(before);
   });
 });

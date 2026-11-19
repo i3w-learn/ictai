@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
-  INK_POINTS_MAX, INK_STROKES_MAX, SCREEN_REPORTS_MAX, SHOW_STALE_MS, WHITEBOARD_PAGES_MAX, showRoom,
+  INK_POINTS_MAX, INK_SHOW_STROKES_MAX, INK_STROKES_MAX, SCREEN_REPORTS_MAX, SHOW_STALE_MS, WHITEBOARD_PAGES_MAX, showRoom,
   type ContentItem, type Ink, type InkAdd, type InkEvent, type InkStroke, type Principal, type ScreenReport, type Show, type ShowKind, type ShowPage, type ShowStart,
   type ShowUpdate, type StaffPrincipal, type StudentPrincipal,
 } from '@ict/contracts';
@@ -173,12 +173,15 @@ export class ShowService {
     const live = this.seen(p, id);
     const who = this.writer(p, live);
     if (p.kind === 'student' && live.playing) throw new AppError(409, 'SHOW_PLAYING', 'You can write when your teacher pauses the video.');
+    // The screens show one page; a line for any other page is about something no longer on show.
+    if (input.page !== live.page) throw new AppError(409, 'WRONG_PAGE', 'Your teacher has moved to another page.');
     let stroke = live.strokes.get(input.strokeId);
     if (stroke && stroke.by !== who.by) throw new AppError(403, 'FORBIDDEN', 'That line is not yours.');
     if (!stroke) {
-      if (live.strokes.size >= INK_STROKES_MAX) throw new AppError(409, 'INK_FULL', 'There is no room left to write. Wipe the writing first.');
+      const onPage = [...live.strokes.values()].filter((x) => x.page === input.page).length;
+      if (onPage >= INK_STROKES_MAX || live.strokes.size >= INK_SHOW_STROKES_MAX) throw new AppError(409, 'INK_FULL', 'There is no room left to write. Wipe the writing first.');
       if (!live.strokes.size) this.log('show.ink.started', { show: short(live.id), by: who.byName });
-      stroke = { id: input.strokeId, ...who, colour: input.colour, width: input.width, points: [] };
+      stroke = { id: input.strokeId, ...who, page: input.page, colour: input.colour, width: input.width, points: [] };
       live.strokes.set(stroke.id, stroke);
     }
     // A line that is already as long as it may be simply stops growing.
@@ -202,7 +205,7 @@ export class ShowService {
 
   clear(actor: StaffPrincipal, id: string) {
     const live = this.mine(actor, id);
-    if (live.strokes.size) this.log('show.ink.cleared', { show: short(live.id), by: actor.displayName });
+    if ([...live.strokes.values()].some((x) => x.page === live.page)) this.log('show.ink.cleared', { show: short(live.id), by: actor.displayName });
     this.wipe(live);
   }
 
@@ -293,11 +296,13 @@ export class ShowService {
     return { by: p.studentId, byName: p.name };
   }
 
+  // Wipes the writing on the page the show is on; other pages keep theirs.
   private wipe(live: Live) {
-    if (!live.strokes.size) return;
-    live.strokes.clear();
+    const here = [...live.strokes].filter(([, x]) => x.page === live.page);
+    if (!here.length) return;
+    for (const [id] of here) live.strokes.delete(id);
     live.inkRev += 1;
-    this.say(live, { kind: 'clear', show: live.id, rev: live.inkRev });
+    this.say(live, { kind: 'clear', show: live.id, rev: live.inkRev, page: live.page });
   }
 
   private say(live: Live, event: InkEvent) {

@@ -9166,7 +9166,7 @@
                     "pages": {
                       "nullable": true,
                       "type": "integer",
-                      "minimum": -9007199254740991,
+                      "minimum": 1,
                       "maximum": 9007199254740991
                     },
                     "at": {
@@ -9439,7 +9439,7 @@
                     "pages": {
                       "nullable": true,
                       "type": "integer",
-                      "minimum": -9007199254740991,
+                      "minimum": 1,
                       "maximum": 9007199254740991
                     },
                     "at": {
@@ -9756,7 +9756,7 @@
                     "pages": {
                       "nullable": true,
                       "type": "integer",
-                      "minimum": -9007199254740991,
+                      "minimum": 1,
                       "maximum": 9007199254740991
                     },
                     "at": {
@@ -10035,6 +10035,11 @@
                           "byName": {
                             "type": "string"
                           },
+                          "page": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
                           "colour": {
                             "type": "string",
                             "enum": [
@@ -10064,6 +10069,7 @@
                           "id",
                           "by",
                           "byName",
+                          "page",
                           "colour",
                           "width",
                           "points"
@@ -10135,6 +10141,11 @@
                     "format": "uuid",
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   },
+                  "page": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
                   "colour": {
                     "type": "string",
                     "enum": [
@@ -10165,6 +10176,7 @@
                 },
                 "required": [
                   "strokeId",
+                  "page",
                   "colour",
                   "width",
                   "points"
@@ -10480,7 +10492,7 @@
                     "pages": {
                       "nullable": true,
                       "type": "integer",
-                      "minimum": -9007199254740991,
+                      "minimum": 1,
                       "maximum": 9007199254740991
                     },
                     "at": {
@@ -10713,7 +10725,7 @@
                     "pages": {
                       "nullable": true,
                       "type": "integer",
-                      "minimum": -9007199254740991,
+                      "minimum": 1,
                       "maximum": 9007199254740991
                     },
                     "at": {
