@@ -20,6 +20,7 @@
     "clsx": "^2.1.1",
     "jsqr": "1.4.0",
     "lucide-react": "^1.64.0",
+    "pdfjs-dist": "5.7.284",
     "qrcode": "1.5.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
