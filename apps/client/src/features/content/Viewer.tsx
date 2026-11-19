@@ -1,94 +1,71 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, MonitorPlay } from 'lucide-react';
-import { SHOW_BEAT_MS, type ContentItem, type Show } from '@ict/contracts';
+import { lazy, Suspense, useRef, useState } from 'react';
+import { ArrowLeft, ChevronLeft, ChevronRight, MonitorPlay } from 'lucide-react';
+import type { ContentItem } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { ApiCallError } from '../../core/api-client';
-import { Button, Card, ErrorNote, Note, Select, useAction, useLatest } from '../../ui/ui';
+import { Button, Card, ErrorNote, Note, Select } from '../../ui/ui';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from '../shows/Ink';
+import { turnPage } from '../shows/show-pages';
+import { useShowHost } from '../shows/useShowHost';
 import { KIND_WORDS, sizeWords } from './files';
 import { useFileUrl } from './useFileUrl';
 import { VideoPlayer, type PlayerState } from './VideoPlayer';
 
-// Opens one library item: a picture as a picture, a PDF in the built-in reader, video and sound with
-// their own players. A teacher who may host lessons can also show a video to its class: it then plays
-// on the class's screens too, following whatever she does here.
+// pdf.js is big, so it is fetched only when a PDF is first opened this way.
+const PdfPages = lazy(() => import('./PdfPages').then((m) => ({ default: m.PdfPages })));
+
+// What the teacher is told about a show, before and while it is on.
+const SHOW_WORDS = {
+  video: { before: 'The video opens on every student PC of the class and follows what you do here.', during: 'When you play, pause or skip, their screens do the same.' },
+  pdf: { before: 'The book opens on every student PC of the class, on the page you are on.', during: 'When you turn the page, their screens turn too.' },
+  image: { before: 'The picture opens on every student PC of the class.', during: '' },
+} as const;
+
+// Opens one library item: a picture as a picture, a PDF page by page (students: in the built-in
+// reader), video and sound with their own players. A teacher who may host lessons can also show a
+// video, a PDF or a picture to its class: it then opens on the class's screens too, following
+// whatever she does here, and what she writes on it with the pen shows there as well.
 export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void }) {
-  const { call, keepAlive, state } = useApp();
-  const { url, percent, error, onError } = useFileUrl(item);
+  const { state } = useApp();
+  const me = state.session?.principal;
+  const staff = me?.kind === 'staff';
+  const { url, percent, error, onError } = useFileUrl(item, { streamPdf: staff });
 
   // --- Show to class ---
-  const me = state.session?.principal;
-  const canShow = item.kind === 'video' && me?.kind === 'staff' && me.permissions.includes('lesson.present');
-  const [showing, setShowing] = useState(false);
-  const showId = useRef<string | null>(null);
-  // The show as the server last described it: who is watching, who has the pen, how much is written.
-  const [live, setLive] = useState<Show | null>(null);
+  const canShow = staff && me.permissions.includes('lesson.present') && (item.kind === 'video' || item.kind === 'pdf' || item.kind === 'image');
+  const words = item.kind === 'video' || item.kind === 'pdf' || item.kind === 'image' ? SHOW_WORDS[item.kind] : null;
   // Asks the player where it is right now.
   const peek = useRef<(() => PlayerState) | null>(null);
-  const tell = (s: PlayerState) => {
-    const id = showId.current;
-    if (!id) return;
-    call('PUT /api/v1/shows/:id', { params: { id }, body: s }).then((now) => { if (showId.current === id) setLive(now); }, (e) => {
-      if (!(e instanceof ApiCallError) || showId.current !== id) return;
-      // Someone else is now showing this class something: stop saying this show is on.
-      if (e.status === 410) { showId.current = null; setShowing(false); setLive(null); }
-      // The server no longer knows the show (the Server PC was away for a while, or restarted) but the
-      // teacher never stopped it: start it again, at the place her video is now.
-      if (e.status === 404) {
-        showId.current = null;
-        call('POST /api/v1/shows', { body: { contentId: item.id } }).then(
-          (again) => { showId.current = again.id; setLive(again); const now = peek.current?.(); if (now) tell(now); },
-          () => { setShowing(false); setLive(null); },
-        );
-      }
-    });
-  };
-  const tellNow = useLatest(tell);
-  const startShow = useAction(async () => {
-    const s = await call('POST /api/v1/shows', { body: { contentId: item.id } });
-    showId.current = s.id;
-    setLive(s);
-    setShowing(true);
-    const now = peek.current?.();
-    if (now) tell(now);
-  });
-  const stopShow = useAction(async () => {
-    const id = showId.current;
-    showId.current = null;
-    setShowing(false);
-    setLive(null);
-    if (id) await call('DELETE /api/v1/shows/:id', { params: { id } });
-  });
-  // While showing, the server hears from this screen every few seconds, so it knows the teacher is
-  // still here; and the class's screens are put right if one has drifted.
-  useEffect(() => {
-    if (!showing) return;
-    const t = setInterval(() => { const s = peek.current?.(); if (s) tellNow.current(s); }, SHOW_BEAT_MS);
-    return () => clearInterval(t);
-  }, [showing, tellNow]);
-  // And the app itself says "still here", because this page's own timer is slowed down, sometimes to
-  // once a minute, when the window is hidden or covered (the teacher has another program in front).
-  const liveId = showing ? live?.id : undefined;
-  useEffect(() => {
-    if (!liveId) return;
-    keepAlive({ key: 'POST /api/v1/shows/:id/beat', input: { params: { id: liveId } } }, SHOW_BEAT_MS);
-    return () => keepAlive(null);
-  }, [keepAlive, liveId]);
-  // Leaving the video ends the show.
-  useEffect(() => () => { const id = showId.current; if (id) void call('DELETE /api/v1/shows/:id', { params: { id } }).catch(() => undefined); }, [call]);
+  const host = useShowHost({ contentId: item.id }, peek);
+  const { showing, live } = host;
 
-  // --- Writing on the video, while it is being shown ---
-  const board = useInk(showing ? live : null, 'teacher', me?.kind === 'staff' ? me.displayName : '');
+  // --- Turning the pages of a PDF ---
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState<number | null>(null);
+  const [bookError, setBookError] = useState<string | null>(null);
+  const go = (by: number) => {
+    const next = turnPage(page, by, pages);
+    if (next === page) return;
+    setPage(next);
+    host.turn(next);
+  };
+  const counted = (n: number) => {
+    const at = Math.min(page, n);
+    setPages(n);
+    setPage(at);
+    host.turn(at, n);
+  };
+
+  // --- Writing on what is shown, while it is being shown ---
+  const board = useInk(showing ? live : null, 'teacher', staff ? me.displayName : '');
   const inkProblem = useInkProblem(board);
   const [picked, setPicked] = useState<InkTools>({ tool: null, colour: 'red', width: 'medium' });
   const [aspect, setAspect] = useState<number | null>(null);
   const pause = useRef<(() => void) | null>(null);
   const tools: InkTools = showing ? picked : { ...picked, tool: null };
-  const givePen = useAction(async (studentId: string | null) => {
-    const id = showId.current;
-    if (id) setLive(await call('PUT /api/v1/shows/:id/pen', { params: { id }, body: { studentId } }));
-  });
   const watching = live?.watching ?? [];
+  const toolbar = showing && <InkToolbar tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />;
+  // The pen's bar over a page or a picture, dark like the video player's.
+  const darkBar = toolbar && <div className="flex justify-center rounded-2xl bg-[hsl(222_30%_10%)] px-3 py-1.5">{toolbar}</div>;
 
   return (
     <div className="mx-auto grid w-full max-w-5xl gap-4">
@@ -102,28 +79,29 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
         showing ? (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3" role="status">
             <MonitorPlay className="size-5 shrink-0 text-primary" />
-            <p className="min-w-56 flex-1"><b>Class {item.className} can see this now.</b> When you play, pause or skip, their screens do the same. What you write with the pen, they see too.</p>
+            <p className="min-w-56 flex-1"><b>Class {item.className} can see this now.</b> {words?.during} What you write with the pen, they see too.</p>
             {live?.pen ? (
               <>
                 <span><b>{live.pen.name}</b> has the pen.</span>
-                <Button variant="quiet" disabled={givePen.busy} onClick={() => givePen.run(null)}>Take the pen back</Button>
+                <Button variant="quiet" disabled={host.busy.pen} onClick={() => host.givePen(null)}>Take the pen back</Button>
               </>
             ) : (
-              <Select aria-label="Give the pen to a student" className="w-auto" value="" disabled={givePen.busy || watching.length === 0} onChange={(e) => { if (e.target.value) void givePen.run(e.target.value); }}>
+              <Select aria-label="Give the pen to a student" className="w-auto" value="" disabled={host.busy.pen || watching.length === 0} onChange={(e) => { if (e.target.value) void host.givePen(e.target.value); }}>
                 <option value="">{watching.length ? 'Give the pen to…' : 'No student screen has it open yet'}</option>
                 {watching.map((w) => <option key={w.studentId} value={w.studentId}>{w.name}</option>)}
               </Select>
             )}
-            <Button variant="quiet" disabled={stopShow.busy} onClick={() => stopShow.run()}>Stop showing</Button>
+            <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>Stop showing</Button>
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
-            <Button disabled={startShow.busy} onClick={() => startShow.run()}><MonitorPlay className="size-4" /> Show to Class {item.className}</Button>
-            <span className="text-sm text-muted-foreground">The video opens on every student PC of the class and follows what you do here.</span>
+            <Button disabled={host.busy.start} onClick={() => host.start()}><MonitorPlay className="size-4" /> Show to Class {item.className}</Button>
+            <span className="text-sm text-muted-foreground">{words?.before}</span>
           </div>
         )
       )}
-      <ErrorNote message={startShow.error ?? stopShow.error ?? givePen.error ?? inkProblem} />
+      <ErrorNote message={host.error ?? inkProblem} />
+      <ErrorNote message={bookError} />
 
       {item.kind === 'link' ? (
         <Card className="grid gap-3 p-6">
@@ -139,14 +117,46 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
         </Card>
       ) : url && (
         <>
-          {item.kind === 'image' && <img src={url} alt={item.title} onError={onError} className="mx-auto max-h-[75vh] max-w-full rounded-2xl border border-border bg-card" />}
-          {item.kind === 'pdf' && <iframe src={url} title={item.title} className="h-[78vh] w-full rounded-2xl border border-border bg-card" />}
+          {item.kind === 'image' && (
+            <div className="grid gap-3">
+              {darkBar}
+              {/* The writing layer covers the picture exactly; a ring, not a border, so the two line up. */}
+              <div className="relative mx-auto w-fit max-w-full">
+                <img
+                  src={url} alt={item.title} onError={onError}
+                  onLoad={(e) => { const { naturalWidth: w, naturalHeight: h } = e.currentTarget; if (w && h) setAspect(w / h); }}
+                  className="block max-h-[75vh] max-w-full rounded-2xl bg-card ring-1 ring-border"
+                />
+                <InkLayer board={board} aspect={aspect} tools={tools} />
+              </div>
+            </div>
+          )}
+          {item.kind === 'pdf' && (staff ? (
+            <div className="grid gap-3">
+              {darkBar}
+              <div className="h-[78vh] w-full overflow-hidden rounded-2xl border border-border bg-card">
+                <Suspense fallback={<p className="grid h-full place-items-center text-muted-foreground" role="status">Opening…</p>}>
+                  <PdfPages
+                    url={url} page={page} onPages={counted} onAspect={setAspect}
+                    // A streamed book that cannot be read is fetched whole instead; past that, say so.
+                    onError={onError ?? (() => setBookError('This book could not be opened.'))}
+                    layer={<InkLayer board={board} aspect={aspect} tools={tools} />}
+                  />
+                </Suspense>
+              </div>
+              <div className="flex items-center justify-center gap-4">
+                <Button variant="quiet" className="min-h-14 px-6 text-base" disabled={page <= 1} onClick={() => go(-1)}><ChevronLeft className="size-5" /> Previous</Button>
+                <span className="min-w-36 text-center text-lg font-semibold tabular-nums" role="status">Page {page} of {pages ?? '…'}</span>
+                <Button variant="quiet" className="min-h-14 px-6 text-base" disabled={pages === null || page >= pages} onClick={() => go(1)}>Next <ChevronRight className="size-5" /></Button>
+              </div>
+            </div>
+          ) : <iframe src={url} title={item.title} className="h-[78vh] w-full rounded-2xl border border-border bg-card" />)}
           {item.kind === 'video' && (
             <VideoPlayer
-              key={url} src={url} title={item.title} onError={onError} peek={peek} onState={showing ? tell : undefined}
+              key={url} src={url} title={item.title} onError={onError} peek={peek} onState={showing ? host.tell : undefined}
               // The pen touching down pauses the video: writing is about one moment of it.
               pause={pause} onAspect={setAspect} layer={<InkLayer board={board} aspect={aspect} tools={tools} onPenDown={() => pause.current?.()} />}
-              tools={showing && <InkToolbar tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />}
+              tools={toolbar}
               plain={tools.tool !== null}
             />
           )}
