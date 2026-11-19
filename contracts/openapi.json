@@ -8984,7 +8984,7 @@
     },
     "/api/v1/shows": {
       "post": {
-        "summary": "Start showing a library video to its class; it opens on their screens",
+        "summary": "Start showing a library video, PDF or picture to its class, or a whiteboard to a class; it opens on their screens",
         "x-access": {
           "kind": "staff",
           "permission": "lesson.present"
@@ -8999,16 +8999,40 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "contentId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "contentId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "required": [
+                      "contentId"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "whiteboard": {
+                        "type": "boolean",
+                        "enum": [
+                          true
+                        ]
+                      },
+                      "classId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "required": [
+                      "whiteboard",
+                      "classId"
+                    ]
                   }
-                },
-                "required": [
-                  "contentId"
                 ]
               }
             }
@@ -9031,7 +9055,17 @@
                     "className": {
                       "type": "string"
                     },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "video",
+                        "pdf",
+                        "image",
+                        "whiteboard"
+                      ]
+                    },
                     "item": {
+                      "nullable": true,
                       "type": "object",
                       "properties": {
                         "id": {
@@ -9124,6 +9158,17 @@
                     "rate": {
                       "type": "number"
                     },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "pages": {
+                      "nullable": true,
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
                     "at": {
                       "type": "number"
                     },
@@ -9174,11 +9219,14 @@
                     "id",
                     "classId",
                     "className",
+                    "kind",
                     "item",
                     "byName",
                     "playing",
                     "position",
                     "rate",
+                    "page",
+                    "pages",
                     "at",
                     "now"
                   ]
@@ -9280,7 +9328,17 @@
                     "className": {
                       "type": "string"
                     },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "video",
+                        "pdf",
+                        "image",
+                        "whiteboard"
+                      ]
+                    },
                     "item": {
+                      "nullable": true,
                       "type": "object",
                       "properties": {
                         "id": {
@@ -9373,6 +9431,17 @@
                     "rate": {
                       "type": "number"
                     },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "pages": {
+                      "nullable": true,
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
                     "at": {
                       "type": "number"
                     },
@@ -9423,11 +9492,14 @@
                     "id",
                     "classId",
                     "className",
+                    "kind",
                     "item",
                     "byName",
                     "playing",
                     "position",
                     "rate",
+                    "page",
+                    "pages",
                     "at",
                     "now"
                   ]
@@ -9483,6 +9555,274 @@
         "responses": {
           "204": {
             "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shows/{id}/page": {
+      "put": {
+        "summary": "Move every screen of the class to this page; a whiteboard may also gain a page",
+        "x-access": {
+          "kind": "staff",
+          "permission": "lesson.present"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "page": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5000
+                  },
+                  "pages": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5000
+                  }
+                },
+                "required": [
+                  "page"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "classId": {
+                      "type": "string"
+                    },
+                    "className": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "video",
+                        "pdf",
+                        "image",
+                        "whiteboard"
+                      ]
+                    },
+                    "item": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "pdf",
+                            "image",
+                            "video",
+                            "audio",
+                            "link"
+                          ]
+                        },
+                        "classId": {
+                          "type": "string"
+                        },
+                        "className": {
+                          "type": "string"
+                        },
+                        "subject": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "chapter": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fileHash": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "fileName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "size": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "mime": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "url": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "needsInternet": {
+                          "type": "boolean"
+                        },
+                        "byName": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "kind",
+                        "classId",
+                        "className",
+                        "subject",
+                        "chapter",
+                        "fileHash",
+                        "fileName",
+                        "size",
+                        "mime",
+                        "url",
+                        "needsInternet",
+                        "byName",
+                        "createdAt"
+                      ]
+                    },
+                    "byName": {
+                      "type": "string"
+                    },
+                    "playing": {
+                      "type": "boolean"
+                    },
+                    "position": {
+                      "type": "number"
+                    },
+                    "rate": {
+                      "type": "number"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "pages": {
+                      "nullable": true,
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "at": {
+                      "type": "number"
+                    },
+                    "now": {
+                      "type": "number"
+                    },
+                    "inkRev": {
+                      "default": 0,
+                      "type": "number"
+                    },
+                    "pen": {
+                      "default": null,
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "studentId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "studentId",
+                        "name"
+                      ]
+                    },
+                    "watching": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "classId",
+                    "className",
+                    "kind",
+                    "item",
+                    "byName",
+                    "playing",
+                    "position",
+                    "rate",
+                    "page",
+                    "pages",
+                    "at",
+                    "now"
+                  ]
+                }
+              }
+            }
           },
           "default": {
             "description": "Error",
@@ -10029,7 +10369,17 @@
                     "className": {
                       "type": "string"
                     },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "video",
+                        "pdf",
+                        "image",
+                        "whiteboard"
+                      ]
+                    },
                     "item": {
+                      "nullable": true,
                       "type": "object",
                       "properties": {
                         "id": {
@@ -10122,6 +10472,17 @@
                     "rate": {
                       "type": "number"
                     },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "pages": {
+                      "nullable": true,
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
                     "at": {
                       "type": "number"
                     },
@@ -10172,11 +10533,14 @@
                     "id",
                     "classId",
                     "className",
+                    "kind",
                     "item",
                     "byName",
                     "playing",
                     "position",
                     "rate",
+                    "page",
+                    "pages",
                     "at",
                     "now"
                   ]
@@ -10238,7 +10602,17 @@
                     "className": {
                       "type": "string"
                     },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "video",
+                        "pdf",
+                        "image",
+                        "whiteboard"
+                      ]
+                    },
                     "item": {
+                      "nullable": true,
                       "type": "object",
                       "properties": {
                         "id": {
@@ -10331,6 +10705,17 @@
                     "rate": {
                       "type": "number"
                     },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "pages": {
+                      "nullable": true,
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
                     "at": {
                       "type": "number"
                     },
@@ -10381,11 +10766,14 @@
                     "id",
                     "classId",
                     "className",
+                    "kind",
                     "item",
                     "byName",
                     "playing",
                     "position",
                     "rate",
+                    "page",
+                    "pages",
                     "at",
                     "now"
                   ]

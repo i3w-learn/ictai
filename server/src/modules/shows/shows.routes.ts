@@ -4,7 +4,8 @@ import type { ShowService } from './show.service.js';
 
 export function showRoutes(app: FastifyInstance, deps: { shows: ShowService }) {
   const { shows } = deps;
-  route(app, 'POST /api/v1/shows', ({ body, principal }) => shows.start(asStaff(principal), body.contentId));
+  route(app, 'POST /api/v1/shows', ({ body, principal }) => shows.start(asStaff(principal), body));
+  route(app, 'PUT /api/v1/shows/:id/page', ({ params, body, principal }) => shows.page(asStaff(principal), params.id, body));
   route(app, 'PUT /api/v1/shows/:id', ({ params, body, principal }) => shows.update(asStaff(principal), params.id, body));
   route(app, 'POST /api/v1/shows/:id/beat', ({ params, principal }) => shows.beat(asStaff(principal), params.id));
   route(app, 'DELETE /api/v1/shows/:id', ({ params, principal }) => shows.stop(asStaff(principal), params.id));

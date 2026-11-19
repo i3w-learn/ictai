@@ -5,6 +5,8 @@ import { testServer } from './helpers.js';
 
 const mp4 = (size = 2000) => Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(size - 12, 1)]);
 const pdf = () => Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(200, 0x20)]);
+const png = () => Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(200, 2)]);
+const mp3 = () => Buffer.concat([Buffer.from('ID3'), Buffer.alloc(200, 3)]);
 
 // Class 7 (Asha) and Class 8 (Kabir). Ravi teaches Maths to Class 7; Tara teaches Class 7 but may not host lessons.
 async function school() {
@@ -43,8 +45,10 @@ async function school() {
   };
   const start = (who: object, contentId = video.id) => inject('POST', '/api/v1/shows', who, { contentId });
   const move = (who: object, id: string, body: object) => inject('PUT', `/api/v1/shows/${id}`, who, body);
+  const turn = (who: object, id: string, body: object) => inject('PUT', `/api/v1/shows/${id}/page`, who, body);
+  const board = (who: object, classId: string) => inject('POST', '/api/v1/shows', who, { whiteboard: true, classId });
   const mine = async (who: object) => (await inject('GET', '/api/v1/shows/mine', who)).json();
-  return { ...t, inject, admin, ravi, raviToken, c7, c8, asha, kabir, video, upload, screen, start, move, mine };
+  return { ...t, inject, admin, ravi, raviToken, c7, c8, asha, kabir, video, upload, screen, start, move, turn, board, mine };
 }
 
 describe('Show to class', () => {
@@ -176,7 +180,7 @@ describe('Show to class', () => {
   it('refuses what cannot be shown, and people who may not show', async () => {
     const { inject, admin, ravi, asha, c7, c8, upload, start, move } = await school();
     const doc = await upload(admin, pdf(), { title: 'Book', classId: c7.id, subject: 'Maths' });
-    expect((await start(ravi, doc.id)).json().message).toBe('Only a video can be shown to the class.');
+    expect((await start(ravi, doc.id)).statusCode).toBe(201); // a PDF may be shown too
     const science = await upload(admin, mp4(3000), { title: 'Science video', classId: c7.id, subject: 'Science' });
     expect((await start(ravi, science.id)).statusCode).toBe(404); // not her subject
     const forEight = await upload(admin, mp4(4000), { title: 'Class 8 video', classId: c8.id, subject: 'Maths' });
@@ -402,5 +406,89 @@ describe('Writing on the video', () => {
       'show.pen.taken student="Asha"',
       'show.ink.cleared by="Ravi K"',
     ]);
+  });
+});
+
+describe('Showing pages', () => {
+  it('shows a PDF on page 1 and moves every screen when the teacher turns the page', async () => {
+    const { admin, ravi, asha, c7, upload, screen, start, turn } = await school();
+    const book = await upload(admin, pdf(), { title: 'Maths book', classId: c7.id, subject: 'Maths' });
+    const pc = screen(asha.token, c7.id);
+    const res = await start(ravi, book.id);
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ kind: 'pdf', page: 1, pages: null, item: { id: book.id } });
+    const id = res.json().id;
+    // The teacher's app opens the file and says how many pages it has.
+    const told = await turn(ravi, id, { page: 1, pages: 12 });
+    expect(told.statusCode).toBe(200);
+    expect(told.json()).toMatchObject({ page: 1, pages: 12 });
+    expect((await turn(ravi, id, { page: 5 })).json()).toMatchObject({ page: 5, pages: 12 });
+    expect(pc.last()).toMatchObject({ page: 5, pages: 12 });
+    // Only the teacher who is showing turns the page.
+    expect((await turn(asha.as, id, { page: 2 })).statusCode).toBe(403);
+    expect((await turn(admin, id, { page: 2 })).statusCode).toBe(404);
+  });
+
+  it('shows a picture as one page', async () => {
+    const { admin, ravi, c7, upload, start, turn } = await school();
+    const picture = await upload(admin, png(), { title: 'Number line', classId: c7.id, subject: 'Maths' });
+    const res = await start(ravi, picture.id);
+    expect(res.json()).toMatchObject({ kind: 'image', page: 1, pages: 1 });
+    expect((await turn(ravi, res.json().id, { page: 2 })).statusCode).toBe(400);
+    expect((await turn(ravi, res.json().id, { page: 1 })).statusCode).toBe(200);
+  });
+
+  it('starts a whiteboard for a class the teacher teaches, and adds pages up to 30', async () => {
+    const { ravi, asha, c7, c8, screen, board, turn, mine } = await school();
+    const pc = screen(asha.token, c7.id);
+    const res = await board(ravi, c7.id);
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ kind: 'whiteboard', item: null, classId: c7.id, className: '7', page: 1, pages: 1 });
+    expect(pc.last()).toMatchObject({ kind: 'whiteboard', page: 1 });
+    expect(await mine(asha.as)).toMatchObject({ kind: 'whiteboard', item: null });
+    const id = res.json().id;
+    expect((await turn(ravi, id, { page: 2, pages: 2 })).json()).toMatchObject({ page: 2, pages: 2 });
+    expect((await turn(ravi, id, { page: 4, pages: 4 })).statusCode).toBe(400); // grows by one at most
+    expect((await turn(ravi, id, { page: 1, pages: 1 })).statusCode).toBe(400); // and never shrinks
+    expect((await turn(ravi, id, { page: 1 })).json()).toMatchObject({ page: 1, pages: 2 });
+    for (let n = 3; n <= 30; n += 1) expect((await turn(ravi, id, { page: n, pages: n })).statusCode).toBe(200);
+    expect((await turn(ravi, id, { page: 31, pages: 31 })).statusCode).toBe(400);
+    expect(pc.last()).toMatchObject({ page: 30, pages: 30 });
+    // A class she does not teach looks the same as no class.
+    expect((await board(ravi, c8.id)).statusCode).toBe(404);
+    expect((await board(ravi, randomUUID())).statusCode).toBe(404);
+  });
+
+  it('refuses pages that do not exist', async () => {
+    const { admin, ravi, c7, upload, start, turn, move } = await school();
+    const book = await upload(admin, pdf(), { title: 'Maths book', classId: c7.id, subject: 'Maths' });
+    const id = (await start(ravi, book.id)).json().id;
+    await turn(ravi, id, { page: 1, pages: 12 });
+    expect((await turn(ravi, id, { page: 13 })).statusCode).toBe(400);
+    expect((await turn(ravi, id, { page: 0 })).statusCode).toBe(400);
+    expect((await move(ravi, id, { playing: true, position: 0 })).json().message).toBe('Only a video plays.');
+    const videoShow = (await start(ravi)).json().id;
+    const res = await turn(ravi, videoShow, { page: 2 });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().message).toBe('A video has no pages.');
+  });
+
+  it('keeps a whiteboard going when library items change, and ends it when it goes quiet', async () => {
+    const { inject, admin, ravi, asha, c7, clock, video, board, mine } = await school();
+    const id = (await board(ravi, c7.id)).json().id;
+    await inject('DELETE', `/api/v1/content/${video.id}`, admin);
+    expect(await mine(asha.as)).toMatchObject({ id, kind: 'whiteboard' });
+    clock.t += SHOW_STALE_MS + 1;
+    expect(await mine(asha.as)).toBeNull();
+  });
+
+  it('refuses sound and web links', async () => {
+    const { inject, admin, ravi, c7, upload, start } = await school();
+    const sound = await upload(admin, mp3(), { title: 'Song', classId: c7.id, subject: 'Maths' });
+    const res = await start(ravi, sound.id);
+    expect(res.statusCode).toBe(400);
+    expect(res.json().message).toBe('Only a video, PDF or picture can be shown to the class.');
+    const link = (await inject('POST', '/api/v1/content/links', admin, { title: 'Site', url: 'https://example.org', classId: c7.id, subject: 'Maths' })).json();
+    expect((await start(ravi, link.id)).json().message).toBe('Only a video, PDF or picture can be shown to the class.');
   });
 });

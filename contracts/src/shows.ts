@@ -16,8 +16,28 @@ import { ContentItem } from './content.js';
 export const SHOW_BEAT_MS = 5_000;
 export const SHOW_STALE_MS = 20_000;
 
-export const ShowStart = z.object({ contentId: Id });
+// What is being shown. A video plays; a PDF, a picture and a whiteboard are shown page by page, and
+// every screen of the class is on the page the teacher is on. A picture is one page. A whiteboard is
+// a show with no file: only blank pages to write on.
+export const ShowKind = z.enum(['video', 'pdf', 'image', 'whiteboard']);
+export type ShowKind = z.infer<typeof ShowKind>;
+
+// Start showing a library item (video, PDF or picture), or a blank whiteboard to one class.
+export const ShowStart = z.union([z.object({ contentId: Id }), z.object({ whiteboard: z.literal(true), classId: Id })]);
 export type ShowStart = z.infer<typeof ShowStart>;
+
+// Move every screen to `page`. The teacher's app sends `pages` once for a PDF, after opening the file
+// and counting its pages. A whiteboard sends `pages` one higher to add a page.
+export const ShowPage = z.object({
+  page: z.number().int().min(1).max(5000),
+  pages: z.number().int().min(1).max(5000).optional(),
+});
+export type ShowPage = z.infer<typeof ShowPage>;
+// The most pages a whiteboard may have, so one show cannot fill the server's memory.
+export const WHITEBOARD_PAGES_MAX = 30;
+// Every screen draws the whiteboard in this shape (wide, like a projector), with plain bars where a
+// screen is a different shape, so writing lands on the same spot of the board everywhere.
+export const WHITEBOARD_ASPECT = 16 / 9;
 
 // Where the teacher's player is. `position` is seconds into the video.
 export const ShowUpdate = z.object({
@@ -50,11 +70,17 @@ export const Show = z.object({
   id: z.string(),
   classId: z.string(),
   className: z.string(),
-  item: ContentItem,
+  kind: ShowKind,
+  // The library item being shown; null for a whiteboard, which has no file.
+  item: ContentItem.nullable(),
   byName: z.string(),
   playing: z.boolean(),
   position: z.number(),
   rate: z.number(),
+  // The page every screen is on (1 for a video), and how many pages there are, once known: a
+  // whiteboard always, a picture 1, a PDF after the teacher's app has counted them, a video never.
+  page: z.number().int().min(1),
+  pages: z.number().int().nullable(),
   // Server clock when the teacher was at `position`, and server clock now. A screen works out where
   // the video should be from these two, so it never needs its own clock to be right.
   at: z.number(),
@@ -95,6 +121,8 @@ export type InkWidth = z.infer<typeof InkWidth>;
 export const INK_POINTS_MAX = 2000;
 export const INK_STROKES_MAX = 300;
 export const INK_BATCH_MAX = 300;
+// Lines on one show across all its pages.
+export const INK_SHOW_STROKES_MAX = 1500;
 
 // Points one after another as x, y, pressure, each 0 to INK_SCALE.
 const numbers = (maxPoints: number) =>
