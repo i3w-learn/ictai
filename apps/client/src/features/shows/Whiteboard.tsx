@@ -4,7 +4,7 @@ import { WHITEBOARD_ASPECT, WHITEBOARD_PAGES_MAX, type SchoolClass } from '@ict/
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Select, useAction } from '../../ui/ui';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from './Ink';
-import { PenRow } from './PenRow';
+import { PenAsks, PenRow } from './PenRow';
 import { turnPage } from './show-pages';
 import { useShowHost } from './useShowHost';
 
@@ -60,7 +60,7 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
           <div className="flex flex-wrap items-center gap-3" role="status">
             <span className="flex h-11 items-center gap-2 rounded-full bg-primary/10 px-5 text-base font-semibold text-primary"><MonitorPlay className="size-5 shrink-0" /> Class {live?.className} can see this board now</span>
             <PenRow host={host} />
-          <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>Stop showing</Button>
+            <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>Stop showing</Button>
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3" title="A blank board opens on every student PC of the class.">
@@ -72,6 +72,7 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
           </div>
         )}
       </div>
+      {showing && <PenAsks host={host} />}
       <ErrorNote message={load.error ?? host.error ?? inkProblem} />
 
       {/* The board in the middle, as big as fits at its wide shape; the pen down its left side and the

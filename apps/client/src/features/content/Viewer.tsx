@@ -4,7 +4,7 @@ import type { ContentItem } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, Card, ErrorNote, Note } from '../../ui/ui';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from '../shows/Ink';
-import { PenRow } from '../shows/PenRow';
+import { PenAsks, PenRow } from '../shows/PenRow';
 import { turnPage } from '../shows/show-pages';
 import { useShowHost } from '../shows/useShowHost';
 import { KIND_WORDS, sizeWords } from './files';
@@ -75,7 +75,7 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
       <InkToolbar vertical tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />
     </div>
   );
-  // Who has the pen, who is asking for it, and the way to give it or take it back.
+  // Who has the pen, and the way to give it or take it back.
   const penGiving = <PenRow host={host} />;
 
   return (
@@ -113,6 +113,7 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
           </div>
         )
       )}
+      {showing && <PenAsks host={host} />}
       <ErrorNote message={host.error ?? inkProblem} />
       <ErrorNote message={bookError} />
 
