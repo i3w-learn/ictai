@@ -77,4 +77,18 @@ describe('videos that come with the app', () => {
     expect((await app.inject({ method: 'GET', url: '/api/v1/classes', headers })).json()).toHaveLength(1);
     expect(diary.filter((l) => l.startsWith('starter.video.skipped'))).toHaveLength(2);
   });
+
+  it('puts a book (PDF) in the library like a video, once, and skips a .pdf that is really a video', async () => {
+    const pdf = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(500, 7)]);
+    const { c, admin, library, diary } = await server({ 'G6-Eng-Sci-Our Book.pdf': pdf, 'G6-Eng-Sci-Fake Book.pdf': mp4(4) });
+    const headers = await admin();
+    expect(await c.starter!.sync()).toBe(true);
+    await c.starter!.sync();
+    const items = await library(headers);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ kind: 'pdf', className: '6', subject: 'Science', title: filingFromName('G6-Eng-Sci-Our Book.pdf')!.title });
+    expect(diary.filter((l) => l.startsWith('starter.book.added'))).toHaveLength(1);
+    expect(diary.filter((l) => l.startsWith('starter.book.skipped'))).toHaveLength(1);
+    expect(diary.filter((l) => l.startsWith('starter.video.'))).toHaveLength(0);
+  });
 });
