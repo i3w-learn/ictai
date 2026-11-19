@@ -4,6 +4,7 @@ import { WHITEBOARD_ASPECT, WHITEBOARD_PAGES_MAX, type SchoolClass } from '@ict/
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Select, useAction } from '../../ui/ui';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from './Ink';
+import { PenRow } from './PenRow';
 import { turnPage } from './show-pages';
 import { useShowHost } from './useShowHost';
 
@@ -48,7 +49,6 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
   const board = useInk(showing ? live : null, 'teacher', myName, here.page);
   const inkProblem = useInkProblem(board);
   const [tools, setTools] = useState<InkTools>({ tool: 'pen', colour: 'blue', width: 'medium' });
-  const watching = live?.watching ?? [];
 
   return (
     // The whole window: one slim row of buttons on top, and under it the board as big as fits.
@@ -59,17 +59,7 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
         {showing ? (
           <div className="flex flex-wrap items-center gap-3" role="status">
             <span className="flex h-11 items-center gap-2 rounded-full bg-primary/10 px-5 text-base font-semibold text-primary"><MonitorPlay className="size-5 shrink-0" /> Class {live?.className} can see this board now</span>
-          {live?.pen ? (
-            <>
-              <span className="flex h-11 items-center text-base"><b>{live.pen.name}</b>&nbsp;has the pen.</span>
-              <Button variant="quiet" disabled={host.busy.pen} onClick={() => host.givePen(null)}>Take the pen back</Button>
-            </>
-          ) : (
-            <Select aria-label="Give the pen to a student" className="w-auto rounded-full !text-base" value="" disabled={host.busy.pen || watching.length === 0} onChange={(e) => { if (e.target.value) void host.givePen(e.target.value); }}>
-              <option value="">{watching.length ? 'Give the pen to…' : 'No student screen has it open yet'}</option>
-              {watching.map((w) => <option key={w.studentId} value={w.studentId}>{w.name}</option>)}
-            </Select>
-          )}
+            <PenRow host={host} />
           <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>Stop showing</Button>
           </div>
         ) : (

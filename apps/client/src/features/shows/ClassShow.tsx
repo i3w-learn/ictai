@@ -6,6 +6,7 @@ import { useLatest } from '../../ui/ui';
 import { useFileUrl } from '../content/useFileUrl';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from './Ink';
 import type { InkBoard } from './ink-board';
+import { PenAsk } from './PenAsk';
 import { pageWords } from './show-pages';
 
 // pdf.js is big, so it is fetched only when the teacher first shows a book.
@@ -103,6 +104,7 @@ function ClassPages({ live }: { live: LiveShow }) {
             <InkToolbar tools={tools} onTools={setPicked} />
           </div>
         )}
+        {!failed && myId && !hasPen && <PenAsk show={show} />}
         {!failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{inkProblem}</p>}
       </div>
       <div className="relative min-h-0 flex-1">
@@ -281,6 +283,7 @@ function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow
             {!show.playing && <InkToolbar tools={tools} onTools={setPicked} />}
           </div>
         )}
+        {url && !failed && myId && !hasPen && <PenAsk show={show} />}
         {url && !failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{inkProblem}</p>}
         {url && !failed && !show.playing && (
           <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="status"><Pause className="size-4 fill-current" strokeWidth={0} /> Paused by your teacher</p>

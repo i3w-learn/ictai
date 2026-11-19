@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { SHOW_BEAT_MS, type Show, type ShowKind, type ShowStart, type ShowUpdate } from '@ict/contracts';
+import { SHOW_BEAT_MS, Show, showRoom, type ShowKind, type ShowStart, type ShowUpdate } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
 import { useAction, useLatest } from '../../ui/ui';
@@ -13,7 +13,7 @@ import { startingPlace } from './show-pages';
 // remembered and sent as soon as there is a show, and again every few seconds while showing, so the
 // class's screens are put right if a message was lost, and the server keeps saying who is watching.
 export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate) | null>) {
-  const { call, keepAlive } = useApp();
+  const { call, keepAlive, relay } = useApp();
   const what = useLatest(start);
   const [showing, setShowing] = useState(false);
   const showId = useRef<string | null>(null);
@@ -89,6 +89,14 @@ export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate
     const id = showId.current;
     if (id) setLive(await call('PUT /api/v1/shows/:id/pen', { params: { id }, body: { studentId } }));
   });
+  // "Not now" to a student who asked. Her name leaves the list here at once; the class's room then
+  // brings the server's own word on it.
+  const refusePen = useAction(async (studentId: string) => {
+    const id = showId.current;
+    if (!id) return;
+    await call('DELETE /api/v1/shows/:id/pen/asks/:studentId', { params: { id, studentId } });
+    setLive((now) => (now && now.id === id ? { ...now, asks: now.asks?.filter((a) => a.studentId !== studentId) } : now));
+  });
   const turn = (page: number, pages?: number) => {
     where.current = { page, pages: pages ?? where.current.pages };
     sendPage();
@@ -101,6 +109,16 @@ export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate
     const t = setInterval(() => refreshNow.current(), SHOW_BEAT_MS);
     return () => clearInterval(t);
   }, [showing, refreshNow]);
+  // While showing, listen to the class's room too: a student asking for the pen shows up at once,
+  // not at the next "still here".
+  const classId = showing ? live?.classId : undefined;
+  useEffect(() => {
+    if (!classId) return;
+    return relay.subscribe(showRoom(classId), (state) => {
+      const parsed = Show.nullable().safeParse(state);
+      if (parsed.success && parsed.data && parsed.data.id === showId.current) setLive(parsed.data);
+    });
+  }, [relay, classId]);
   // And the app itself says "still here", because this page's own timer is slowed down, sometimes to
   // once a minute, when the window is hidden or covered (the teacher has another program in front).
   const liveId = showing ? live?.id : undefined;
@@ -119,8 +137,11 @@ export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate
     stop: stopShow.run,
     turn,
     givePen: givePen.run,
-    error: startShow.error ?? stopShow.error ?? givePen.error ?? pageError,
+    refusePen: refusePen.run,
+    error: startShow.error ?? stopShow.error ?? givePen.error ?? refusePen.error ?? pageError,
     tell,
-    busy: { start: startShow.busy, stop: stopShow.busy, pen: givePen.busy },
+    busy: { start: startShow.busy, stop: stopShow.busy, pen: givePen.busy || refusePen.busy },
   };
 }
+
+export type ShowHost = ReturnType<typeof useShowHost>;

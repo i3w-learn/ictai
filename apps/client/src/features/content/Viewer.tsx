@@ -2,8 +2,9 @@ import { lazy, Suspense, useRef, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, MonitorPlay } from 'lucide-react';
 import type { ContentItem } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, Card, ErrorNote, Note, Select } from '../../ui/ui';
+import { Button, Card, ErrorNote, Note } from '../../ui/ui';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from '../shows/Ink';
+import { PenRow } from '../shows/PenRow';
 import { turnPage } from '../shows/show-pages';
 import { useShowHost } from '../shows/useShowHost';
 import { KIND_WORDS, sizeWords } from './files';
@@ -64,7 +65,6 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
   const [aspect, setAspect] = useState<number | null>(null);
   const pause = useRef<(() => void) | null>(null);
   const tools: InkTools = showing ? picked : { ...picked, tool: null };
-  const watching = live?.watching ?? [];
   const toolbar = showing && <InkToolbar tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />;
   // The teacher's PDF and picture get the whole window: one slim row of buttons on top, and under it
   // the page as tall as the window allows, with the pen down its left side and the page buttons down
@@ -75,18 +75,8 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
       <InkToolbar vertical tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />
     </div>
   );
-  // Who has the pen, and the way to give it or take it back.
-  const penGiving = live?.pen ? (
-    <>
-      <span className="flex h-11 items-center text-base"><b>{live.pen.name}</b>&nbsp;has the pen.</span>
-      <Button variant="quiet" disabled={host.busy.pen} onClick={() => host.givePen(null)}>Take the pen back</Button>
-    </>
-  ) : (
-    <Select aria-label="Give the pen to a student" className="w-auto rounded-full !text-base" value="" disabled={host.busy.pen || watching.length === 0} onChange={(e) => { if (e.target.value) void host.givePen(e.target.value); }}>
-      <option value="">{watching.length ? 'Give the pen to…' : 'No student screen has it open yet'}</option>
-      {watching.map((w) => <option key={w.studentId} value={w.studentId}>{w.name}</option>)}
-    </Select>
-  );
+  // Who has the pen, who is asking for it, and the way to give it or take it back.
+  const penGiving = <PenRow host={host} />;
 
   return (
     <div className={fill ? 'flex h-full w-full flex-col gap-3' : 'mx-auto grid w-full max-w-5xl gap-4'}>
