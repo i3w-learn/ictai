@@ -139,7 +139,7 @@ export function createContainer(opts: {
     timetable,
     work: new WorkService(now, repos.work, repos.classes, audit),
     content: new ContentService(now, repos.content, fileStore, repos.classes, audit),
-    shows: new ShowService(now, repos.content, relay, audit, opts.log, (id) => repos.devices.name(id), (studentId) => repos.sessions.liveStudentDevice(studentId, '', now()) !== undefined),
+    shows: new ShowService(now, repos.content, relay, audit, opts.log, (id) => repos.devices.name(id), (studentId) => repos.sessions.liveStudentDevice(studentId, '', now()) !== undefined, (id) => repos.classes.name(id)),
     sequences: new SequenceService(now, repos.sequences, repos.content, repos.work, repos.classes, audit),
     reportCards: new ReportCardService(now, repos.reportCards, repos.classes, repos.students, results, repos.work, audit),
     staffAuth: new StaffAuthService(now, repos.staff, sessions, new FailureLimiter(now), audit),

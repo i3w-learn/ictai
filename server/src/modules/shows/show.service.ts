@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import {
-  INK_POINTS_MAX, INK_STROKES_MAX, SCREEN_REPORTS_MAX, SHOW_STALE_MS, showRoom,
-  type ContentItem, type Ink, type InkAdd, type InkEvent, type InkStroke, type Principal, type ScreenReport, type Show, type ShowUpdate, type StaffPrincipal, type StudentPrincipal,
+  INK_POINTS_MAX, INK_SHOW_STROKES_MAX, INK_STROKES_MAX, SCREEN_REPORTS_MAX, SHOW_STALE_MS, WHITEBOARD_PAGES_MAX, showRoom,
+  type ContentItem, type Ink, type InkAdd, type InkEvent, type InkStroke, type Principal, type ScreenReport, type Show, type ShowKind, type ShowPage, type ShowStart,
+  type ShowUpdate, type StaffPrincipal, type StudentPrincipal,
 } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import type { Clock } from '../../core/clock.js';
@@ -13,7 +14,15 @@ import type { ContentRepository } from '../content/content.repository.js';
 
 interface Live {
   id: string;
-  item: ContentItem;
+  kind: ShowKind;
+  // The library item being shown; null for a whiteboard. The class is kept on its own, since a
+  // whiteboard has no item to take it from.
+  item: ContentItem | null;
+  classId: string;
+  className: string;
+  // The page every screen is on, and how many pages there are once known (see `Show`).
+  page: number;
+  pages: number | null;
   by: string;
   byName: string;
   playing: boolean;
@@ -52,6 +61,9 @@ export class ShowService {
     private readonly pcName: (deviceId: string) => string | undefined = () => undefined,
     // Is this student signed in on a lab PC right now? A student who has left cannot hold the pen.
     private readonly signedIn: (studentId: string) => boolean = () => true,
+    // A class's name, or undefined when there is no such class. A whiteboard is shown to a class
+    // the teacher picks, not taken from a library item, so its name is looked up here.
+    private readonly className: (classId: string) => string | undefined = () => undefined,
   ) {
     relay.register({
       prefix: 'show',
@@ -61,29 +73,54 @@ export class ShowService {
     });
   }
 
-  // Showing a second video to the same class replaces the first.
-  start(actor: StaffPrincipal, contentId: string): Show {
-    const item = this.content.get(contentId);
-    // A library item for a class or subject this teacher does not teach looks the same as none.
-    if (!item || !seesQuiz(scopeOf(actor), item)) throw notFound('Library item');
-    if (item.kind !== 'video') throw new AppError(400, 'BAD_REQUEST', 'Only a video can be shown to the class.');
+  // Showing something new to the same class replaces what was shown before.
+  start(actor: StaffPrincipal, input: ShowStart): Show {
+    const what = 'whiteboard' in input ? this.whiteboard(actor, input.classId) : this.libraryItem(actor, input.contentId);
     const now = this.now();
-    const before = this.byClass.get(item.classId);
+    const before = this.byClass.get(what.classId);
     if (before) {
       this.markOver(before.id);
       this.log('show.replaced', this.words(before));
     }
-    const live: Live = { id: randomUUID(), item, by: actor.userId, byName: actor.displayName, playing: false, position: 0, rate: 1, at: now, heardAt: now, reports: new Map(), watching: new Map(), strokes: new Map(), inkRev: 0, pen: null };
-    this.byClass.set(item.classId, live);
-    this.audit.record({ kind: 'staff', id: actor.userId }, 'show.start', item.id, { title: item.title, classId: item.classId });
+    const live: Live = {
+      id: randomUUID(), ...what, page: 1, by: actor.userId, byName: actor.displayName, playing: false, position: 0, rate: 1, at: now, heardAt: now,
+      reports: new Map(), watching: new Map(), strokes: new Map(), inkRev: 0, pen: null,
+    };
+    this.byClass.set(live.classId, live);
+    this.audit.record({ kind: 'staff', id: actor.userId }, 'show.start', live.item?.id ?? live.classId, { title: this.title(live), kind: live.kind, classId: live.classId });
     this.log('show.started', this.words(live));
-    this.relay.notify(showRoom(item.classId));
+    this.relay.notify(showRoom(live.classId));
+    return this.view(live, true);
+  }
+
+  // Move every screen to another page. Only the teacher who is showing; it also counts as "still here".
+  page(actor: StaffPrincipal, id: string, input: ShowPage): Show {
+    const live = this.mine(actor, id);
+    const bad = (message: string) => new AppError(400, 'BAD_REQUEST', message);
+    if (live.kind === 'video') throw bad('A video has no pages.');
+    let pages = live.pages;
+    if (input.pages !== undefined && input.pages !== live.pages) {
+      // A PDF: the teacher's app counted the pages of the file. A whiteboard: "Add page", one at a time.
+      if (live.kind === 'image') throw bad('A picture is one page.');
+      if (live.kind === 'whiteboard' && (input.pages !== (live.pages ?? 0) + 1 || input.pages > WHITEBOARD_PAGES_MAX)) {
+        throw bad(`A whiteboard gains one page at a time, up to ${WHITEBOARD_PAGES_MAX}.`);
+      }
+      pages = input.pages;
+    }
+    if (pages !== null && input.page > pages) throw bad('There is no such page.');
+    const changed = live.page !== input.page || live.pages !== pages;
+    Object.assign(live, { page: input.page, pages, heardAt: this.now() });
+    if (changed) {
+      this.log('show.page', { show: short(live.id), page: live.page, pages: live.pages ?? undefined });
+      this.relay.notify(showRoom(live.classId));
+    }
     return this.view(live, true);
   }
 
   // Only the teacher who is showing can move it. Every call also counts as "still here".
   update(actor: StaffPrincipal, id: string, input: ShowUpdate): Show {
     const live = this.mine(actor, id);
+    if (live.kind !== 'video') throw new AppError(400, 'BAD_REQUEST', 'Only a video plays.');
     const now = this.now();
     const jumped = Math.abs(expected(live, now) - input.position) > 0.5;
     const changed = live.playing !== input.playing || live.rate !== input.rate || jumped;
@@ -93,7 +130,7 @@ export class ShowService {
       this.log(input.playing ? 'show.playing' : 'show.paused', { show: short(live.id), at: seconds(input.position), speed: input.rate });
       // The writing was about the moment the video stood at. Once it plays or jumps, it goes.
       if (input.playing || jumped) this.wipe(live);
-      this.relay.notify(showRoom(live.item.classId));
+      this.relay.notify(showRoom(live.classId));
     }
     return this.view(live, true);
   }
@@ -107,7 +144,7 @@ export class ShowService {
     const live = this.mine(actor, id);
     this.markOver(live.id);
     this.end(live);
-    this.audit.record({ kind: 'staff', id: actor.userId }, 'show.stop', live.item.id, { title: live.item.title });
+    this.audit.record({ kind: 'staff', id: actor.userId }, 'show.stop', live.item?.id ?? live.classId, { title: this.title(live) });
     this.log('show.stopped', this.words(live));
   }
 
@@ -136,12 +173,15 @@ export class ShowService {
     const live = this.seen(p, id);
     const who = this.writer(p, live);
     if (p.kind === 'student' && live.playing) throw new AppError(409, 'SHOW_PLAYING', 'You can write when your teacher pauses the video.');
+    // The screens show one page; a line for any other page is about something no longer on show.
+    if (input.page !== live.page) throw new AppError(409, 'WRONG_PAGE', 'Your teacher has moved to another page.');
     let stroke = live.strokes.get(input.strokeId);
     if (stroke && stroke.by !== who.by) throw new AppError(403, 'FORBIDDEN', 'That line is not yours.');
     if (!stroke) {
-      if (live.strokes.size >= INK_STROKES_MAX) throw new AppError(409, 'INK_FULL', 'There is no room left to write. Wipe the writing first.');
+      const onPage = [...live.strokes.values()].filter((x) => x.page === input.page).length;
+      if (onPage >= INK_STROKES_MAX || live.strokes.size >= INK_SHOW_STROKES_MAX) throw new AppError(409, 'INK_FULL', 'There is no room left to write. Wipe the writing first.');
       if (!live.strokes.size) this.log('show.ink.started', { show: short(live.id), by: who.byName });
-      stroke = { id: input.strokeId, ...who, colour: input.colour, width: input.width, points: [] };
+      stroke = { id: input.strokeId, ...who, page: input.page, colour: input.colour, width: input.width, points: [] };
       live.strokes.set(stroke.id, stroke);
     }
     // A line that is already as long as it may be simply stops growing.
@@ -165,7 +205,7 @@ export class ShowService {
 
   clear(actor: StaffPrincipal, id: string) {
     const live = this.mine(actor, id);
-    if (live.strokes.size) this.log('show.ink.cleared', { show: short(live.id), by: actor.displayName });
+    if ([...live.strokes.values()].some((x) => x.page === live.page)) this.log('show.ink.cleared', { show: short(live.id), by: actor.displayName });
     this.wipe(live);
   }
 
@@ -180,7 +220,7 @@ export class ShowService {
       live.pen = { studentId, name };
       this.log('show.pen.given', { show: short(live.id), student: name });
     }
-    this.relay.notify(showRoom(live.item.classId));
+    this.relay.notify(showRoom(live.classId));
     return this.view(live, true);
   }
 
@@ -191,8 +231,9 @@ export class ShowService {
   forClass(classId: string, forTeacher = false): Show | null {
     const live = this.byClass.get(classId);
     if (!live) return null;
-    // Gone quiet (the teacher's app closed or lost the network), or its video left the library: over.
-    if (this.now() - live.heardAt > SHOW_STALE_MS || !this.content.get(live.item.id)) {
+    // Gone quiet (the teacher's app closed or lost the network), or its item left the library: over.
+    // A whiteboard has no item, so only silence ends it.
+    if (this.now() - live.heardAt > SHOW_STALE_MS || (live.item && !this.content.get(live.item.id))) {
       this.byClass.delete(classId);
       this.log('show.gone_quiet', this.words(live));
       return null;
@@ -216,10 +257,27 @@ export class ShowService {
     }
   }
 
+  // A library item this teacher may show: a video, a PDF or a picture. A PDF's page count is not
+  // known until the teacher's app opens the file; a picture is one page; a video has none.
+  private libraryItem(actor: StaffPrincipal, contentId: string) {
+    const item = this.content.get(contentId);
+    // A library item for a class or subject this teacher does not teach looks the same as none.
+    if (!item || !seesQuiz(scopeOf(actor), item)) throw notFound('Library item');
+    if (item.kind !== 'video' && item.kind !== 'pdf' && item.kind !== 'image') throw new AppError(400, 'BAD_REQUEST', 'Only a video, PDF or picture can be shown to the class.');
+    return { kind: item.kind, item, classId: item.classId, className: item.className, pages: item.kind === 'image' ? 1 : null };
+  }
+
+  // A blank whiteboard with one page, for a class this teacher teaches. Any other class looks the same as none.
+  private whiteboard(actor: StaffPrincipal, classId: string) {
+    const className = this.className(classId);
+    if (className === undefined || !seesClass(scopeOf(actor), classId)) throw notFound('Class');
+    return { kind: 'whiteboard' as const, item: null, classId, className, pages: 1 };
+  }
+
   private mine(actor: StaffPrincipal, id: string): Live {
     if (this.over.has(id)) throw new AppError(410, 'SHOW_OVER', 'This show has ended.');
     const live = [...this.byClass.values()].find((l) => l.id === id);
-    if (!live || live.by !== actor.userId || !this.forClass(live.item.classId)) throw notFound('Show');
+    if (!live || live.by !== actor.userId || !this.forClass(live.classId)) throw notFound('Show');
     return live;
   }
 
@@ -227,7 +285,7 @@ export class ShowService {
   private seen(p: Principal, id: string): Live {
     if (p.kind === 'staff') return this.mine(p, id);
     const live = p.kind === 'student' ? this.byClass.get(p.classId) : undefined;
-    if (!live || live.id !== id || !this.forClass(live.item.classId)) throw notFound('Show');
+    if (!live || live.id !== id || !this.forClass(live.classId)) throw notFound('Show');
     return live;
   }
 
@@ -238,15 +296,17 @@ export class ShowService {
     return { by: p.studentId, byName: p.name };
   }
 
+  // Wipes the writing on the page the show is on; other pages keep theirs.
   private wipe(live: Live) {
-    if (!live.strokes.size) return;
-    live.strokes.clear();
+    const here = [...live.strokes].filter(([, x]) => x.page === live.page);
+    if (!here.length) return;
+    for (const [id] of here) live.strokes.delete(id);
     live.inkRev += 1;
-    this.say(live, { kind: 'clear', show: live.id, rev: live.inkRev });
+    this.say(live, { kind: 'clear', show: live.id, rev: live.inkRev, page: live.page });
   }
 
   private say(live: Live, event: InkEvent) {
-    this.relay.emit(showRoom(live.item.classId), event);
+    this.relay.emit(showRoom(live.classId), event);
   }
 
   private markOver(id: string) {
@@ -256,19 +316,23 @@ export class ShowService {
   }
 
   private end(live: Live) {
-    if (this.byClass.get(live.item.classId) === live) this.byClass.delete(live.item.classId);
-    this.relay.notify(showRoom(live.item.classId));
+    if (this.byClass.get(live.classId) === live) this.byClass.delete(live.classId);
+    this.relay.notify(showRoom(live.classId));
   }
 
   // What a diary line says about a show.
   private words(live: Live) {
-    return { show: short(live.id), video: live.item.title, class: live.item.className, by: live.byName, screens: live.reports.size || undefined };
+    return { show: short(live.id), video: this.title(live), class: live.className, by: live.byName, screens: live.reports.size || undefined };
+  }
+
+  private title(live: Live) {
+    return live.item?.title ?? 'Whiteboard';
   }
 
   private view(live: Live, forTeacher = false): Show {
     return {
-      id: live.id, classId: live.item.classId, className: live.item.className, item: live.item, byName: live.byName,
-      playing: live.playing, position: live.position, rate: live.rate, at: live.at, now: this.now(), inkRev: live.inkRev, pen: live.pen,
+      id: live.id, classId: live.classId, className: live.className, kind: live.kind, item: live.item, byName: live.byName,
+      page: live.page, pages: live.pages, playing: live.playing, position: live.position, rate: live.rate, at: live.at, now: this.now(), inkRev: live.inkRev, pen: live.pen,
       ...(forTeacher ? { watching: [...live.watching].map(([studentId, name]) => ({ studentId, name })) } : {}),
     };
   }

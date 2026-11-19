@@ -18,8 +18,8 @@
 ; Folder with the staged files, laid out by the CI job:
 ;   stage\client\ict-client.exe
 ;   stage\server\{node.exe, server.cjs, node_modules\better-sqlite3\..., ict-server.exe, ict-server.xml}
-;   stage\server\starter-videos\*.mp4   (optional) videos that come with the app; the server
-;                                        adds them to the library the first time it runs.
+;   stage\server\starter-videos\*.mp4, *.webm, *.pdf   (optional) videos and books that come with
+;                                        the app; the server adds them to the library the first time it runs.
 #ifndef Stage
   #define Stage "..\stage"
 #endif

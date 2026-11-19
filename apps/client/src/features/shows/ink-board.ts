@@ -31,6 +31,8 @@ export class InkBoard {
   private loading = false;
   private again = false;
   private closed = false;
+  // The page of the show this screen is on. A video has only page 1.
+  private page = 1;
   private listeners = new Set<() => void>();
   // Why the last line could not be written, in words for the screen.
   problem: string | null = null;
@@ -42,8 +44,16 @@ export class InkBoard {
     private readonly newId: () => string = () => crypto.randomUUID(),
   ) {}
 
+  // Only the lines of the page this screen is on.
   all(): Iterable<InkStroke> {
-    return this.strokes.values();
+    return [...this.strokes.values()].filter((s) => s.page === this.page);
+  }
+
+  // Move to another page of the show. The lines of other pages stay kept, but are not drawn.
+  setPage(page: number) {
+    if (page === this.page) return;
+    this.page = page;
+    this.changed();
   }
 
   onChange(fn: () => void): () => void {
@@ -83,7 +93,7 @@ export class InkBoard {
     if (this.rev < 0 || e.rev > this.rev + 1) return void this.load();
     if (e.rev <= this.rev) return;
     this.rev = e.rev;
-    if (e.kind === 'clear') this.forgetAll();
+    if (e.kind === 'clear') this.forgetPage(e.page);
     if (e.kind === 'erase') this.forget(e.strokeId);
     if (e.kind === 'add' && !this.mine.has(e.stroke.id)) {
       const had = this.strokes.get(e.stroke.id);
@@ -119,11 +129,11 @@ export class InkBoard {
   // Pen down. Places and pressure are 0 to INK_SCALE.
   begin(colour: InkColour, width: InkWidth, x: number, y: number, pressure: number) {
     this.problem = null;
-    const stroke: InkStroke = { id: this.newId(), ...this.me, colour, width, points: [x, y, pressure] };
+    const stroke: InkStroke = { id: this.newId(), ...this.me, page: this.page, colour, width, points: [x, y, pressure] };
     this.current = stroke;
     this.mine.add(stroke.id);
     this.strokes.set(stroke.id, stroke);
-    this.outbox.push({ strokeId: stroke.id, colour, width, points: [x, y, pressure] });
+    this.outbox.push({ strokeId: stroke.id, page: stroke.page, colour, width, points: [x, y, pressure] });
     this.changed();
     this.soon();
   }
@@ -137,7 +147,7 @@ export class InkBoard {
     stroke.points.push(x, y, pressure);
     const last = this.outbox.at(-1);
     if (last?.strokeId === stroke.id && last.points.length < INK_BATCH_MAX * 3) last.points.push(x, y, pressure);
-    else this.outbox.push({ strokeId: stroke.id, colour: stroke.colour, width: stroke.width, points: [x, y, pressure] });
+    else this.outbox.push({ strokeId: stroke.id, page: stroke.page, colour: stroke.colour, width: stroke.width, points: [x, y, pressure] });
     this.changed();
     this.soon();
   }
@@ -150,7 +160,7 @@ export class InkBoard {
 
   // The line nearest to this spot, if one is within `reach`. With `onlyBy`, only that writer's lines.
   near(x: number, y: number, reach: number, onlyBy?: string): string | null {
-    for (const s of [...this.strokes.values()].reverse()) {
+    for (const s of [...this.all()].reverse()) {
       if (onlyBy && s.by !== onlyBy) continue;
       for (let i = 0; i < s.points.length; i += 3) {
         if (Math.hypot(s.points[i]! - x, s.points[i + 1]! - y) <= reach) return s.id;
@@ -166,8 +176,9 @@ export class InkBoard {
     this.api.erase(strokeId).catch(() => void this.load());
   }
 
+  // Wipes the page this screen is on; the server wipes the page the show is on, which is the same.
   clear() {
-    this.forgetAll();
+    this.forgetPage(this.page);
     this.changed();
     this.api.clear().catch(() => void this.load());
   }
@@ -202,11 +213,8 @@ export class InkBoard {
     if (this.current?.id === strokeId) this.current = null;
   }
 
-  private forgetAll() {
-    this.strokes.clear();
-    this.mine.clear();
-    this.outbox = [];
-    this.current = null;
+  private forgetPage(page: number) {
+    for (const s of [...this.strokes.values()]) if (s.page === page) this.forget(s.id);
   }
 
   private changed() {

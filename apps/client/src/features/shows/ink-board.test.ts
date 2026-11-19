@@ -3,7 +3,7 @@ import { INK_BATCH_MAX, INK_POINTS_MAX, type Ink, type InkAdd } from '@ict/contr
 import { InkBoard } from './ink-board';
 
 const SHOW = 'show-1';
-const line = (id: string, points: number[], by = 'teacher') => ({ id, by, byName: 'Ravi', colour: 'red' as const, width: 'medium' as const, points });
+const line = (id: string, points: number[], by = 'teacher', page = 1) => ({ id, by, byName: 'Ravi', page, colour: 'red' as const, width: 'medium' as const, points });
 
 // A board with a fake server: what was sent is recorded, and `server` is what "all the writing" returns.
 function setup(by = 'teacher') {
@@ -50,7 +50,7 @@ describe('InkBoard', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(api.all).toHaveBeenCalledTimes(1);
     expect(drawn()).toEqual([{ id: 'a', points: [1, 1, 1, 2, 2, 2] }, { id: 'b', points: [5, 5, 5] }]);
-    board.take({ kind: 'clear', show: SHOW, rev: 4 });
+    board.take({ kind: 'clear', show: SHOW, rev: 4, page: 1 });
     expect(drawn()).toEqual([]);
   });
 
@@ -86,11 +86,11 @@ describe('InkBoard', () => {
     expect(changes).toHaveBeenCalledTimes(2);
     expect(sent).toEqual([]);
     await vi.advanceTimersByTimeAsync(50);
-    expect(sent).toEqual([{ strokeId: 'mine-1', colour: 'blue', width: 'thick', points: [1, 1, 5000, 2, 2, 5000] }]);
+    expect(sent).toEqual([{ strokeId: 'mine-1', page: 1, colour: 'blue', width: 'thick', points: [1, 1, 5000, 2, 2, 5000] }]);
     board.extend(3, 3, 5000);
     board.end();
     await vi.advanceTimersByTimeAsync(0);
-    expect(sent[1]).toEqual({ strokeId: 'mine-1', colour: 'blue', width: 'thick', points: [3, 3, 5000] });
+    expect(sent[1]).toEqual({ strokeId: 'mine-1', page: 1, colour: 'blue', width: 'thick', points: [3, 3, 5000] });
     // The server's echo of the writer's own line is not drawn a second time.
     board.take({ kind: 'add', show: SHOW, rev: 1, stroke: line('mine-1', [1, 1, 5000, 2, 2, 5000]) });
     expect(drawn()).toEqual([{ id: 'mine-1', points: [1, 1, 5000, 2, 2, 5000, 3, 3, 5000] }]);
@@ -142,7 +142,7 @@ describe('InkBoard', () => {
     const { board, drawn, sent } = setup();
     board.expect(0);
     board.begin('red', 'thin', 1, 1, 1);
-    board.take({ kind: 'clear', show: SHOW, rev: 1 }); // the teacher pressed play
+    board.take({ kind: 'clear', show: SHOW, rev: 1, page: 1 }); // the teacher pressed play
     board.extend(2, 2, 1);
     await vi.advanceTimersByTimeAsync(100);
     expect(drawn()).toEqual([]);
@@ -164,5 +164,59 @@ describe('InkBoard', () => {
     expect(drawn().map((s) => s.id)).toEqual(['a', 'mine-1']);
     expect(sent).toHaveLength(1);
     expect(changes).toHaveBeenCalled();
+  });
+
+  it('draws only the lines of the page it is on', async () => {
+    const { board, drawn, server } = setup();
+    Object.assign(server, { rev: 2, strokes: [line('a', [1, 1, 1], 'teacher', 1), line('b', [2, 2, 2], 'teacher', 7)] });
+    board.expect(2);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(drawn().map((s) => s.id)).toEqual(['a']);
+    board.setPage(7);
+    expect(drawn().map((s) => s.id)).toEqual(['b']);
+    board.setPage(1);
+    expect(drawn().map((s) => s.id)).toEqual(['a']);
+  });
+
+  it('writes new lines on the current page', async () => {
+    const { board, sent } = setup();
+    board.setPage(3);
+    board.begin('red', 'medium', 1, 1, 1);
+    board.end();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sent[0]!.page).toBe(3);
+  });
+
+  it('wipes only the current page when the server says so', () => {
+    const { board, drawn } = setup();
+    board.expect(0);
+    board.take({ kind: 'add', show: SHOW, rev: 1, stroke: line('a', [1, 1, 1], 'teacher', 1) });
+    board.take({ kind: 'add', show: SHOW, rev: 2, stroke: line('b', [2, 2, 2], 'teacher', 2) });
+    board.take({ kind: 'clear', show: SHOW, rev: 3, page: 2 });
+    expect(drawn().map((s) => s.id)).toEqual(['a']);
+    board.setPage(2);
+    expect(drawn()).toEqual([]);
+  });
+
+  it('wipes only the current page when this screen wipes', () => {
+    const { board, drawn } = setup();
+    board.expect(0);
+    board.take({ kind: 'add', show: SHOW, rev: 1, stroke: line('a', [1, 1, 1], 'teacher', 1) });
+    board.take({ kind: 'add', show: SHOW, rev: 2, stroke: line('b', [2, 2, 2], 'teacher', 2) });
+    board.setPage(2);
+    board.clear();
+    expect(drawn()).toEqual([]);
+    board.setPage(1);
+    expect(drawn().map((s) => s.id)).toEqual(['a']);
+  });
+
+  it('changes its picture when the page changes', () => {
+    const { board } = setup();
+    const heard = vi.fn();
+    board.onChange(heard);
+    board.setPage(2);
+    expect(heard).toHaveBeenCalledTimes(1);
+    board.setPage(2);
+    expect(heard).toHaveBeenCalledTimes(1);
   });
 });

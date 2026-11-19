@@ -11,7 +11,7 @@ import { sniff } from './sniff.js';
 
 const SUBJECTS: Record<string, string> = { mat: 'Maths', sci: 'Science', eng: 'English', hin: 'Hindi', sst: 'Social Science', evs: 'EVS', com: 'Computer' };
 
-// Where a starter video is filed, read from its file name. The videos come named like
+// Where a starter video or book is filed, read from its file name. They come named like
 //   "G6-Mar-Mat-06Int11-Addition of Integers -Part 1-DMV-ILL.mp4"
 // which is: class, language, subject, lesson code, title, and codes of whoever made it.
 // A name that does not begin with a class ("G6") gives null: the server cannot guess the class.
@@ -30,8 +30,8 @@ export function filingFromName(fileName: string): { className: string; subject: 
   return { className: String(Number(grade[1])), subject, title };
 }
 
-// Videos that come with the app. The installer puts them in a folder beside the server; the server
-// adds each one to the library once. A teacher may remove one afterwards and it stays removed,
+// Videos (.mp4, .webm) and books (.pdf) that come with the app. The installer puts them in a folder beside
+// the server; the server adds each one to the library once. A teacher may remove one afterwards and it stays removed,
 // because the names already added are written down in the data folder.
 export class StarterVideos {
   constructor(
@@ -50,7 +50,7 @@ export class StarterVideos {
   async sync(): Promise<boolean> {
     if (!existsSync(this.dir)) return true;
     const done = new Set<string>(existsSync(this.doneFile) ? (JSON.parse(readFileSync(this.doneFile, 'utf8')) as string[]) : []);
-    const waiting = readdirSync(this.dir).filter((f) => /\.(mp4|webm)$/i.test(f) && !done.has(f)).sort();
+    const waiting = readdirSync(this.dir).filter((f) => /\.(mp4|webm|pdf)$/i.test(f) && !done.has(f)).sort();
     if (waiting.length === 0) return true;
     const by = this.owner();
     if (!by) return false;
@@ -58,27 +58,30 @@ export class StarterVideos {
     for (const name of waiting) {
       const path = join(this.dir, name);
       const filing = filingFromName(name);
+      const isBook = /\.pdf$/i.test(name);
+      const what = isBook ? 'book' : 'video';
       const size = statSync(path).size;
       if (!filing) {
-        this.log('starter.video.skipped', { file: name, why: 'the name does not start with a class, like "G6-"' });
+        this.log(`starter.${what}.skipped`, { file: name, why: 'the name does not start with a class, like "G6-"' });
       } else if (this.store.freeBytes() - size < DISK_RESERVE_BYTES) {
         // Not written down as done: it is tried again when the server next starts.
-        this.log('starter.video.skipped', { file: name, why: 'the disk is almost full' });
+        this.log(`starter.${what}.skipped`, { file: name, why: 'the disk is almost full' });
         continue;
       } else {
         const partId = this.store.newPart();
         this.store.copyIn(partId, path);
         const type = sniff(this.store.head(partId));
-        if (type?.kind !== 'video') {
+        const kind = isBook ? 'pdf' : 'video';
+        if (type?.kind !== kind) {
           this.store.discard(partId);
-          this.log('starter.video.skipped', { file: name, why: 'it is not a video the app can play (MP4 or WebM)' });
+          this.log(`starter.${what}.skipped`, { file: name, why: isBook ? 'it is not a PDF book' : 'it is not a video the app can play (MP4 or WebM)' });
         } else {
           const kept = await this.store.keep(partId);
           const now = this.now();
           const cls = this.classes.listClasses().find((c) => c.name === filing.className) ?? this.classes.insertClass(filing.className, now);
           this.content.addFile(kept.hash, kept.size, type.mime, now);
-          this.content.insert({ id: randomUUID(), title: filing.title, kind: 'video', classId: cls.id, subject: filing.subject, chapter: null, fileHash: kept.hash, fileName: name, url: null, by, now });
-          this.log('starter.video.added', { video: filing.title, class: cls.name, subject: filing.subject });
+          this.content.insert({ id: randomUUID(), title: filing.title, kind, classId: cls.id, subject: filing.subject, chapter: null, fileHash: kept.hash, fileName: name, url: null, by, now });
+          this.log(`starter.${what}.added`, { [what]: filing.title, class: cls.name, subject: filing.subject });
         }
       }
       done.add(name);
