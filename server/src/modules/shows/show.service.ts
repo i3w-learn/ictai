@@ -222,14 +222,15 @@ export class ShowService {
     this.wipe(live, on);
   }
 
-  // One student at a time holds the pen. Giving it to another takes it from the first.
+  // One student at a time holds the pen. Giving it to another takes it from the first. The new
+  // student is checked first, so a refused give leaves the pen where it was.
   givePen(actor: StaffPrincipal, id: string, studentId: string | null): Show {
     const live = this.mine(actor, id);
+    const name = studentId ? live.watching.get(studentId) : undefined;
+    if (studentId && (!name || !this.signedIn(studentId))) throw new AppError(409, 'NOT_WATCHING', "That student's screen does not have the show open.");
     if (live.pen) this.log('show.pen.taken', { show: short(live.id), student: live.pen.name });
     live.pen = null;
-    if (studentId) {
-      const name = live.watching.get(studentId);
-      if (!name || !this.signedIn(studentId)) throw new AppError(409, 'NOT_WATCHING', "That student's screen does not have the video open.");
+    if (studentId && name) {
       live.pen = { studentId, name };
       live.asks.delete(studentId);
       live.refused.delete(studentId);

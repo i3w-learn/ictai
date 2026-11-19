@@ -350,6 +350,14 @@ describe('Writing on the video', () => {
     void ravi;
   });
 
+  it('leaves the pen with its holder when it cannot be given to a student who is not watching', async () => {
+    const { asha, kabir, pen, mine } = await lesson();
+    await pen(asha.id);
+    const res = await pen(kabir.id);
+    expect(res.json()).toMatchObject({ code: 'NOT_WATCHING', message: "That student's screen does not have the show open." });
+    expect(await mine(asha.as)).toMatchObject({ pen: { studentId: asha.id, name: 'Asha' } });
+  });
+
   it('does not let a student write on a playing video, or touch a line that is not theirs', async () => {
     const { ravi, asha, id, line, pen, move, inject, ink } = await lesson();
     await pen(asha.id);
