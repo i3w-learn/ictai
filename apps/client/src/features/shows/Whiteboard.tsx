@@ -51,17 +51,14 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
   const watching = live?.watching ?? [];
 
   return (
-    // As tall as the window has room for, so the board, the pen's bar and the page buttons all fit.
-    <div className="mx-auto flex h-full w-full max-w-5xl flex-col gap-4">
+    // The whole window: one slim row of buttons on top, and under it the board as big as fits.
+    <div className="flex h-full w-full flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button>
         <h1 className="min-w-48 flex-1 font-display text-2xl font-semibold">Whiteboard</h1>
-      </div>
-
-      {showing ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3" role="status">
-          <MonitorPlay className="size-5 shrink-0 text-primary" />
-          <p className="min-w-56 flex-1"><b>Class {live?.className} can see this board now.</b> What you write, and the page you are on, they see too.</p>
+        {showing ? (
+          <div className="flex flex-wrap items-center gap-3" role="status">
+            <span className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 font-semibold text-primary"><MonitorPlay className="size-5" /> Class {live?.className} can see this board now</span>
           {live?.pen ? (
             <>
               <span><b>{live.pen.name}</b> has the pen.</span>
@@ -74,37 +71,38 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
             </Select>
           )}
           <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>Stop showing</Button>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center gap-3">
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3" title="A blank board opens on every student PC of the class.">
           <Select aria-label="Class to show the whiteboard to" className="w-auto" value={classId} onChange={(e) => setPickedClass(e.target.value)}>
             <option value="">Choose a class</option>
             {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
           </Select>
           <Button disabled={!classId || host.busy.start} onClick={() => host.start()}><MonitorPlay className="size-4" /> Start whiteboard</Button>
-          <span className="text-sm text-muted-foreground">A blank board opens on every student PC of the class.</span>
-        </div>
-      )}
-      <ErrorNote message={load.error ?? host.error ?? inkProblem} />
-
-      <div className="flex min-h-0 flex-1 flex-col gap-3">
-        {showing && (
-          <div className="flex justify-center rounded-2xl bg-[hsl(222_30%_10%)] px-3 py-1.5">
-            <InkToolbar tools={tools} onTools={setTools} onWipe={() => board?.clear()} />
           </div>
         )}
-        {/* The board takes the room that is left, and is as big as fits in it at its wide shape. */}
-        <div className="grid min-h-64 flex-1 place-items-center [container-type:size]">
+      </div>
+      <ErrorNote message={load.error ?? host.error ?? inkProblem} />
+
+      {/* The board in the middle, as big as fits at its wide shape; the pen down its left side and the
+          page buttons down its right, so none of the window's height is spent on them. */}
+      <div className="flex min-h-0 flex-1 gap-3">
+        {showing && (
+          <div className="flex shrink-0 flex-col items-center rounded-2xl bg-[hsl(222_30%_10%)] px-1.5 py-3">
+            <InkToolbar vertical tools={tools} onTools={setTools} onWipe={() => board?.clear()} />
+          </div>
+        )}
+        <div className="grid min-h-64 min-w-0 flex-1 place-items-center [container-type:size]">
           <div className="relative aspect-video w-[min(100cqw,calc(100cqh*16/9))] rounded-2xl bg-white ring-1 ring-border">
             <InkLayer board={board} aspect={WHITEBOARD_ASPECT} tools={showing ? tools : { ...tools, tool: null }} />
           </div>
         </div>
         {showing && (
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Button variant="quiet" className="min-h-14 px-6 text-base" disabled={here.page <= 1} onClick={() => go(-1)}><ChevronLeft className="size-5" /> Previous</Button>
-            <span className="min-w-36 text-center text-lg font-semibold tabular-nums" role="status">Page {here.page} of {here.pages}</span>
-            <Button variant="quiet" className="min-h-14 px-6 text-base" disabled={here.page >= here.pages} onClick={() => go(1)}>Next <ChevronRight className="size-5" /></Button>
-            <Button variant="quiet" className="min-h-14 px-6 text-base" disabled={here.pages >= WHITEBOARD_PAGES_MAX} onClick={addPage}><Plus className="size-5" /> Add page</Button>
+          <div className="flex w-36 shrink-0 flex-col items-stretch justify-center gap-3">
+            <Button variant="quiet" className="min-h-20 flex-col text-base" disabled={here.page <= 1} onClick={() => go(-1)}><ChevronLeft className="size-6" /> Previous</Button>
+            <span className="text-center text-lg font-semibold tabular-nums" role="status">Page {here.page} of {here.pages}</span>
+            <Button className="min-h-20 flex-col text-base" disabled={here.page >= here.pages} onClick={() => go(1)}><ChevronRight className="size-6" /> Next</Button>
+            <Button variant="quiet" className="min-h-16 flex-col text-base" disabled={here.pages >= WHITEBOARD_PAGES_MAX} onClick={addPage}><Plus className="size-5" /> Add page</Button>
           </div>
         )}
       </div>

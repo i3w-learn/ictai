@@ -66,36 +66,54 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
   const tools: InkTools = showing ? picked : { ...picked, tool: null };
   const watching = live?.watching ?? [];
   const toolbar = showing && <InkToolbar tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />;
-  // The pen's bar over a page or a picture, dark like the video player's.
-  const darkBar = toolbar && <div className="flex justify-center rounded-2xl bg-[hsl(222_30%_10%)] px-3 py-1.5">{toolbar}</div>;
-  // The teacher's PDF and picture take the height the window has left, so the whole page, the pen's
-  // bar and the page buttons are all on screen together, with no scrolling.
+  // The teacher's PDF and picture get the whole window: one slim row of buttons on top, and under it
+  // the page as tall as the window allows, with the pen down its left side and the page buttons down
+  // its right. A page is tall and a board is wide, so the sides are where there is room to spare.
   const fill = staff && (item.kind === 'pdf' || item.kind === 'image');
+  const penRail = showing && (
+    <div className="flex shrink-0 flex-col items-center rounded-2xl bg-[hsl(222_30%_10%)] px-1.5 py-3">
+      <InkToolbar vertical tools={tools} onTools={setPicked} onWipe={() => board?.clear()} />
+    </div>
+  );
+  // Who has the pen, and the way to give it or take it back.
+  const penGiving = live?.pen ? (
+    <>
+      <span><b>{live.pen.name}</b> has the pen.</span>
+      <Button variant="quiet" disabled={host.busy.pen} onClick={() => host.givePen(null)}>Take the pen back</Button>
+    </>
+  ) : (
+    <Select aria-label="Give the pen to a student" className="w-auto" value="" disabled={host.busy.pen || watching.length === 0} onChange={(e) => { if (e.target.value) void host.givePen(e.target.value); }}>
+      <option value="">{watching.length ? 'Give the pen to…' : 'No student screen has it open yet'}</option>
+      {watching.map((w) => <option key={w.studentId} value={w.studentId}>{w.name}</option>)}
+    </Select>
+  );
 
   return (
-    <div className={fill ? 'mx-auto flex h-full w-full max-w-5xl flex-col gap-4' : 'mx-auto grid w-full max-w-5xl gap-4'}>
+    <div className={fill ? 'flex h-full w-full flex-col gap-3' : 'mx-auto grid w-full max-w-5xl gap-4'}>
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button>
-        <h1 className="min-w-48 flex-1 font-display text-2xl font-semibold">{item.title}</h1>
-        <span className="text-sm text-muted-foreground">{[KIND_WORDS[item.kind], item.subject, item.chapter, item.size ? sizeWords(item.size) : null].filter(Boolean).join(' · ')}</span>
+        <h1 className="min-w-48 flex-1 truncate font-display text-2xl font-semibold">{item.title}</h1>
+        {fill && canShow && url ? (
+          showing ? (
+            <div className="flex flex-wrap items-center gap-3" role="status">
+              <span className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 font-semibold text-primary"><MonitorPlay className="size-5" /> Class {item.className} can see this now</span>
+              {penGiving}
+              <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>Stop showing</Button>
+            </div>
+          ) : (
+            <Button disabled={host.busy.start} onClick={() => host.start()} title={words?.before}><MonitorPlay className="size-4" /> Show to Class {item.className}</Button>
+          )
+        ) : (
+          <span className="text-sm text-muted-foreground">{[KIND_WORDS[item.kind], item.subject, item.chapter, item.size ? sizeWords(item.size) : null].filter(Boolean).join(' · ')}</span>
+        )}
       </div>
       <ErrorNote message={error} />
-      {canShow && url && (
+      {!fill && canShow && url && (
         showing ? (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3" role="status">
             <MonitorPlay className="size-5 shrink-0 text-primary" />
             <p className="min-w-56 flex-1"><b>Class {item.className} can see this now.</b> {words?.during} What you write with the pen, they see too.</p>
-            {live?.pen ? (
-              <>
-                <span><b>{live.pen.name}</b> has the pen.</span>
-                <Button variant="quiet" disabled={host.busy.pen} onClick={() => host.givePen(null)}>Take the pen back</Button>
-              </>
-            ) : (
-              <Select aria-label="Give the pen to a student" className="w-auto" value="" disabled={host.busy.pen || watching.length === 0} onChange={(e) => { if (e.target.value) void host.givePen(e.target.value); }}>
-                <option value="">{watching.length ? 'Give the pen to…' : 'No student screen has it open yet'}</option>
-                {watching.map((w) => <option key={w.studentId} value={w.studentId}>{w.name}</option>)}
-              </Select>
-            )}
+            {penGiving}
             <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>Stop showing</Button>
           </div>
         ) : (
@@ -123,11 +141,11 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
       ) : url && (
         <>
           {item.kind === 'image' && (staff ? (
-            <div className="flex min-h-0 flex-1 flex-col gap-3">
-              {darkBar}
+            <div className="flex min-h-0 flex-1 gap-3">
+              {penRail}
               {/* The picture is drawn whole, as big as the box allows. The writing layer covers the same
                   box and finds the picture in it from its shape, as on a video. */}
-              <div className="relative min-h-64 flex-1 overflow-hidden rounded-2xl border border-border bg-card">
+              <div className="relative min-h-64 min-w-0 flex-1 overflow-hidden rounded-2xl border border-border bg-card">
                 <img
                   src={url} alt={item.title} onError={onError}
                   onLoad={(e) => { const { naturalWidth: w, naturalHeight: h } = e.currentTarget; if (w && h) setAspect(w / h); }}
@@ -138,9 +156,9 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
             </div>
           ) : <img src={url} alt={item.title} onError={onError} className="mx-auto block max-h-[75vh] max-w-full rounded-2xl bg-card ring-1 ring-border" />)}
           {item.kind === 'pdf' && (staff ? (
-            <div className="flex min-h-0 flex-1 flex-col gap-3">
-              {darkBar}
-              <div className="min-h-64 w-full flex-1 overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="flex min-h-0 flex-1 gap-3">
+              {penRail}
+              <div className="min-h-64 min-w-0 flex-1 overflow-hidden rounded-2xl border border-border bg-card">
                 <Suspense fallback={<p className="grid h-full place-items-center text-muted-foreground" role="status">Opening…</p>}>
                   <PdfPages
                     url={url} page={page} onPages={counted} onAspect={setAspect}
@@ -150,10 +168,10 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
                   />
                 </Suspense>
               </div>
-              <div className="flex items-center justify-center gap-4">
-                <Button variant="quiet" className="min-h-14 px-6 text-base" disabled={page <= 1} onClick={() => go(-1)}><ChevronLeft className="size-5" /> Previous</Button>
-                <span className="min-w-36 text-center text-lg font-semibold tabular-nums" role="status">Page {page} of {pages ?? '…'}</span>
-                <Button variant="quiet" className="min-h-14 px-6 text-base" disabled={pages === null || page >= pages} onClick={() => go(1)}>Next <ChevronRight className="size-5" /></Button>
+              <div className="flex w-36 shrink-0 flex-col items-stretch justify-center gap-3">
+                <Button variant="quiet" className="min-h-20 flex-col text-base" disabled={page <= 1} onClick={() => go(-1)}><ChevronLeft className="size-6" /> Previous</Button>
+                <span className="text-center text-lg font-semibold tabular-nums" role="status">Page {page} of {pages ?? '…'}</span>
+                <Button className="min-h-20 flex-col text-base" disabled={pages === null || page >= pages} onClick={() => go(1)}><ChevronRight className="size-6" /> Next</Button>
               </div>
             </div>
           ) : <iframe src={url} title={item.title} className="h-[78vh] w-full rounded-2xl border border-border bg-card" />)}
