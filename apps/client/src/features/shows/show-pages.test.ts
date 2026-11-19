@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { InkEvent, Show } from '@ict/contracts';
 import { pageWords, startingPlace, turnPage } from './show-pages';
 
 describe('turnPage', () => {
@@ -32,5 +33,17 @@ describe('pageWords', () => {
   });
   it('says only the page while the count is not known', () => {
     expect(pageWords(3, null)).toBe('Page 3');
+  });
+});
+
+// A school may update the Server PC after the student PCs. An older server knows only videos and
+// says nothing about kinds or pages; this screen must still read what it says.
+describe('a show from an older server', () => {
+  it('is a video on page 1 with no pages', () => {
+    const old = { id: 's1', classId: 'c1', className: '7A', item: null, byName: 'Ravi K', playing: false, position: 0, rate: 1, at: 0, now: 0 };
+    expect(Show.parse(old)).toMatchObject({ kind: 'video', page: 1, pages: null });
+  });
+  it('wipes page 1 when it wipes the writing', () => {
+    expect(InkEvent.parse({ kind: 'clear', show: 's1', rev: 3 })).toEqual({ kind: 'clear', show: 's1', rev: 3, page: 1 });
   });
 });

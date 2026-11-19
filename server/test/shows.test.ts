@@ -381,6 +381,14 @@ describe('Writing on the video', () => {
     expect((await ink(ravi)).strokes).toHaveLength(1);
   });
 
+  it('takes a pen line from an older student PC that does not say the page', async () => {
+    const { ravi, asha, id, pen, ink, inject } = await lesson();
+    await pen(asha.id);
+    const old = await inject('POST', `/api/v1/shows/${id}/ink`, asha.as, { strokeId: randomUUID(), colour: 'red', width: 'medium', points: [1, 1, 1] });
+    expect(old.statusCode).toBe(204);
+    expect((await ink(ravi)).strokes).toMatchObject([{ by: asha.id, page: 1 }]);
+  });
+
   it('stops a line and the board from growing for ever', async () => {
     const { ravi, line, ink } = await lesson();
     const long = randomUUID();

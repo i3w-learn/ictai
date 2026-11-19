@@ -9056,6 +9056,7 @@
                       "type": "string"
                     },
                     "kind": {
+                      "default": "video",
                       "type": "string",
                       "enum": [
                         "video",
@@ -9159,11 +9160,13 @@
                       "type": "number"
                     },
                     "page": {
+                      "default": 1,
                       "type": "integer",
                       "minimum": 1,
                       "maximum": 9007199254740991
                     },
                     "pages": {
+                      "default": null,
                       "nullable": true,
                       "type": "integer",
                       "minimum": 1,
@@ -9219,14 +9222,11 @@
                     "id",
                     "classId",
                     "className",
-                    "kind",
                     "item",
                     "byName",
                     "playing",
                     "position",
                     "rate",
-                    "page",
-                    "pages",
                     "at",
                     "now"
                   ]
@@ -9329,6 +9329,7 @@
                       "type": "string"
                     },
                     "kind": {
+                      "default": "video",
                       "type": "string",
                       "enum": [
                         "video",
@@ -9432,11 +9433,13 @@
                       "type": "number"
                     },
                     "page": {
+                      "default": 1,
                       "type": "integer",
                       "minimum": 1,
                       "maximum": 9007199254740991
                     },
                     "pages": {
+                      "default": null,
                       "nullable": true,
                       "type": "integer",
                       "minimum": 1,
@@ -9492,14 +9495,11 @@
                     "id",
                     "classId",
                     "className",
-                    "kind",
                     "item",
                     "byName",
                     "playing",
                     "position",
                     "rate",
-                    "page",
-                    "pages",
                     "at",
                     "now"
                   ]
@@ -9646,6 +9646,7 @@
                       "type": "string"
                     },
                     "kind": {
+                      "default": "video",
                       "type": "string",
                       "enum": [
                         "video",
@@ -9749,11 +9750,13 @@
                       "type": "number"
                     },
                     "page": {
+                      "default": 1,
                       "type": "integer",
                       "minimum": 1,
                       "maximum": 9007199254740991
                     },
                     "pages": {
+                      "default": null,
                       "nullable": true,
                       "type": "integer",
                       "minimum": 1,
@@ -9809,14 +9812,11 @@
                     "id",
                     "classId",
                     "className",
-                    "kind",
                     "item",
                     "byName",
                     "playing",
                     "position",
                     "rate",
-                    "page",
-                    "pages",
                     "at",
                     "now"
                   ]
@@ -10036,6 +10036,7 @@
                             "type": "string"
                           },
                           "page": {
+                            "default": 1,
                             "type": "integer",
                             "minimum": 1,
                             "maximum": 9007199254740991
@@ -10069,7 +10070,6 @@
                           "id",
                           "by",
                           "byName",
-                          "page",
                           "colour",
                           "width",
                           "points"
@@ -10142,6 +10142,7 @@
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   },
                   "page": {
+                    "default": 1,
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 9007199254740991
@@ -10176,7 +10177,6 @@
                 },
                 "required": [
                   "strokeId",
-                  "page",
                   "colour",
                   "width",
                   "points"
@@ -10382,6 +10382,7 @@
                       "type": "string"
                     },
                     "kind": {
+                      "default": "video",
                       "type": "string",
                       "enum": [
                         "video",
@@ -10485,11 +10486,13 @@
                       "type": "number"
                     },
                     "page": {
+                      "default": 1,
                       "type": "integer",
                       "minimum": 1,
                       "maximum": 9007199254740991
                     },
                     "pages": {
+                      "default": null,
                       "nullable": true,
                       "type": "integer",
                       "minimum": 1,
@@ -10545,14 +10548,11 @@
                     "id",
                     "classId",
                     "className",
-                    "kind",
                     "item",
                     "byName",
                     "playing",
                     "position",
                     "rate",
-                    "page",
-                    "pages",
                     "at",
                     "now"
                   ]
@@ -10615,6 +10615,7 @@
                       "type": "string"
                     },
                     "kind": {
+                      "default": "video",
                       "type": "string",
                       "enum": [
                         "video",
@@ -10718,11 +10719,13 @@
                       "type": "number"
                     },
                     "page": {
+                      "default": 1,
                       "type": "integer",
                       "minimum": 1,
                       "maximum": 9007199254740991
                     },
                     "pages": {
+                      "default": null,
                       "nullable": true,
                       "type": "integer",
                       "minimum": 1,
@@ -10778,14 +10781,11 @@
                     "id",
                     "classId",
                     "className",
-                    "kind",
                     "item",
                     "byName",
                     "playing",
                     "position",
                     "rate",
-                    "page",
-                    "pages",
                     "at",
                     "now"
                   ]
