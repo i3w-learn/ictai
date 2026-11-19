@@ -6,7 +6,8 @@ import { Button, ErrorNote, Select, useAction } from '../../ui/ui';
 import { InkLayer, useInk, useInkProblem, type InkTools } from './Ink';
 import { PageRail } from './PageRail';
 import { PenRail } from './PenRail';
-import { PenAsks, PenRow } from './PenRow';
+import { PenRequests } from './PenRequests';
+import { PenRow } from './PenRow';
 import { turnPage } from './show-pages';
 import { useShowHost } from './useShowHost';
 
@@ -74,7 +75,7 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
           </div>
         )}
       </div>
-      {showing && <PenAsks host={host} />}
+      {showing && <PenRequests host={host} />}
       <ErrorNote message={load.error ?? host.error ?? inkProblem} />
 
       {/* The board in the middle, as big as fits at its wide shape; the pen down its left side and the

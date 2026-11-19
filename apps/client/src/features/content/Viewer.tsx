@@ -6,7 +6,8 @@ import { Button, Card, ErrorNote, Note } from '../../ui/ui';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from '../shows/Ink';
 import { PageRail } from '../shows/PageRail';
 import { PenRail } from '../shows/PenRail';
-import { PenAsks, PenRow } from '../shows/PenRow';
+import { PenRequests } from '../shows/PenRequests';
+import { PenRow } from '../shows/PenRow';
 import { turnPage } from '../shows/show-pages';
 import { useShowHost } from '../shows/useShowHost';
 import { KIND_WORDS, sizeWords } from './files';
@@ -111,7 +112,7 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
           </div>
         )
       )}
-      {showing && <PenAsks host={host} />}
+      {showing && <PenRequests host={host} />}
       <ErrorNote message={host.error ?? inkProblem} />
       <ErrorNote message={bookError} />
 
