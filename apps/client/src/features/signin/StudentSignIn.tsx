@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import jsQR from 'jsqr';
+import { useEffect, useState, type ReactNode } from 'react';
 import { sameRoll, type RosterEntry, type SchoolClass, type Section } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
-import { Button, Card, CARD_LOOK, Centered, ErrorNote, Field, PageTitle, cn, useAction, useLatest } from '../../ui/ui';
+import { Button, Card, CARD_LOOK, Centered, ErrorNote, Field, PageTitle, cn, useAction } from '../../ui/ui';
 
 // Where the student sits in the school: their class and, when the class has sections, their section.
 type Place = { cls: SchoolClass; section: Section | null };
@@ -11,8 +10,7 @@ type Step =
   | { at: 'section'; cls: SchoolClass; sections: Section[] }
   | { at: 'roll'; place: Place }
   | { at: 'confirm'; place: Place; student: RosterEntry }
-  | { at: 'who'; place: Place; students: RosterEntry[] }
-  | { at: 'card' };
+  | { at: 'who'; place: Place; students: RosterEntry[] };
 
 const placeLabel = (p: Place) => `Class ${p.cls.name}${p.section ? ` ${p.section.name}` : ''}`;
 
@@ -26,49 +24,6 @@ function Tile({ onClick, children }: { onClick: () => void; children: ReactNode 
       {children}
     </button>
   );
-}
-
-// Shows the webcam and reports the first QR code it sees. A PC with no camera shows nothing here;
-// the card scanner field below still works.
-function CardCamera({ onRead }: { onRead: (text: string) => void }) {
-  const video = useRef<HTMLVideoElement>(null);
-  const [failed, setFailed] = useState(!navigator.mediaDevices?.getUserMedia);
-  const report = useLatest(onRead);
-
-  useEffect(() => {
-    if (!navigator.mediaDevices?.getUserMedia) return;
-    let stream: MediaStream | null = null;
-    let stopped = false;
-    let timer: ReturnType<typeof setInterval> | undefined;
-    const canvas = document.createElement('canvas');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 } } }).then(async (s) => {
-      stream = s;
-      const el = video.current;
-      if (stopped || !el) return s.getTracks().forEach((t) => t.stop());
-      el.srcObject = s;
-      await el.play().catch(() => undefined);
-      const paint = canvas.getContext('2d', { willReadFrequently: true });
-      let last = '';
-      timer = setInterval(() => {
-        if (!paint || el.readyState < 2 || !el.videoWidth) return;
-        canvas.width = el.videoWidth;
-        canvas.height = el.videoHeight;
-        paint.drawImage(el, 0, 0);
-        const frame = paint.getImageData(0, 0, canvas.width, canvas.height);
-        const text = jsQR(frame.data, frame.width, frame.height)?.data;
-        // The same card held still is reported once, not four times a second.
-        if (text && text !== last) { last = text; report.current(text); }
-      }, 250);
-    }).catch(() => setFailed(true));
-    return () => {
-      stopped = true;
-      clearInterval(timer);
-      stream?.getTracks().forEach((t) => t.stop());
-    };
-  }, [report]);
-
-  if (failed) return null;
-  return <video ref={video} muted playsInline className="aspect-video w-full rounded-xl bg-secondary object-cover" />;
 }
 
 // Made for young students: pick your class, type your roll number, say "yes, that is me", and you are in.
@@ -117,16 +72,8 @@ export function StudentSignIn() {
     dispatch({ type: 'session', session });
   });
 
-  // A card's QR holds a long sign-in token. A hand scanner types it and presses Enter; the camera reads it directly.
-  const [cardText, setCardText] = useState('');
-  const withCard = useAction(async (qrToken: string) => {
-    setCardText('');
-    const session = await call('POST /api/v1/auth/student/qr', { body: { qrToken: qrToken.trim() } }, 'device');
-    dispatch({ type: 'session', session });
-  });
-
   // Going back wipes the trouble shown so far, so an old message does not follow the student to the next screen.
-  const forget = () => [openClass, findMe, signIn, withCard].forEach((a) => a.clear());
+  const forget = () => [openClass, findMe, signIn].forEach((a) => a.clear());
   const go = (to: Step) => () => { forget(); setStep(to); };
   const startOver = () => { forget(); setRollNo(''); setStep({ at: 'class' }); };
   // Only the trouble that belongs to the screen in view.
@@ -136,7 +83,6 @@ export function StudentSignIn() {
     roll: findMe.error,
     confirm: signIn.error,
     who: signIn.error,
-    card: withCard.error,
   }[step.at];
   const tiles = 'grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3';
   const big = '[&_input]:h-14 [&_input]:text-center [&_input]:text-2xl [&_input]:font-semibold';
@@ -152,7 +98,6 @@ export function StudentSignIn() {
           {classes.length === 0 && !loadClasses.busy && !loadClasses.error && (
             <p className="text-muted-foreground">No classes yet. Ask your teacher to add your class on the server PC.</p>
           )}
-          <div><Button variant="quiet" onClick={go({ at: 'card' })}>Scan my card</Button></div>
         </Card>
       )}
 
@@ -192,17 +137,6 @@ export function StudentSignIn() {
             {step.students.map((x) => <Tile key={x.id} onClick={() => { if (!signIn.busy) void signIn.run(step.place, x); }}>{x.name}</Tile>)}
           </div>
           <div><Button variant="quiet" onClick={go({ at: 'roll', place: step.place })}>Back</Button></div>
-        </Card>
-      )}
-
-      {step.at === 'card' && (
-        <Card className="p-7 sm:p-9">
-          <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); if (cardText.trim().length >= 16) void withCard.run(cardText); }}>
-            <PageTitle sub="Hold your sign-in card up to the camera, or scan it with the scanner.">Scan your card</PageTitle>
-            <CardCamera onRead={(text) => { if (!withCard.busy) void withCard.run(text); }} />
-            <Field id="card-token" label="Card scanner" type="password" autoComplete="off" autoFocus value={cardText} onChange={(e) => setCardText(e.target.value)} />
-            <Button type="button" variant="quiet" onClick={startOver}>Back</Button>
-          </form>
         </Card>
       )}
 

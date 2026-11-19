@@ -108,9 +108,8 @@ describe('student edit and delete', () => {
     expect((await app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: auth(token) })).statusCode).toBe(401);
     const roster = await app.inject({ method: 'GET', url: `/api/v1/auth/student/roster?classId=${cls.id}`, headers: device });
     expect(roster.json()).toEqual([]);
-    // Neither their roll number nor their card gets them in any more.
+    // Their roll number does not get them in any more.
     expect((await signIn()).statusCode).toBe(404);
-    expect((await app.inject({ method: 'POST', url: '/api/v1/auth/student/qr', headers: device, payload: { qrToken: student.qrToken } })).statusCode).toBe(401);
     const logged = db.prepare(`SELECT target FROM audit_log WHERE action = 'student.delete'`).get();
     expect(logged).toEqual({ target: student.id });
   });
@@ -142,31 +141,6 @@ describe('student sign-in on a lab PC', () => {
     expect((await app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: auth(token) })).statusCode).toBe(401);
   });
 
-  it('signs in with the QR card token', async () => {
-    const { app, student, device } = await withStudent();
-    const res = await app.inject({ method: 'POST', url: '/api/v1/auth/student/qr', headers: device, payload: { qrToken: student.qrToken } });
-    expect(res.statusCode).toBe(201);
-    const bad = await app.inject({ method: 'POST', url: '/api/v1/auth/student/qr', headers: device, payload: { qrToken: 'x'.repeat(43) } });
-    expect(bad.statusCode).toBe(401);
-  });
-
-  it('blocks QR guessing on a lab PC after 5 unknown cards, for five minutes', async () => {
-    const { app, student, device, clock } = await withStudent();
-    const scan = (qrToken: string) => app.inject({ method: 'POST', url: '/api/v1/auth/student/qr', headers: device, payload: { qrToken } });
-    for (let i = 0; i < 5; i++) expect((await scan(`${i}`.repeat(43))).statusCode).toBe(401);
-    expect((await scan(student.qrToken)).statusCode).toBe(429);
-    clock.t += 5 * 60_000 + 1;
-    expect((await scan(student.qrToken)).statusCode).toBe(201);
-  });
-
-  it('a good card clears earlier bad scans', async () => {
-    const { app, student, device } = await withStudent();
-    const scan = (qrToken: string) => app.inject({ method: 'POST', url: '/api/v1/auth/student/qr', headers: device, payload: { qrToken } });
-    for (let i = 0; i < 4; i++) await scan(`${i}`.repeat(43));
-    expect((await scan(student.qrToken)).statusCode).toBe(201);
-    for (let i = 0; i < 4; i++) await scan(`${i}`.repeat(43));
-    expect((await scan(student.qrToken)).statusCode).toBe(201);
-  });
 
 });
 
@@ -202,16 +176,5 @@ describe('student import from a spreadsheet', () => {
     expect((await post(cls.id, [])).statusCode).toBe(400);
     expect((await post(cls.id, Array.from({ length: 501 }, (_, i) => ({ name: `S${i}` })))).statusCode).toBe(400);
     expect((await post('00000000-0000-4000-8000-000000000000', [{ name: 'X' }])).statusCode).toBe(404);
-  });
-});
-
-describe('activity log for sign-in and quizzes', () => {
-  it('logs an unknown card against the lab PC, without what was scanned', async () => {
-    const { app, db, device } = await withStudent();
-    await app.inject({ method: 'POST', url: '/api/v1/auth/student/qr', headers: device, payload: { qrToken: 'x'.repeat(32) } });
-    const rows = db.prepare(`SELECT actor_kind, target, detail FROM audit_log WHERE action = 'student.signin.failed' ORDER BY id`).all() as { actor_kind: string; target: string | null; detail: string }[];
-    expect(rows).toEqual([
-      { actor_kind: 'device', target: null, detail: '{"method":"qr"}' },
-    ]);
   });
 });

@@ -72,23 +72,6 @@ describe('promote a class', () => {
   });
 });
 
-describe('sign-in cards', () => {
-  it('cards carry a new QR that works, and the old QR stops working', async () => {
-    const { app, c7, staff, device } = await withClass();
-    const created = (await app.inject({
-      method: 'POST', url: '/api/v1/students', headers: staff, payload: { name: 'Kabir', classId: c7.id, rollNo: '14' },
-    })).json();
-    const qr = (qrToken: string) => app.inject({ method: 'POST', url: '/api/v1/auth/student/qr', headers: device, payload: { qrToken } });
-    expect((await qr(created.qrToken)).statusCode).toBe(201);
-
-    const cards = (await app.inject({ method: 'POST', url: `/api/v1/classes/${c7.id}/cards`, headers: staff })).json();
-    const kabir = cards.find((c: { name: string }) => c.name === 'Kabir');
-    expect(kabir).toEqual({ studentId: created.id, name: 'Kabir', rollNo: '14', qrToken: expect.any(String) }); // a QR and nothing else to sign in with
-    expect((await qr(kabir.qrToken)).statusCode).toBe(201);
-    expect((await qr(created.qrToken)).statusCode).toBe(401);
-  });
-});
-
 describe('activity log', () => {
   it('shows who did what, newest first, with names', async () => {
     const { app, post, c7, c8, login, auth } = await withClass();
