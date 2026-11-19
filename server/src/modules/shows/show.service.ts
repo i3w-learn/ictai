@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
-  SCREEN_REPORTS_MAX, WHITEBOARD_PAGES_MAX, showRoom,
+  SCREEN_REPORTS_MAX, SHOW_KINDS, WHITEBOARD_PAGES_MAX, canShow, showRoom, startingPages,
   type ScreenReport, type Show, type ShowPage, type ShowStart, type ShowUpdate, type StaffPrincipal, type StudentPrincipal,
 } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
@@ -67,12 +67,13 @@ export class ShowService {
   page(actor: StaffPrincipal, id: string, input: ShowPage): Show {
     const live = this.store.mine(actor, id);
     const bad = (message: string) => new AppError(400, 'BAD_REQUEST', message);
-    if (live.kind === 'video') throw bad('A video has no pages.');
+    const rule = SHOW_KINDS[live.kind].pages;
+    if (rule === 'none') throw bad('A video has no pages.');
     let pages = live.pages;
     if (input.pages !== undefined && input.pages !== live.pages) {
       // A PDF: the teacher's app counted the pages of the file. A whiteboard: "Add page", one at a time.
-      if (live.kind === 'image') throw bad('A picture is one page.');
-      if (live.kind === 'whiteboard' && (input.pages !== (live.pages ?? 0) + 1 || input.pages > WHITEBOARD_PAGES_MAX)) {
+      if (rule === 'one') throw bad('A picture is one page.');
+      if (rule === 'grows' && (input.pages !== (live.pages ?? 0) + 1 || input.pages > WHITEBOARD_PAGES_MAX)) {
         throw bad(`A whiteboard gains one page at a time, up to ${WHITEBOARD_PAGES_MAX}.`);
       }
       pages = input.pages;
@@ -152,15 +153,15 @@ export class ShowService {
     const item = this.content.get(contentId);
     // A library item for a class or subject this teacher does not teach looks the same as none.
     if (!item || !seesQuiz(scopeOf(actor), item)) throw notFound('Library item');
-    if (item.kind !== 'video' && item.kind !== 'pdf' && item.kind !== 'image') throw new AppError(400, 'BAD_REQUEST', 'Only a video, PDF or picture can be shown to the class.');
-    return { kind: item.kind, item, classId: item.classId, className: item.className, pages: item.kind === 'image' ? 1 : null };
+    if (!canShow(item.kind)) throw new AppError(400, 'BAD_REQUEST', 'Only a video, PDF or picture can be shown to the class.');
+    return { kind: item.kind, item, classId: item.classId, className: item.className, pages: startingPages(item.kind) };
   }
 
   // A blank whiteboard with one page, for a class this teacher teaches. Any other class looks the same as none.
   private whiteboard(actor: StaffPrincipal, classId: string) {
     const className = this.classes.name(classId);
     if (className === undefined || !seesClass(scopeOf(actor), classId)) throw notFound('Class');
-    return { kind: 'whiteboard' as const, item: null, classId, className, pages: 1 };
+    return { kind: 'whiteboard' as const, item: null, classId, className, pages: startingPages('whiteboard') };
   }
 }
 

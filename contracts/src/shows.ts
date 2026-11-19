@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Id } from './common.js';
-import { ContentItem } from './content.js';
+import { ContentItem, type ContentKind } from './content.js';
 
 // "Show to class": a teacher opens a library video and shows it to a class. The same video opens on
 // every student PC of that class by itself, and when the teacher plays, pauses or skips, every screen
@@ -37,6 +37,31 @@ export const ShowPage = z.object({
 export type ShowPage = z.infer<typeof ShowPage>;
 // The most pages a whiteboard may have, so one show cannot fill the server's memory.
 export const WHITEBOARD_PAGES_MAX = 30;
+
+// What each kind of show is, in one place. `library`: it is a library item a teacher can show (a
+// whiteboard is not; it has no file). `pages`, how its pages work:
+//   none: a video has no pages (it is always on page 1)
+//   counted: a PDF; the teacher's app counts the pages after opening the file
+//   one: a picture is one page
+//   grows: a whiteboard starts with one page and gains one at a time, up to WHITEBOARD_PAGES_MAX
+export const SHOW_KINDS = {
+  video: { library: true, pages: 'none' },
+  pdf: { library: true, pages: 'counted' },
+  image: { library: true, pages: 'one' },
+  whiteboard: { library: false, pages: 'grows' },
+} as const satisfies Record<ShowKind, { library: boolean; pages: 'none' | 'counted' | 'one' | 'grows' }>;
+
+// The kinds of library item that can be shown to a class.
+export type ShowableKind = { [K in ShowKind]: (typeof SHOW_KINDS)[K]['library'] extends true ? K : never }[ShowKind];
+export function canShow(kind: ContentKind | ShowKind): kind is ShowableKind {
+  return kind in SHOW_KINDS && SHOW_KINDS[kind as ShowKind].library;
+}
+
+// How many pages a show of this kind has when it starts: null while not yet known (a PDF), or for a video.
+export function startingPages(kind: ShowKind): number | null {
+  const rule = SHOW_KINDS[kind].pages;
+  return rule === 'one' || rule === 'grows' ? 1 : null;
+}
 // Every screen draws the whiteboard in this shape (wide, like a projector), with plain bars where a
 // screen is a different shape, so writing lands on the same spot of the board everywhere.
 export const WHITEBOARD_ASPECT = 16 / 9;

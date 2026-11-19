@@ -1,5 +1,5 @@
 import {
-  INK_POINTS_MAX, INK_SHOW_STROKES_MAX, INK_STROKES_MAX, showRoom,
+  INK_POINTS_MAX, INK_SHOW_STROKES_MAX, INK_STROKES_MAX, SHOW_KINDS, showRoom,
   type Ink, type InkAdd, type InkEvent, type Principal, type Show, type StaffPrincipal, type StudentPrincipal,
 } from '@ict/contracts';
 import { AppError } from '../../core/errors.js';
@@ -34,7 +34,7 @@ export class ShowPenService {
     if (p.kind === 'staff') {
       // The teacher writes on the page in front of her, which may be a step ahead of the server's
       // when her page turn is still on its way. Any page the show has will do.
-      const last = live.kind === 'video' ? 1 : live.pages;
+      const last = SHOW_KINDS[live.kind].pages === 'none' ? 1 : live.pages;
       if (last !== null && input.page > last) throw new AppError(400, 'BAD_REQUEST', 'There is no such page.');
     } else if (input.page !== live.page) {
       // A student's screen follows the teacher's; a line for any other page is about something no longer on show.

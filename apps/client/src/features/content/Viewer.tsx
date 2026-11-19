@@ -1,6 +1,6 @@
 import { lazy, Suspense, useRef, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, MonitorPlay } from 'lucide-react';
-import type { ContentItem } from '@ict/contracts';
+import { canShow as showable, type ContentItem, type ShowableKind } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, Card, ErrorNote, Note } from '../../ui/ui';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from '../shows/Ink';
@@ -15,11 +15,11 @@ import { VideoPlayer, type PlayerState } from './VideoPlayer';
 const PdfPages = lazy(() => import('./PdfPages').then((m) => ({ default: m.PdfPages })));
 
 // What the teacher is told about a show, before and while it is on.
-const SHOW_WORDS = {
+const SHOW_WORDS: Record<ShowableKind, { before: string; during: string }> = {
   video: { before: 'The video opens on every student PC of the class and follows what you do here.', during: 'When you play, pause or skip, their screens do the same.' },
   pdf: { before: 'The book opens on every student PC of the class, on the page you are on.', during: 'When you turn the page, their screens turn too.' },
   image: { before: 'The picture opens on every student PC of the class.', during: '' },
-} as const;
+};
 
 // Opens one library item: a picture as a picture, a PDF page by page (students: in the built-in
 // reader), video and sound with their own players. A teacher who may host lessons can also show a
@@ -32,8 +32,8 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
   const { url, percent, error, onError } = useFileUrl(item, { streamPdf: staff });
 
   // --- Show to class ---
-  const canShow = staff && me.permissions.includes('lesson.present') && (item.kind === 'video' || item.kind === 'pdf' || item.kind === 'image');
-  const words = item.kind === 'video' || item.kind === 'pdf' || item.kind === 'image' ? SHOW_WORDS[item.kind] : null;
+  const canShow = staff && me.permissions.includes('lesson.present') && showable(item.kind);
+  const words = showable(item.kind) ? SHOW_WORDS[item.kind] : null;
   // Asks the player where it is right now.
   const peek = useRef<(() => PlayerState) | null>(null);
   const host = useShowHost({ contentId: item.id }, peek);
