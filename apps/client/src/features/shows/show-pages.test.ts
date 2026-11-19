@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { turnPage } from './show-pages';
+import { startingPlace, turnPage } from './show-pages';
 
 describe('turnPage', () => {
   it('goes on and back one page', () => {
@@ -13,5 +13,15 @@ describe('turnPage', () => {
   it('does not go on while the number of pages is not known', () => {
     expect(turnPage(1, 1, null)).toBe(1);
     expect(turnPage(2, -1, null)).toBe(1);
+  });
+});
+
+describe('startingPlace', () => {
+  it('keeps the page of a book the teacher is reading', () => {
+    expect(startingPlace('pdf', { page: 7, pages: 120 })).toEqual({ page: 7, pages: 120 });
+    expect(startingPlace('video', { page: 1 })).toEqual({ page: 1 });
+  });
+  it('starts a whiteboard blank at page 1 of 1, however many pages it had', () => {
+    expect(startingPlace('whiteboard', { page: 3, pages: 4 })).toEqual({ page: 1, pages: 1 });
   });
 });

@@ -3,6 +3,7 @@ import { SHOW_BEAT_MS, type Show, type ShowKind, type ShowStart, type ShowUpdate
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
 import { useAction, useLatest } from '../../ui/ui';
+import { startingPlace } from './show-pages';
 
 // The teacher's side of one show: start it, keep it alive, turn its pages, give the pen, stop it.
 // `start` says what to show. For a video, `peek` asks the player where it is right now; its play,
@@ -32,11 +33,12 @@ export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate
     // Someone else is now showing this class something: stop saying this show is on.
     if (e.status === 410) { ended(); return true; }
     // The server no longer knows the show (the Server PC was away for a while, or restarted) but the
-    // teacher never stopped it: start it again, at the place her video or her page is now.
+    // teacher never stopped it: start it again, at the place her video or her page is now. A whiteboard
+    // starts again blank, at page 1 of 1: its writing went with the server's memory.
     if (e.status === 404) {
       showId.current = null;
       call('POST /api/v1/shows', { body: what.current }).then(
-        (again) => { showId.current = again.id; kind.current = again.kind; setLive(again); refresh(); },
+        (again) => { showId.current = again.id; kind.current = again.kind; where.current = startingPlace(again.kind, where.current); setLive(again); refresh(); },
         () => ended(),
       );
       return true;
@@ -72,6 +74,7 @@ export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate
     const s = await call('POST /api/v1/shows', { body: what.current });
     showId.current = s.id;
     kind.current = s.kind;
+    where.current = startingPlace(s.kind, where.current);
     setLive(s);
     setShowing(true);
     setPageError(null);

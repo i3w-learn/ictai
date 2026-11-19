@@ -17,6 +17,7 @@ import { AskAi } from '../quizzes/AskAi';
 import { VideosPanel } from '../content/VideosPanel';
 import { ContentPanel } from '../content/ContentPanel';
 import { Viewer } from '../content/Viewer';
+import { Whiteboard } from '../shows/Whiteboard';
 import { NoticesPanel } from '../notices/NoticesPanel';
 import { ReportCardsPanel } from '../report-cards/ReportCardsPanel';
 import { SequencesPanel } from '../sequences/SequencesPanel';
@@ -48,6 +49,7 @@ type View =
   | { kind: 'ask-ai' }
   | { kind: 'mark-work'; id: string }
   | { kind: 'content'; item: ContentItem }
+  | { kind: 'whiteboard' }
   | { kind: 'student'; studentId: string };
 
 function greeting() {
@@ -78,6 +80,7 @@ export function Home() {
     if (view.kind === 'edit-quiz') return <Shell><QuizEditor quizId={view.quizId} draft={view.draft} onDone={back} /></Shell>;
     if (view.kind === 'ai-quiz') return <Shell><AiQuizMaker onDraft={(draft) => setView({ kind: 'edit-quiz', quizId: null, draft })} onBack={back} /></Shell>;
     if (view.kind === 'content') return <Shell><Viewer item={view.item} onBack={back} /></Shell>;
+    if (view.kind === 'whiteboard') return <Shell><Whiteboard onBack={back} /></Shell>;
     if (view.kind === 'mark-work') return <Shell><MarkWork id={view.id} onBack={back} /></Shell>;
     if (view.kind === 'ask-ai') return <Shell><AskAi onBack={back} /></Shell>;
     if (view.kind === 'lab') return <Shell><LabSession runId={view.runId} onExit={back} /></Shell>;
@@ -92,7 +95,7 @@ export function Home() {
         can('teaching.manage') && <QuizzesPanel key="quizzes" refresh={refresh} onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} onAsk={() => setView({ kind: 'ask-ai' })} />,
       ],
       teach: [
-        can('teaching.manage') && <ContentPanel key="content" refresh={refresh} onChanged={changed} onOpen={(item) => setView({ kind: 'content', item })} />,
+        can('teaching.manage') && <ContentPanel key="content" refresh={refresh} onChanged={changed} onOpen={(item) => setView({ kind: 'content', item })} onWhiteboard={() => setView({ kind: 'whiteboard' })} />,
         can('teaching.manage') && <SequencesPanel key="sequences" refresh={refresh} />,
         can('teaching.manage') && <WorkPanel key="work" refresh={refresh} onChanged={changed} onOpen={(id) => setView({ kind: 'mark-work', id })} />,
         can('teaching.manage') && <NoticesPanel key="notices" refresh={refresh} />,

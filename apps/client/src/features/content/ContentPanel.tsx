@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link2, Upload } from 'lucide-react';
+import { Link2, Presentation, Upload } from 'lucide-react';
 import { MAX_FILE_BYTES, type ContentItem, type SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, useAction } from '../../ui/ui';
@@ -10,10 +10,12 @@ const BLANK = { title: '', classId: '', subject: '', chapter: '', url: '' };
 
 // PRD "Content": the school's library. A teacher adds a file or a web link and files it under a class,
 // subject and chapter. Students find it under My books.
-export function ContentPanel({ onOpen, refresh, onChanged }: { onOpen: (item: ContentItem) => void; refresh: number; onChanged: () => void }) {
+// A teacher who may host lessons also gets a blank whiteboard to show to a class (`onWhiteboard`).
+export function ContentPanel({ onOpen, onWhiteboard, refresh, onChanged }: { onOpen: (item: ContentItem) => void; onWhiteboard: () => void; refresh: number; onChanged: () => void }) {
   const { call, state } = useApp();
   const p = state.session?.principal;
   const canAdd = p?.kind === 'staff' && p.permissions.includes('setup.content');
+  const canPresent = p?.kind === 'staff' && p.permissions.includes('lesson.present');
   const [items, setItems] = useState<ContentItem[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [filter, setFilter] = useState('');
@@ -69,7 +71,7 @@ export function ContentPanel({ onOpen, refresh, onChanged }: { onOpen: (item: Co
   const shown = filter ? items.filter((i) => i.classId === filter) : items;
 
   return (
-    <Panel title="Library">
+    <Panel title="Library" actions={canPresent && <Button variant="quiet" onClick={onWhiteboard}><Presentation className="size-4" /> Whiteboard</Button>}>
       {canAdd && (
         <form className="grid gap-3" onSubmit={(e) => e.preventDefault()}>
           <div className="flex flex-wrap items-end gap-3">
