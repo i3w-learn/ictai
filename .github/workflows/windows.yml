@@ -76,8 +76,8 @@ jobs:
           VIDEOS_REPO: ${{ vars.STARTER_VIDEOS_REPO || github.repository }}
         run: |
           New-Item -ItemType Directory -Force stage/server/starter-videos | Out-Null
-          gh release download starter-videos --repo $env:VIDEOS_REPO --pattern "*.mp4" --pattern "*.webm" --dir stage/server/starter-videos
-          if ($LASTEXITCODE) { Write-Host "No starter videos found; building without them."; $global:LASTEXITCODE = 0 }
+          gh release download starter-videos --repo $env:VIDEOS_REPO --pattern "*.mp4" --pattern "*.webm" --pattern "*.pdf" --dir stage/server/starter-videos
+          if ($LASTEXITCODE) { Write-Host "No starter videos or books found; building without them."; $global:LASTEXITCODE = 0 }
           Get-ChildItem stage/server/starter-videos | ForEach-Object { "{0}  {1:N0} MB" -f $_.Name, ($_.Length / 1MB) }
 
       - name: Smoke-test the staged server
