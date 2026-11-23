@@ -122,6 +122,19 @@ double-click a `.ictlock` file, or try to open it with a video player. It must n
 2. Student PC: **Join the quiz**. Server PC: **Start quiz**.
 3. Student answers. Server PC shows the live score. Press **End quiz**.
 
+## Step 6b: A poll
+
+1. Server PC: **Today** → **Polls** → Class 6 → type a question → **Ask the class**.
+
+Check on the student PC: the question pops up at once, over whatever was open.
+
+2. Student: tap an answer. The popup goes away.
+
+Check on the Server PC: the bar for that answer grows by one, without pressing anything.
+
+3. Ask a second poll with **1 to 5 stars**. The first poll shows as **Closed**. The student taps a star.
+4. Press **Close poll**. The student no longer sees it.
+
 ## Step 7: Switch off and on
 
 1. Restart the Server PC. Do not open anything.

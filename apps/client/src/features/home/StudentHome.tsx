@@ -8,6 +8,7 @@ import { MyBooks } from '../content/MyBooks';
 import { StudentNotices } from '../notices/StudentNotices';
 import { MyNotes } from '../notes/MyNotes';
 import { HowIAmDoing } from '../progress/HowIAmDoing';
+import { PollPopup, useOpenPoll } from '../polls/PollPopup';
 import { PlayQuiz } from '../quizzes/PlayQuiz';
 import { QuizPopup, QuizWaiting, useOpenQuiz } from '../quizzes/QuizInvite';
 import { ThingsToDo } from '../sequences/ThingsToDo';
@@ -38,6 +39,9 @@ export function StudentHome({ name }: { name: string }) {
   // The quiz the student said "Not now" to; a different quiz pops up again.
   const [later, setLater] = useState<string | null>(null);
   const { quiz, clear: clearQuiz } = useOpenQuiz();
+  // A quick question from the teacher (a poll). It pops up until the student answers it or says "Not now".
+  const { poll, set: setPoll } = useOpenPoll();
+  const [pollLater, setPollLater] = useState<string | null>(null);
   // A video the teacher is showing the class right now. It lies over every screen below.
   const classShow = useClassShow();
   const { call } = useApp();
@@ -79,6 +83,8 @@ export function StudentHome({ name }: { name: string }) {
       {/* While the teacher is showing a video, a quiz that is open waits: its popup would lie over the
           video, and over the pen of a student the teacher has asked to write on it. It comes up when the video goes. */}
       {quiz && quiz.runId !== later && !classShow && <QuizPopup quiz={quiz} onJoined={setPlaying} onLater={() => setLater(quiz.runId)} />}
+      {/* A poll waits behind the teacher's video and behind a quiz popup, like the quiz does. */}
+      {poll && poll.myChoice === null && poll.id !== pollLater && !classShow && !(quiz && quiz.runId !== later) && <PollPopup poll={poll} onAnswered={setPoll} onLater={() => setPollLater(poll.id)} />}
       {page === 'home' && (
         <StudentDashboard
           name={name} go={setPage}

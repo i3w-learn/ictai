@@ -504,4 +504,29 @@ export const migrations: Migration[] = [
       CREATE INDEX attendance_day ON attendance(day);
     `,
   },
+  {
+    // Polls: one question to a class, and one answer from each student who gives one.
+    version: 19,
+    name: 'polls',
+    sql: `
+      CREATE TABLE polls (
+        id           TEXT PRIMARY KEY,
+        class_id     TEXT NOT NULL REFERENCES classes(id),
+        question     TEXT NOT NULL,
+        kind         TEXT NOT NULL CHECK (kind IN ('choice','rating')),
+        options_json TEXT NOT NULL,
+        created_by   TEXT NOT NULL REFERENCES users(id),
+        created_at   INTEGER NOT NULL,
+        closed_at    INTEGER
+      );
+      CREATE INDEX polls_class ON polls(class_id, created_at);
+      CREATE TABLE poll_answers (
+        poll_id     TEXT NOT NULL REFERENCES polls(id),
+        student_id  TEXT NOT NULL REFERENCES students(id),
+        choice      INTEGER NOT NULL,
+        answered_at INTEGER NOT NULL,
+        PRIMARY KEY (poll_id, student_id)
+      );
+    `,
+  },
 ];

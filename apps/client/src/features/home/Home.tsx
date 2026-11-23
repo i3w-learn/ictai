@@ -19,6 +19,7 @@ import { ContentPanel } from '../content/ContentPanel';
 import { Viewer } from '../content/Viewer';
 import { Whiteboard } from '../shows/Whiteboard';
 import { AttendancePanel } from '../attendance/AttendancePanel';
+import { PollsPanel } from '../polls/PollsPanel';
 import { NoticesPanel } from '../notices/NoticesPanel';
 import { ReportCardsPanel } from '../report-cards/ReportCardsPanel';
 import { SequencesPanel } from '../sequences/SequencesPanel';
@@ -95,6 +96,7 @@ export function Home() {
         can('results.view') && <ResultsPanel key="results" refresh={refresh} onStudent={(studentId) => setView({ kind: 'student', studentId })} />,
         can('results.view') && <AttendancePanel key="attendance" refresh={refresh} canEdit={can('students.manage')} />,
         can('teaching.manage') && <QuizzesPanel key="quizzes" refresh={refresh} onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} onAsk={() => setView({ kind: 'ask-ai' })} />,
+        can('lesson.start') && <PollsPanel key="polls" refresh={refresh} />,
       ],
       teach: [
         can('teaching.manage') && <ContentPanel key="content" refresh={refresh} onChanged={changed} onOpen={(item) => setView({ kind: 'content', item })} onWhiteboard={() => setView({ kind: 'whiteboard' })} />,

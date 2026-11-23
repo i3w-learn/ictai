@@ -15,6 +15,7 @@ import { ResultsOverview, ResultsQuery, StudentResults, TeacherActivity, MyProgr
 import { Note, NoteInput } from './notes.js';
 import { Notice, NoticeInput } from './notices.js';
 import { AttendanceDay, AttendanceMark, AttendanceQuery } from './attendance.js';
+import { Poll, PollAnswer, PollForStudent, PollInput, PollQuery } from './polls.js';
 import { SchoolSettings, StudentPrefs } from './settings.js';
 import { SlotInput, SlotQuery, StudentToday, Timetable } from './timetable.js';
 import { ContentItem, ContentQuery, FileChunk, FileChunkParams, FinishUpload, LinkInput, StartUpload, UploadChunk, UploadTicket } from './content.js';
@@ -185,6 +186,14 @@ export const API = {
   'PUT /api/v1/notices/:id': { summary: 'Change a notice', access: staff('teaching.manage'), params: IdParams, body: NoticeInput, status: 200, response: Notice },
   'DELETE /api/v1/notices/:id': { summary: 'Take a notice down for good', access: staff('teaching.manage'), params: IdParams, status: 204 },
   'GET /api/v1/notices/mine': { summary: "Notices for the student's school, class and section that have not expired", access: student, status: 200, response: z.array(Notice) },
+
+  // Polls: one quick question to a class, with no right answer and no score.
+  'GET /api/v1/polls': { summary: 'Polls you may see with how the class answered, newest first, optionally for one class', access: staff(), query: PollQuery, status: 200, response: z.array(Poll) },
+  'POST /api/v1/polls': { summary: "Ask a class one question; it opens on their screens. It closes the class's poll that was open before", access: staff('lesson.start'), body: PollInput, status: 201, response: Poll },
+  'POST /api/v1/polls/:id/close': { summary: 'Close a poll; nobody can answer any more', access: staff('lesson.control'), params: IdParams, status: 200, response: Poll },
+  'DELETE /api/v1/polls/:id': { summary: 'Delete a poll and its answers', access: staff('lesson.control'), params: IdParams, status: 204 },
+  'GET /api/v1/polls/open': { summary: "The poll open for the student's class right now, if any, with their own answer", access: student, status: 200, response: PollForStudent.nullable() },
+  'POST /api/v1/polls/:id/answer': { summary: 'Answer the poll, or change the answer while it is open', access: student, params: IdParams, body: PollAnswer, status: 200, response: PollForStudent },
 
   // Attendance: who was in the lab on a day. Signing in on a lab PC marks a student present.
   'GET /api/v1/attendance': { summary: 'Who of a class was present on a day (today when no date is given)', access: staff('results.view'), query: AttendanceQuery, status: 200, response: AttendanceDay },

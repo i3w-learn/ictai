@@ -10,6 +10,7 @@ export * from './results.js';
 export * from './notes.js';
 export * from './notices.js';
 export * from './attendance.js';
+export * from './polls.js';
 export * from './settings.js';
 export * from './timetable.js';
 export * from './work.js';
