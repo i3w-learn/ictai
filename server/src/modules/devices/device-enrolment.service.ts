@@ -11,6 +11,7 @@ import { DEVICE_TOKEN_MS } from '../auth/principal.resolver.js';
 import { hashToken, newToken } from '../auth/secrets.js';
 import type { SchoolIdentity } from '../system/school-identity.js';
 import type { DeviceRepository } from './device.repository.js';
+import type { ScreenLocks } from './screen-locks.js';
 
 // Lab PCs and boards join by themselves: nothing is typed or pressed, on the PC or on the server PC.
 // The cost of that ease: any machine on the lab network that runs the app can join. Staff see every
@@ -26,6 +27,7 @@ export class DeviceEnrolmentService {
     private readonly audit: AuditLog,
     private readonly sessions: SessionRepository,
     private readonly db: Db,
+    private readonly locks: ScreenLocks,
   ) {}
 
   joining(): Joining {
@@ -71,6 +73,7 @@ export class DeviceEnrolmentService {
     // The student who was on it is signed out for real, not just cut off: otherwise they would count
     // as still sitting there, and every other PC would turn them away until that sign-in ran out.
     this.sessions.deleteForDevice(id);
+    this.locks.forget(id);
     this.audit.record({ kind: 'staff', id: by.userId }, 'device.remove', id, {});
   }
 
@@ -84,6 +87,7 @@ export class DeviceEnrolmentService {
       return {
         ...d,
         connected: d.status === 'active' && d.lastSeen !== null && now - d.lastSeen <= CONNECTED_WITHIN_MS,
+        locked: this.locks.has(d.id),
         student: st ? { name: seesClass(scope, st.classId) ? st.name : null, className: st.className } : null,
       };
     });

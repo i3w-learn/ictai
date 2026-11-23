@@ -61,6 +61,18 @@ Do each one from the Server PC and watch the student PC.
 | **Take the pen back** | lose the pen tools |
 | Add your video to Class 6 → **Open** → **Show to Class 6** → play, pause, skip | play, pause and skip at the same moments |
 
+## Step 5a: Lock the screens
+
+1. Server PC: **School** → **Devices** → **Lock all screens**.
+
+Check on the student PC: within a second the whole screen is covered by **Look at your teacher**. Nothing
+behind it can be clicked, and the keyboard does nothing. It is the same whether a student is signed
+in or the PC is waiting on the sign-in screen.
+
+2. Server PC: **Unlock all screens**. The student PC is back where it was.
+3. Try **Lock screen** on one PC's line: only that PC is covered.
+4. Lock a screen, then restart the student PC. When the app opens again it is still locked.
+
 ## Step 5b: Our locked videos
 
 Our own videos and books come locked: the file name ends in `.ictlock` and it plays only inside

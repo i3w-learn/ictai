@@ -1,7 +1,7 @@
 import { z, type ZodType } from 'zod';
 import { AuditEntry, AuditQuery, Health } from './common.js';
 import { Principal, SessionResult, StaffLogin, StudentRollLogin } from './auth.js';
-import { Device, DeviceEnrol, DeviceEnrolResult, Joining } from './devices.js';
+import { Device, DeviceEnrol, DeviceEnrolResult, Joining, ScreenLock } from './devices.js';
 import {
   ClassQuery, ImportResult, ImportStudents, PromoteClass, PromoteResult, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
   SchoolClass, Section, Student, UpdateStudent,
@@ -64,6 +64,8 @@ export const API = {
   'POST /api/v1/auth/device/enrol': { summary: 'A lab PC or board joins the lab by itself, unless staff have locked the lab', access: pub, body: DeviceEnrol, status: 201, response: DeviceEnrolResult },
   'GET /api/v1/devices/joining': { summary: 'Whether new PCs and boards can still join', access: staff('setup.devices'), status: 200, response: Joining },
   'PUT /api/v1/devices/joining': { summary: 'Lock the lab against new devices, or open it again', access: staff('setup.devices'), body: Joining, status: 200, response: Joining },
+  'PUT /api/v1/devices/lock': { summary: 'Lock the screen of every lab PC, or unlock every screen', access: staff('lesson.control'), body: ScreenLock, status: 200, response: z.array(Device) },
+  'PUT /api/v1/devices/:id/lock': { summary: 'Lock or unlock the screen of one PC or board', access: staff('lesson.control'), params: IdParams, body: ScreenLock, status: 200, response: z.array(Device) },
   'POST /api/v1/devices/ping': { summary: 'A lab PC or board says it is switched on and reachable', access: { kind: 'device' }, status: 204 },
   'DELETE /api/v1/devices/:id': { summary: 'Remove a PC or board from the lab; it is signed out and must join again', access: staff('setup.devices'), params: IdParams, status: 204 },
   'GET /api/v1/devices': { summary: 'Devices, whether each is connected, and who is signed in on it', access: staff('setup.devices'), status: 200, response: z.array(Device) },

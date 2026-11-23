@@ -12,6 +12,7 @@ import { StaffAuthService } from './modules/auth/staff-auth.service.js';
 import { StaffRepository } from './modules/auth/staff.repository.js';
 import { DeviceEnrolmentService } from './modules/devices/device-enrolment.service.js';
 import { DeviceRepository } from './modules/devices/device.repository.js';
+import { ScreenLocks } from './modules/devices/screen-locks.js';
 import { ClassRepository } from './modules/students/class.repository.js';
 import { StudentAdminService } from './modules/students/student-admin.service.js';
 import { StudentAuthService } from './modules/students/student-auth.service.js';
@@ -136,6 +137,8 @@ export function createContainer(opts: {
 
   const attendance = new AttendanceService(now, repos.attendance, repos.classes, repos.students, audit);
 
+  const screenLocks = new ScreenLocks(repos.devices, relay, audit);
+
   const firstAdmin = () => db.prepare("SELECT id FROM users WHERE role = 'super_admin' AND status = 'active' ORDER BY created_at LIMIT 1").pluck().get() as string | undefined;
 
   return {
@@ -159,7 +162,8 @@ export function createContainer(opts: {
     reportCards: new ReportCardService(now, repos.reportCards, repos.classes, repos.students, results, repos.work, audit),
     staffAuth: new StaffAuthService(now, repos.staff, sessions, new FailureLimiter(now), audit),
     staffAdmin: new StaffAdminService(now, repos.staff, repos.sessions, repos.classes, audit),
-    enrolment: new DeviceEnrolmentService(now, repos.devices, identity, new FailureLimiter(now), audit, repos.sessions, db),
+    enrolment: new DeviceEnrolmentService(now, repos.devices, identity, new FailureLimiter(now), audit, repos.sessions, db, screenLocks),
+    screenLocks,
     studentAdmin: new StudentAdminService(now, repos.classes, repos.students, repos.sessions, audit),
     quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes, audit),
     runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, audit),

@@ -47,7 +47,7 @@ export function buildApp(c: Container, opts: AppOptions = {}) {
   relayRoutes(app, { relay: c.relay, resolver: c.resolver });
   systemRoutes(app, { identity: c.identity, audit: c.audit });
   authRoutes(app, { staffAuth: c.staffAuth, sessions: c.sessions });
-  deviceRoutes(app, { enrolment: c.enrolment });
+  deviceRoutes(app, { enrolment: c.enrolment, locks: c.screenLocks });
   staffRoutes(app, { admin: c.staffAdmin });
   quizRoutes(app, { quizzes: c.quizzes, runs: c.runs });
   studentRoutes(app, { admin: c.studentAdmin, auth: c.studentAuth });

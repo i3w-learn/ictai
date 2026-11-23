@@ -113,7 +113,7 @@ export function Home() {
         can('setup.timetable') && <TimetablePanel key="timetable" refresh={refresh} />,
         can('students.manage') && <StudentsPanel key="students" onChanged={changed} />,
         can('staff.manage') && <StaffPanel key="staff" classesChanged={refresh} />,
-        can('setup.devices') && <DevicesPanel key="devices" />,
+        can('setup.devices') && <DevicesPanel key="devices" canLock={can('lesson.control')} />,
       ],
       system: [
         can('settings.manage') && <SettingsPanel key="settings" onSaved={settingsSaved} />,

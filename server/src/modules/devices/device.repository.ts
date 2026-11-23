@@ -56,7 +56,7 @@ export class DeviceRepository {
     this.db.prepare('UPDATE devices SET last_seen = ?, token_expires_at = ? WHERE id = ?').run(now, tokenExpiresAt, id);
   }
 
-  list(): Omit<Device, 'connected' | 'student'>[] {
+  list(): Omit<Device, 'connected' | 'student' | 'locked'>[] {
     const rows = this.db
       .prepare(`SELECT id, kind, name, status, app_version, last_seen FROM devices WHERE status = 'active' ORDER BY created_at`)
       .all() as { id: string; kind: DeviceKind; name: string; status: Device['status']; app_version: string | null; last_seen: number | null }[];

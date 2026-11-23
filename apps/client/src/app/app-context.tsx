@@ -73,14 +73,17 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
     return () => relay.detach();
   }, [relay]);
   const sessionToken = state.session?.token ?? null;
+  const deviceToken = state.settings.device?.token ?? null;
+  // A lab PC or board keeps the socket open as itself while nobody is signed in, so a teacher can
+  // lock its screen at any time.
+  const relayToken = sessionToken ?? deviceToken;
   useEffect(() => {
-    if (sessionToken) relay.connect(sessionToken);
+    if (relayToken) relay.connect(relayToken);
     else relay.disconnect();
-  }, [relay, sessionToken]);
+  }, [relay, relayToken]);
 
   // A lab PC or board tells the server "I am here" every few seconds, signed in or not, so the
   // console can show which PCs are connected.
-  const deviceToken = state.settings.device?.token ?? null;
   useEffect(() => {
     if (!api || !deviceToken) return;
     const ping = () => void api.call('POST /api/v1/devices/ping', {}, deviceToken).catch((e) => {

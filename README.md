@@ -48,6 +48,7 @@ The full list, by who uses it.
 - Notices for a class.
 - Report cards: made from quiz results and marked work, with remarks, then published and printed.
 - School: timetable bookings, the student list, the lab PCs.
+- Lock screens: cover one student's screen, or every lab PC at once, with "Look at your teacher" until it is unlocked.
 
 **Super Admin (all of the above, plus)**
 - Teachers: add, change, reset a password, delete.

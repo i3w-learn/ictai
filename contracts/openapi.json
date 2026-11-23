@@ -1347,6 +1347,282 @@
         }
       }
     },
+    "/api/v1/devices/lock": {
+      "put": {
+        "summary": "Lock the screen of every lab PC, or unlock every screen",
+        "x-access": {
+          "kind": "staff",
+          "permission": "lesson.control"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "locked": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "locked"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "lab_pc",
+                          "board"
+                        ]
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "active",
+                          "retired"
+                        ]
+                      },
+                      "appVersion": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "lastSeen": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "connected": {
+                        "type": "boolean"
+                      },
+                      "student": {
+                        "nullable": true,
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "className": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "className"
+                        ]
+                      },
+                      "locked": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "kind",
+                      "name",
+                      "status",
+                      "appVersion",
+                      "lastSeen",
+                      "connected",
+                      "student",
+                      "locked"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{id}/lock": {
+      "put": {
+        "summary": "Lock or unlock the screen of one PC or board",
+        "x-access": {
+          "kind": "staff",
+          "permission": "lesson.control"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "locked": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "locked"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "lab_pc",
+                          "board"
+                        ]
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "active",
+                          "retired"
+                        ]
+                      },
+                      "appVersion": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "lastSeen": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "connected": {
+                        "type": "boolean"
+                      },
+                      "student": {
+                        "nullable": true,
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "className": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "className"
+                        ]
+                      },
+                      "locked": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "kind",
+                      "name",
+                      "status",
+                      "appVersion",
+                      "lastSeen",
+                      "connected",
+                      "student",
+                      "locked"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices/ping": {
       "post": {
         "summary": "A lab PC or board says it is switched on and reachable",
@@ -1507,6 +1783,9 @@
                           "name",
                           "className"
                         ]
+                      },
+                      "locked": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -1517,7 +1796,8 @@
                       "appVersion",
                       "lastSeen",
                       "connected",
-                      "student"
+                      "student",
+                      "locked"
                     ]
                   }
                 }

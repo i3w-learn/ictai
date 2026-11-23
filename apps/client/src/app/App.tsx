@@ -1,5 +1,5 @@
-import { GraduationCap, LogOut } from 'lucide-react';
-import type { Principal } from '@ict/contracts';
+import { GraduationCap, Lock, LogOut } from 'lucide-react';
+import { deviceRoom, type Principal, type ScreenLock } from '@ict/contracts';
 import { EnrolDevice } from '../features/setup/EnrolDevice';
 import { FindServer } from '../features/setup/FindServer';
 import { RolePicker } from '../features/setup/RolePicker';
@@ -9,7 +9,7 @@ import { StaffSignIn } from '../features/signin/StaffSignIn';
 import { StudentSignIn } from '../features/signin/StudentSignIn';
 import { AuthShell } from '../ui/auth';
 import { Button, ConfirmButton, cn } from '../ui/ui';
-import { useApp } from './app-context';
+import { useApp, useRelayRoom } from './app-context';
 import type { Phase } from './app-state';
 
 const ROLE_LABEL = { console: 'Server PC', student: 'Student PC', board: 'Smart board' } as const;
@@ -54,14 +54,32 @@ function Screen({ phase }: { phase: Exclude<Phase, 'home'> }) {
   }
 }
 
+// What a locked PC shows over everything else. There is nothing to press: only the teacher opens it.
+function LockedScreen() {
+  return (
+    <div role="alertdialog" aria-label="This screen is locked" className="fixed inset-0 z-[100] grid place-items-center bg-foreground/95 p-8 text-center text-background">
+      <div className="grid justify-items-center gap-5">
+        <span className="grid size-24 place-items-center rounded-full bg-background/15"><Lock className="size-11" strokeWidth={1.75} /></span>
+        <h1 className="font-display text-5xl font-semibold tracking-tight">Look at your teacher</h1>
+        <p className="max-w-xl text-xl text-background/80">Your teacher has locked this screen. It opens again when your teacher unlocks it.</p>
+      </div>
+    </div>
+  );
+}
+
 export function App() {
   const { state, phase, dispatch, signOut, resetDevice } = useApp();
   const { role, server, device } = state.settings;
   const person = personOf(state.session?.principal);
   const look = person && PERSON[person.kind];
+  // A lab PC or board listens for a teacher locking its screen, signed in or not.
+  const locked = useRelayRoom<ScreenLock>(device ? deviceRoom(device.deviceId) : null).state?.locked === true;
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden">
+    <>
+    {locked && <LockedScreen />}
+    {/* While locked, nothing behind the lock can be reached with the keyboard either. */}
+    <div inert={locked} className="flex h-screen w-full flex-col overflow-hidden">
       <header className={cn('ui-topbar flex h-16 shrink-0 items-center gap-3 border-b border-border bg-card px-4 lg:px-6', look && ['border-t-4', look.bar])}>
         {/* The school comes first: it is what everyone in the room has in common. */}
         <div className="flex min-w-0 items-center gap-3">
@@ -94,5 +112,6 @@ export function App() {
       {/* The home screens bring their own side menu, so they lay themselves out. */}
       {phase === 'home' ? <Home /> : <AuthShell {...WELCOME[phase === 'sign-in' ? (role === 'student' ? 'student' : 'staff') : 'setup']}><Screen phase={phase} /></AuthShell>}
     </div>
+    </>
   );
 }
