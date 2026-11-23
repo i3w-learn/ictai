@@ -1,5 +1,6 @@
 import type { Note, NoteInput } from '@ict/contracts';
 import { ApiCallError } from '../../core/api-client';
+import type { T } from '../../i18n/i18n';
 
 // What the student is typing. `id` is null until the note has been saved once.
 export interface Draft {
@@ -14,17 +15,17 @@ export const BLANK: Draft = { id: null, title: '', subject: '', body: '' };
 export const draftOf = (n: Note): Draft => ({ id: n.id, title: n.title, subject: n.subject ?? '', body: n.body });
 
 // A note with no title still saves, under a plain name, so a student never loses what they typed.
-export const toInput = (d: Draft): NoteInput => ({
-  title: d.title.trim() || 'Untitled note',
+export const toInput = (d: Draft, t: T): NoteInput => ({
+  title: d.title.trim() || t('Untitled note'),
   subject: d.subject.trim() || null,
   body: d.body,
 });
 
 // Has the student typed something the server does not have yet? Compares what would be sent,
 // so stray spaces around the title, or an empty title on an "Untitled note", do not count.
-export function isDirty(d: Draft, saved: Note | undefined): boolean {
+export function isDirty(d: Draft, saved: Note | undefined, t: T): boolean {
   if (!saved) return d.title.trim() !== '' || d.subject.trim() !== '' || d.body.trim() !== '';
-  const now = toInput(d);
+  const now = toInput(d, t);
   return now.title !== saved.title || now.subject !== saved.subject || now.body !== saved.body;
 }
 
@@ -43,8 +44,8 @@ export interface NotesApi {
 
 // Sends a note to the server. If it was deleted meanwhile (say, on another PC), the text is
 // saved as a new note rather than lost.
-export async function saveDraft(api: NotesApi, d: Draft): Promise<Note> {
-  const body = toInput(d);
+export async function saveDraft(api: NotesApi, d: Draft, t: T): Promise<Note> {
+  const body = toInput(d, t);
   if (!d.id) return api.create(body);
   try {
     return await api.update(d.id, body);

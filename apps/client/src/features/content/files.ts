@@ -1,4 +1,5 @@
 import { CHUNK_BYTES, MAX_FILE_BYTES, chunksOf, type ContentItem, type ContentKind } from '@ict/contracts';
+import { tk, type T } from '../../i18n/i18n';
 
 // Bytes <-> base64 for the pieces a file travels in. Done in small steps so a 512 KB piece never
 // builds one enormous argument list.
@@ -33,7 +34,7 @@ export function clock(seconds: number): string {
   return h > 0 ? `${h}:${two(m)}:${two(s % 60)}` : `${m}:${two(s % 60)}`;
 }
 
-export const KIND_WORDS: Record<ContentKind, string> = { pdf: 'PDF', image: 'Picture', video: 'Video', audio: 'Sound', link: 'Web link', activity: 'Activity' };
+export const KIND_WORDS: Record<ContentKind, string> = { pdf: tk('PDF'), image: tk('Picture'), video: tk('Video'), audio: tk('Sound'), link: tk('Web link'), activity: tk('Activity') };
 
 type Call = (key: never, input?: never) => Promise<never>;
 interface Api {
@@ -71,12 +72,15 @@ export async function fetchFile(api: Pick<Api, 'chunk'>, item: Pick<ContentItem,
 export type { Call };
 
 // The library as a student reads it: subjects, each with its chapters, each with its items.
-export function shelve(items: ContentItem[]): { subject: string; chapters: { chapter: string; items: ContentItem[] }[] }[] {
+// `t` says the words for an item with no subject or no chapter in the student's language.
+export function shelve(items: ContentItem[], t: T): { subject: string; chapters: { chapter: string; items: ContentItem[] }[] }[] {
   const subjects = new Map<string, Map<string, ContentItem[]>>();
   for (const item of items) {
-    const chapters = subjects.get(item.subject ?? 'Other') ?? new Map<string, ContentItem[]>();
-    chapters.set(item.chapter ?? 'General', [...(chapters.get(item.chapter ?? 'General') ?? []), item]);
-    subjects.set(item.subject ?? 'Other', chapters);
+    const subject = item.subject ?? t('Other');
+    const chapter = item.chapter ?? t('General');
+    const chapters = subjects.get(subject) ?? new Map<string, ContentItem[]>();
+    chapters.set(chapter, [...(chapters.get(chapter) ?? []), item]);
+    subjects.set(subject, chapters);
   }
   return [...subjects].map(([subject, chapters]) => ({ subject, chapters: [...chapters].map(([chapter, list]) => ({ chapter, items: list })) }));
 }

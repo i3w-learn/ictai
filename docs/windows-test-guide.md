@@ -46,6 +46,16 @@ Check: the student's home page opens with their name at the top.
 Check on the Server PC: **Today** → **Attendance** → Class 6 shows the student as **Present**, with the
 time they signed in. Press **Mark absent**, then **Mark present**: the list changes each time.
 
+## Step 4a: Marathi
+
+1. Student PC, on the sign-in screen: press **मराठी** in the top bar. Every word on the screen changes.
+2. Sign in. The menu, the home page and every student page are in Marathi. Names of students, books
+   and subjects stay as the teacher typed them.
+3. Check that the Marathi letters are whole and clear (no empty boxes), also in **माझ्या नोंदी** while typing.
+4. Close the app and open it again: it is still in Marathi. Press **English** to go back.
+
+The teacher's pages on the Server PC are still in English only; the switch is there but changes little.
+
 ## Step 4b: The student PC is locked down
 
 On the student PC, with the student signed in, try each of these. Every one must do **nothing**:

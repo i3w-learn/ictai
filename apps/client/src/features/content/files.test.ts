@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CHUNK_BYTES, MAX_FILE_BYTES, type ContentItem } from '@ict/contracts';
+import { translate, type T } from '../../i18n/i18n';
 import { clock, fetchFile, fileProblem, fromBase64, sendFile, shelve, sizeWords, toBase64 } from './files';
+
+const t: T = (s, v) => translate('en', s, v);
 
 const bytesOf = (n: number) => Uint8Array.from({ length: n }, (_, i) => (i * 31 + 7) % 256);
 
@@ -52,7 +55,7 @@ describe('library files', () => {
 
   it('shelves the library by subject, then chapter', () => {
     const item = (title: string, subject: string | null, chapter: string | null) => ({ title, subject, chapter }) as ContentItem;
-    const shelves = shelve([item('Decimals', 'Maths', 'Numbers'), item('Fractions', 'Maths', 'Numbers'), item('Shapes', 'Maths', null), item('Poster', null, null)]);
+    const shelves = shelve([item('Decimals', 'Maths', 'Numbers'), item('Fractions', 'Maths', 'Numbers'), item('Shapes', 'Maths', null), item('Poster', null, null)], t);
     expect(shelves.map((s) => [s.subject, s.chapters.map((c) => `${c.chapter}:${c.items.length}`)])).toEqual([['Maths', ['Numbers:2', 'General:1']], ['Other', ['General:1']]]);
   });
 });

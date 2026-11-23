@@ -4,12 +4,14 @@ import { useApp, useLiveState } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
 import { Hourglass, Medal, type LucideIcon } from 'lucide-react';
 import { Button, Card, Centered, ErrorNote, PageTitle, useAction, useLatest } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 
 // A student taking a Lab Mode quiz at their own pace (v2's Join page).
 // The server keeps each question's clock and says which question the student is on (`current`),
 // so reloading this page cannot win time back. This screen only shows what the server says.
 export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit: () => void }) {
   const { call } = useApp();
+  const t = useT();
   const read = () => call('GET /api/v1/quiz-runs/:id/play', { params: { id: initial.runId } });
   const [state, setLocal, liveError] = useLiveState<StudentRunState>(quizRoom(initial.runId), initial, read);
   const run = state ?? initial;
@@ -59,19 +61,19 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
   );
 
   if (run.status === 'lobby') {
-    return stage(Hourglass, <PageTitle sub="Your teacher will start the quiz soon. Keep this screen open.">You're in!</PageTitle>);
+    return stage(Hourglass, <PageTitle sub={t('Your teacher will start the quiz soon. Keep this screen open.')}>{t("You're in!")}</PageTitle>);
   }
 
   if (run.finished || run.status === 'ended' || !current) {
     return stage(Medal, <>
       <PageTitle
-        eyebrow={run.status === 'ended' ? 'Quiz ended' : 'Quiz done'}
-        sub={run.status === 'ended' ? 'Your teacher has ended the quiz.' : 'Wait for your teacher to end the quiz.'}
+        eyebrow={run.status === 'ended' ? t('Quiz ended') : t('Quiz done')}
+        sub={run.status === 'ended' ? t('Your teacher has ended the quiz.') : t('Wait for your teacher to end the quiz.')}
       >
-        {run.score == null ? 'Handing in…' : `You scored ${run.score} out of ${run.totalMarks}`}
+        {run.score == null ? t('Handing in…') : t('You scored {score} out of {total}', { score: run.score, total: run.totalMarks })}
       </PageTitle>
       <ErrorNote message={liveError ?? finish.error ?? timeUp.error} />
-      <Button onClick={onExit}>Back to home</Button>
+      <Button onClick={onExit}>{t('Back to home')}</Button>
     </>);
   }
 
@@ -86,7 +88,7 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
         remainingMs={current.remainingMs}
         onTimeUp={() => void timeUp.run()}
       />
-      <p className="text-sm text-muted-foreground">Question {current.index + 1} of {run.questions.length}</p>
+      <p className="text-sm text-muted-foreground">{t('Question {n} of {total}', { n: current.index + 1, total: run.questions.length })}</p>
       <h1 className="font-display text-2xl font-semibold text-balance">{q.text}</h1>
       <div className="grid gap-3">
         {q.options.map((o, i) => (
@@ -111,6 +113,7 @@ export function PlayQuiz({ initial, onExit }: { initial: StudentRunState; onExit
 // Counts down the time the server says is left. Each fresh word from the server (a new
 // `remainingMs`) makes a new countdown, so this PC's clock only has to be right for a few seconds.
 function Countdown({ seconds, remainingMs, onTimeUp }: { seconds: number; remainingMs: number; onTimeUp: () => void }) {
+  const t = useT();
   const [deadline] = useState(() => Date.now() + remainingMs);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -135,7 +138,7 @@ function Countdown({ seconds, remainingMs, onTimeUp }: { seconds: number; remain
         <div className="h-full bg-primary transition-[width] duration-200" style={{ width: `${(left / (seconds * 1000)) * 100}%` }} />
       </div>
       <span className="text-right text-xs tabular-nums text-muted-foreground">
-        {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')} left
+        {t('{time} left', { time: `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` })}
       </span>
     </div>
   );

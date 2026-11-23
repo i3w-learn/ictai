@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { CARD_LOOK, cn } from './ui';
+import { useT } from '../i18n/i18n';
 
 // The area under the top bar: an optional side menu, and the page beside it. The page is the one
 // <main>, which is what a student's text-size choice enlarges.
@@ -67,10 +68,11 @@ export function Empty({ children, icon: Icon }: { children: ReactNode; icon?: Lu
 // A tall rounded bar for one score out of 100. It fills from the bottom as far as the score;
 // `strong` picks one bar out in the main colour.
 export function ResultBar({ label, percent, strong }: { label: string; percent: number; strong?: boolean }) {
+  const t = useT();
   const p = Math.max(0, Math.min(100, Math.round(percent)));
   return (
     <div
-      role="img" aria-label={`${label}: ${p} percent`}
+      role="img" aria-label={t('{label}: {p} percent', { label, p })}
       className={cn('ui-bar relative flex h-44 w-[4.5rem] shrink-0 flex-col items-center justify-between overflow-hidden rounded-full py-5', strong ? 'ui-strong bg-primary text-primary-foreground shadow-[0_14px_28px_-10px_var(--primary)]' : CARD_LOOK)}
     >
       {!strong && <span className="absolute inset-x-0 bottom-0 bg-primary/10" style={{ height: `${p}%` }} />}
@@ -82,6 +84,7 @@ export function ResultBar({ label, percent, strong }: { label: string; percent: 
 
 // A row that shows how far along something is: its name, "3 of 5", and a thin bar.
 export function ProgressRow({ title, sub, done, total, onClick }: { title: string; sub?: string; done: number; total: number; onClick: () => void }) {
+  const t = useT();
   const p = total > 0 ? Math.round((done / total) * 100) : 0;
   const finished = total > 0 && done >= total;
   return (
@@ -92,10 +95,10 @@ export function ProgressRow({ title, sub, done, total, onClick }: { title: strin
       </span>
       <span className="flex items-center gap-3">
         <span className="font-semibold tabular-nums">{p}%</span>
-        <span className="h-2.5 w-24 overflow-hidden rounded-full bg-secondary" role="img" aria-label={`${done} of ${total} done`}>
+        <span className="h-2.5 w-24 overflow-hidden rounded-full bg-secondary" role="img" aria-label={t('{done} of {total} done', { done, total })}>
           <span className={cn('block h-full rounded-full', finished ? 'bg-success' : 'bg-primary')} style={{ width: `${p}%` }} />
         </span>
-        <span className="flex-1 text-right text-sm text-muted-foreground">{finished ? 'All done' : `${done} of ${total} done`}</span>
+        <span className="flex-1 text-right text-sm text-muted-foreground">{finished ? t('All done') : t('{done} of {total} done', { done, total })}</span>
       </span>
     </button>
   );

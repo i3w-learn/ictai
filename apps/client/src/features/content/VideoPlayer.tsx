@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import { Maximize, Minimize, Pause, Play, RotateCcw, RotateCw, Volume2, VolumeX } from 'lucide-react';
 import { Button, cn } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 import { clock } from './files';
 
 const SPEEDS = [1, 1.25, 1.5, 0.75];
@@ -41,6 +42,7 @@ export function VideoPlayer({ src, title, onError, onState, peek, pause, layer, 
   src: string; title: string; onError?: () => void; onState?: (s: PlayerState) => void; peek?: MutableRefObject<(() => PlayerState) | null>;
   pause?: MutableRefObject<(() => void) | null>; layer?: ReactNode; onAspect?: (aspect: number) => void; tools?: ReactNode; plain?: boolean;
 }) {
+  const t = useT();
   const video = useRef<HTMLVideoElement>(null);
   const box = useRef<FullscreenBox>(null);
   const hide = useRef<number | undefined>(undefined);
@@ -155,7 +157,7 @@ export function VideoPlayer({ src, title, onError, onState, peek, pause, layer, 
   };
 
   if (broken) {
-    return <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">This video cannot be played on this PC. Tell your teacher.</p>;
+    return <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">{t('This video cannot be played on this PC. Tell your teacher.')}</p>;
   }
 
   // Under the picture the controls are always there; only in full screen do they hide.
@@ -165,7 +167,7 @@ export function VideoPlayer({ src, title, onError, onState, peek, pause, layer, 
 
   return (
     <div
-      ref={box} tabIndex={0} role="group" aria-label={`Video: ${title}`} onKeyDown={onKey} onMouseMove={wake} onTouchStart={wake} onFocus={wake}
+      ref={box} tabIndex={0} role="group" aria-label={t('Video: {title}', { title })} onKeyDown={onKey} onMouseMove={wake} onTouchStart={wake} onFocus={wake}
       // After a click or a touch on any control the keys go back to the player as a whole. Otherwise
       // Space would press the last button clicked again (for example leave full screen) instead of play and pause.
       onPointerUp={() => box.current?.focus({ preventScroll: true })}
@@ -208,37 +210,37 @@ export function VideoPlayer({ src, title, onError, onState, peek, pause, layer, 
         {/* The one loud thing: a big button in the middle whenever the video is not playing. */}
         {layer}
         {!playing && !waiting && !stuck && !plain && (
-          <button type="button" onClick={toggle} aria-label={ended ? 'Play again' : 'Play'} className="absolute top-1/2 left-1/2 grid size-20 -translate-x-1/2 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-white">
+          <button type="button" onClick={toggle} aria-label={ended ? t('Play again') : t('Play')} className="absolute top-1/2 left-1/2 grid size-20 -translate-x-1/2 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-white">
             {ended ? <RotateCcw className="size-8" strokeWidth={2.25} /> : <Play className="ml-1 size-9 fill-current" strokeWidth={0} />}
           </button>
         )}
         {stuck && (
         <div className="absolute inset-0 grid place-content-center justify-items-center gap-4 bg-black/75 p-6 text-center text-white" role="alert">
-          <p className="max-w-md text-lg font-medium">The video has stopped loading. Check that the Server PC is switched on.</p>
-          <p className="text-sm text-white/70">It will carry on by itself when the Server PC is back.</p>
-          <Button variant="quiet" onClick={retry}>Try again</Button>
+          <p className="max-w-md text-lg font-medium">{t('The video has stopped loading. Check that the Server PC is switched on.')}</p>
+          <p className="text-sm text-white/70">{t('It will carry on by itself when the Server PC is back.')}</p>
+          <Button variant="quiet" onClick={retry}>{t('Try again')}</Button>
         </div>
       )}
-      {waiting && !stuck && <div role="status" aria-label="Loading" className="pointer-events-none absolute top-1/2 left-1/2 size-12 -translate-x-1/2 -translate-y-1/2 animate-spin rounded-full border-4 border-white/25 border-t-white motion-reduce:animate-none" />}
+      {waiting && !stuck && <div role="status" aria-label={t('Loading')} className="pointer-events-none absolute top-1/2 left-1/2 size-12 -translate-x-1/2 -translate-y-1/2 animate-spin rounded-full border-4 border-white/25 border-t-white motion-reduce:animate-none" />}
       </div>
 
       <div className={cn('px-3 pb-2 transition-opacity duration-200', full ? 'absolute inset-x-0 bottom-0 bg-linear-to-t from-black/85 to-transparent pt-10' : 'bg-[hsl(222_30%_10%)] pt-1.5', shown ? 'opacity-100' : 'pointer-events-none opacity-0')}>
         <input
-          type="range" className="player-seek" aria-label="Where you are in the video" aria-valuetext={`${clock(time)} of ${clock(duration)}`}
+          type="range" className="player-seek" aria-label={t('Where you are in the video')} aria-valuetext={t('{time} of {total}', { time: clock(time), total: clock(duration) })}
           min={0} max={duration || 0} step={0.1} value={Math.min(time, duration || 0)} disabled={duration === 0}
           onChange={(e) => seek(Number(e.target.value))} onKeyDown={(e) => { if (e.key.startsWith('Arrow')) e.preventDefault(); }}
           style={{ '--played': pct(time), '--loaded': pct(Math.max(loaded, time)) } as React.CSSProperties}
         />
         <div className="flex flex-wrap items-center gap-1 text-white">
-          <button type="button" className={Round} onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}>{playing ? <Pause className="size-5 fill-current" strokeWidth={0} /> : <Play className="size-5 fill-current" strokeWidth={0} />}</button>
-          <button type="button" className={Round} onClick={() => jump(-JUMP)} aria-label={`Back ${JUMP} seconds`}><RotateCcw className="size-5" /></button>
-          <button type="button" className={Round} onClick={() => jump(JUMP)} aria-label={`Forward ${JUMP} seconds`}><RotateCw className="size-5" /></button>
+          <button type="button" className={Round} onClick={toggle} aria-label={playing ? t('Pause') : t('Play')}>{playing ? <Pause className="size-5 fill-current" strokeWidth={0} /> : <Play className="size-5 fill-current" strokeWidth={0} />}</button>
+          <button type="button" className={Round} onClick={() => jump(-JUMP)} aria-label={t('Back {n} seconds', { n: JUMP })}><RotateCcw className="size-5" /></button>
+          <button type="button" className={Round} onClick={() => jump(JUMP)} aria-label={t('Forward {n} seconds', { n: JUMP })}><RotateCw className="size-5" /></button>
           <span className="px-2 text-sm font-medium tabular-nums">{clock(time)} <span className="text-white/60">/ {clock(duration)}</span></span>
           {tools}
           <span className="flex-1" />
-          <button type="button" className={cn(Round, 'w-auto min-w-11 px-3 text-sm font-semibold tabular-nums')} onClick={faster} aria-label={`Speed ${speed} times. Press to change`}>{speed}×</button>
-          <button type="button" className={Round} onClick={sound} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>{muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}</button>
-          {canFull && <button type="button" className={Round} onClick={fullScreen} aria-label={full ? 'Leave full screen' : 'Full screen'}>{full ? <Minimize className="size-5" /> : <Maximize className="size-5" />}</button>}
+          <button type="button" className={cn(Round, 'w-auto min-w-11 px-3 text-sm font-semibold tabular-nums')} onClick={faster} aria-label={t('Speed {speed} times. Press to change', { speed })}>{speed}×</button>
+          <button type="button" className={Round} onClick={sound} aria-label={muted ? t('Turn sound on') : t('Turn sound off')}>{muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}</button>
+          {canFull && <button type="button" className={Round} onClick={fullScreen} aria-label={full ? t('Leave full screen') : t('Full screen')}>{full ? <Minimize className="size-5" /> : <Maximize className="size-5" />}</button>}
         </div>
       </div>
     </div>

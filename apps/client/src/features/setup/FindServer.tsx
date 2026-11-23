@@ -5,10 +5,12 @@ import { useApp } from '../../app/app-context';
 import { baseUrl } from '../../core/settings';
 import type { FoundServer } from '../../platform/platform';
 import { Button, Card, Centered, ErrorNote, Field, Note, PageTitle, useAction } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 
 // Spec 8.1: find the server by broadcast; typing an address is the fallback.
 export function FindServer() {
   const { locator, platform, dispatch } = useApp();
+  const t = useT();
   const [found, setFound] = useState<FoundServer[] | null>(null);
   const [manual, setManual] = useState('');
 
@@ -23,16 +25,16 @@ export function FindServer() {
   }, [searchNow, locator]);
 
   const pick = useAction(async (f: FoundServer) => {
-    if (!f.certFp) throw new Error('This server has no certificate yet. Restart the server and try again.');
+    if (!f.certFp) throw new Error(t('This server has no certificate yet. Restart the server and try again.'));
     const target = await locator!.confirm(f, f.certFp);
-    if (!target) throw new Error(`Found "${f.name}" but could not connect to it. Check the firewall on the server PC.`);
+    if (!target) throw new Error(t('Found "{name}" but could not connect to it. Check the firewall on the server PC.', { name: f.name }));
     dispatch({ type: 'server', server: target });
   });
 
   const connectManual = useAction(async () => {
     const [addr, portText] = manual.trim().split(':');
     const port = Number(portText ?? 7700);
-    if (!addr || !port) throw new Error('Type an address like 192.168.1.20');
+    if (!addr || !port) throw new Error(t('Type an address like 192.168.1.20'));
     const probe = await platform.probe(baseUrl({ addr, port }));
     const health = Health.parse(probe.health);
     dispatch({ type: 'server', server: { serverId: health.serverId, name: health.name, certFp: probe.certFp, addr, port } });
@@ -41,15 +43,15 @@ export function FindServer() {
   return (
     <Centered>
       <PageTitle
-        eyebrow="Setup"
-        sub={search.busy ? 'Looking on the school network…' : found && found.length > 0 ? 'Pick your server.' : 'Nothing found yet. Search again, or type the address shown on the server PC.'}
+        eyebrow={t('Setup')}
+        sub={search.busy ? t('Looking on the school network…') : found && found.length > 0 ? t('Pick your server.') : t('Nothing found yet. Search again, or type the address shown on the server PC.')}
       >
-        Find the school server
+        {t('Find the school server')}
       </PageTitle>
 
       {search.busy && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Searching…
+          <Loader2 className="size-4 animate-spin" /> {t('Searching…')}
         </p>
       )}
       {found && found.length > 0 && (
@@ -64,21 +66,21 @@ export function FindServer() {
                   <strong className="font-semibold">{f.name}</strong>
                   <span className="font-mono text-xs text-muted-foreground">{f.from}:{f.port}</span>
                 </div>
-                <Button disabled={pick.busy} onClick={() => pick.run(f)}>Connect</Button>
+                <Button disabled={pick.busy} onClick={() => pick.run(f)}>{t('Connect')}</Button>
               </Card>
             </li>
           ))}
         </ul>
       )}
-      {found && found.length === 0 && <Note>No server answered. Check the server PC is on and on the same network.</Note>}
+      {found && found.length === 0 && <Note>{t('No server answered. Check the server PC is on and on the same network.')}</Note>}
       <ErrorNote message={search.error ?? pick.error} />
       <div>
-        <Button variant="quiet" disabled={search.busy} onClick={() => search.run()}>Search again</Button>
+        <Button variant="quiet" disabled={search.busy} onClick={() => search.run()}>{t('Search again')}</Button>
       </div>
 
       <form className="flex items-end gap-3 border-t border-border pt-6" onSubmit={(e) => { e.preventDefault(); void connectManual.run(); }}>
-        <Field id="manual-addr" className="max-w-xs flex-1" label="Or type the server address" placeholder="192.168.1.20" value={manual} onChange={(e) => setManual(e.target.value)} />
-        <Button type="submit" variant="quiet" disabled={connectManual.busy}>Connect</Button>
+        <Field id="manual-addr" className="max-w-xs flex-1" label={t('Or type the server address')} placeholder="192.168.1.20" value={manual} onChange={(e) => setManual(e.target.value)} />
+        <Button type="submit" variant="quiet" disabled={connectManual.busy}>{t('Connect')}</Button>
       </form>
       <ErrorNote message={connectManual.error} />
     </Centered>

@@ -3,6 +3,7 @@ import { ArrowLeft, MonitorPlay } from 'lucide-react';
 import { canShow as showable, type ContentItem, type ShowableKind } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, Card, ErrorNote, Note } from '../../ui/ui';
+import { tk, useT } from '../../i18n/i18n';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from '../shows/Ink';
 import { PageRail } from '../shows/PageRail';
 import { PenRail } from '../shows/PenRail';
@@ -20,9 +21,9 @@ const PdfPages = lazy(() => import('./PdfPages').then((m) => ({ default: m.PdfPa
 
 // What the teacher is told about a show, before and while it is on.
 const SHOW_WORDS: Record<ShowableKind, { before: string; during: string }> = {
-  video: { before: 'The video opens on every student PC of the class and follows what you do here.', during: 'When you play, pause or skip, their screens do the same.' },
-  pdf: { before: 'The book opens on every student PC of the class, on the page you are on.', during: 'When you turn the page, their screens turn too.' },
-  image: { before: 'The picture opens on every student PC of the class.', during: '' },
+  video: { before: tk('The video opens on every student PC of the class and follows what you do here.'), during: tk('When you play, pause or skip, their screens do the same.') },
+  pdf: { before: tk('The book opens on every student PC of the class, on the page you are on.'), during: tk('When you turn the page, their screens turn too.') },
+  image: { before: tk('The picture opens on every student PC of the class.'), during: '' },
 };
 
 // Opens one library item: a picture as a picture, a PDF page by page (students: in the built-in
@@ -31,6 +32,7 @@ const SHOW_WORDS: Record<ShowableKind, { before: string; during: string }> = {
 // whatever she does here, and what she writes on it with the pen shows there as well.
 export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void }) {
   const { state } = useApp();
+  const t = useT();
   const me = state.session?.principal;
   const staff = me?.kind === 'staff';
   const { url, percent, error, onError } = useFileUrl(item, { streamPdf: staff });
@@ -81,20 +83,20 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
   return (
     <div className={fill ? 'flex h-full w-full flex-col gap-3' : 'mx-auto grid w-full max-w-5xl gap-4'}>
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button>
+        <Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> {t('Back')}</Button>
         <h1 className="min-w-48 flex-1 truncate font-display text-2xl font-semibold">{item.title}</h1>
         {fill && canShow && url ? (
           showing ? (
             <div className="flex flex-wrap items-center gap-3" role="status">
-              <span className="flex h-11 items-center gap-2 rounded-full bg-primary/10 px-5 text-base font-semibold text-primary"><MonitorPlay className="size-5 shrink-0" /> Class {item.className} can see this now</span>
+              <span className="flex h-11 items-center gap-2 rounded-full bg-primary/10 px-5 text-base font-semibold text-primary"><MonitorPlay className="size-5 shrink-0" /> {t('Class {name} can see this now', { name: item.className })}</span>
               {penGiving}
-              <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>Stop showing</Button>
+              <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>{t('Stop showing')}</Button>
             </div>
           ) : (
-            <Button disabled={host.busy.start} onClick={() => host.start()} title={words?.before}><MonitorPlay className="size-4" /> Show to Class {item.className}</Button>
+            <Button disabled={host.busy.start} onClick={() => host.start()} title={words ? t(words.before) : undefined}><MonitorPlay className="size-4" /> {t('Show to Class {name}', { name: item.className })}</Button>
           )
         ) : (
-          <span className="text-sm text-muted-foreground">{[KIND_WORDS[item.kind], item.subject, item.chapter, item.size ? sizeWords(item.size) : null].filter(Boolean).join(' · ')}</span>
+          <span className="text-sm text-muted-foreground">{[t(KIND_WORDS[item.kind]), item.subject, item.chapter, item.size ? sizeWords(item.size) : null].filter(Boolean).join(' · ')}</span>
         )}
       </div>
       <ErrorNote message={error} />
@@ -102,30 +104,30 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
         showing ? (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3" role="status">
             <MonitorPlay className="size-5 shrink-0 text-primary" />
-            <p className="min-w-56 flex-1"><b>Class {item.className} can see this now.</b> {words?.during} What you write with the pen, they see too.</p>
+            <p className="min-w-56 flex-1"><b>{t('Class {name} can see this now.', { name: item.className })}</b> {words?.during ? t(words.during) : ''} {t('What you write with the pen, they see too.')}</p>
             {penGiving}
-            <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>Stop showing</Button>
+            <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>{t('Stop showing')}</Button>
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
-            <Button disabled={host.busy.start} onClick={() => host.start()}><MonitorPlay className="size-4" /> Show to Class {item.className}</Button>
-            <span className="text-sm text-muted-foreground">{words?.before}</span>
+            <Button disabled={host.busy.start} onClick={() => host.start()}><MonitorPlay className="size-4" /> {t('Show to Class {name}', { name: item.className })}</Button>
+            <span className="text-sm text-muted-foreground">{words ? t(words.before) : ''}</span>
           </div>
         )
       )}
       {showing && <PenRequests host={host} />}
-      <ErrorNote message={host.error ?? inkProblem} />
+      <ErrorNote message={host.error ?? (inkProblem && t(inkProblem))} />
       <ErrorNote message={bookError} />
 
       {item.kind === 'link' ? (
         <Card className="grid gap-3 p-6">
-          <Note>This is a web page. It opens only when the lab has internet.</Note>
+          <Note>{t('This is a web page. It opens only when the lab has internet.')}</Note>
           <p className="text-lg break-all select-all">{item.url}</p>
         </Card>
       ) : !url && !error ? (
         <Card className="grid gap-3 p-8 text-center">
-          <p className="text-muted-foreground">Opening… {percent}%</p>
-          <div className="mx-auto h-2 w-64 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label="Opening the file">
+          <p className="text-muted-foreground">{t('Opening… {percent}%', { percent })}</p>
+          <div className="mx-auto h-2 w-64 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={t('Opening the file')}>
             <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${percent}%` }} />
           </div>
         </Card>
@@ -150,11 +152,11 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
             <div className="flex min-h-0 flex-1 gap-3">
               {penRail}
               <div className="min-h-64 min-w-0 flex-1 overflow-hidden rounded-2xl border border-border bg-card">
-                <Suspense fallback={<p className="grid h-full place-items-center text-muted-foreground" role="status">Opening…</p>}>
+                <Suspense fallback={<p className="grid h-full place-items-center text-muted-foreground" role="status">{t('Opening…')}</p>}>
                   <PdfPages
                     url={url} page={page} onPages={counted} onAspect={setAspect}
                     // A streamed book that cannot be read is fetched whole instead; past that, say so.
-                    onError={onError ?? (() => setBookError('This book could not be opened.'))}
+                    onError={onError ?? (() => setBookError(t('This book could not be opened.')))}
                     layer={<InkLayer board={board} aspect={aspect} tools={tools} />}
                   />
                 </Suspense>

@@ -4,11 +4,13 @@ import type { AiTutorJob, MyTutor } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
 import { Button, Card, ErrorNote, Note, PageTitle, TextArea, useAction } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 
 // PRD student app "Ask": the student types a question and the AI on the Server PC gives a hint in
 // simple words. A few questions a day, one at a time. Nothing leaves the school.
 export function AskTutor() {
   const { call } = useApp();
+  const t = useT();
   const [mine, setMine] = useState<MyTutor | null>(null);
   const [off, setOff] = useState<string | null>(null);
   const [question, setQuestion] = useState('');
@@ -43,7 +45,7 @@ export function AskTutor() {
       await load.run();
     } catch (e) {
       // AI switched off, or not installed on this server: say it plainly instead of as a fault.
-      if (e instanceof ApiCallError && (e.code === 'AI_OFF' || e.code === 'AI_NOT_INSTALLED')) return setOff('The helper is not switched on in your school right now. Ask your teacher.');
+      if (e instanceof ApiCallError && (e.code === 'AI_OFF' || e.code === 'AI_NOT_INSTALLED')) return setOff(t('The helper is not switched on in your school right now. Ask your teacher.'));
       throw e;
     }
   });
@@ -52,13 +54,13 @@ export function AskTutor() {
   const none = mine !== null && mine.leftToday === 0;
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-5">
-      <PageTitle sub="Ask about something you are learning. You get a hint and an explanation, so you can work out the answer yourself.">Ask</PageTitle>
+      <PageTitle sub={t('Ask about something you are learning. You get a hint and an explanation, so you can work out the answer yourself.')}>{t('Ask')}</PageTitle>
       {off ? <Note>{off}</Note> : (
         <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); if (question.trim() && !waiting && !none) void ask.run(); }}>
-          <TextArea id="tutor-question" label="Your question" rows={3} maxLength={600} placeholder="What is a fraction?" className="text-lg" value={question} onChange={(e) => setQuestion(e.target.value)} />
+          <TextArea id="tutor-question" label={t('Your question')} rows={3} maxLength={600} placeholder={t('What is a fraction?')} className="text-lg" value={question} onChange={(e) => setQuestion(e.target.value)} />
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" className="h-12 px-6" disabled={!question.trim() || ask.busy || waiting || none}><Sparkles className="size-4" /> Ask</Button>
-            {mine && <span className="text-muted-foreground">{none ? `You have asked ${mine.dailyCap} questions today. You can ask more tomorrow.` : `${mine.leftToday} of ${mine.dailyCap} questions left today.`}</span>}
+            <Button type="submit" className="h-12 px-6" disabled={!question.trim() || ask.busy || waiting || none}><Sparkles className="size-4" /> {t('Ask')}</Button>
+            {mine && <span className="text-muted-foreground">{none ? t('You have asked {cap} questions today. You can ask more tomorrow.', { cap: mine.dailyCap }) : t('{left} of {cap} questions left today.', { left: mine.leftToday, cap: mine.dailyCap })}</span>}
           </div>
           <ErrorNote message={ask.error} />
         </form>
@@ -67,13 +69,13 @@ export function AskTutor() {
       {job && (
         <Card className="grid gap-3 p-5">
           <p className="font-semibold">{job.request.question}</p>
-          {job.status === 'queued' && <Note>You are number {job.position} in line. Your answer is coming.</Note>}
-          {job.status === 'running' && <Note>Thinking… this can take a minute.</Note>}
+          {job.status === 'queued' && <Note>{t('You are number {position} in line. Your answer is coming.', { position: job.position ?? '' })}</Note>}
+          {job.status === 'running' && <Note>{t('Thinking… this can take a minute.')}</Note>}
           {job.status === 'failed' && <ErrorNote message={job.error} />}
           {job.status === 'done' && job.result && (
             <>
               <p className="text-lg leading-relaxed whitespace-pre-wrap">{job.result.answer}</p>
-              <p className="text-sm text-muted-foreground">The helper can be wrong. If something looks odd, ask your teacher.</p>
+              <p className="text-sm text-muted-foreground">{t('The helper can be wrong. If something looks odd, ask your teacher.')}</p>
             </>
           )}
         </Card>
@@ -81,7 +83,7 @@ export function AskTutor() {
 
       {earlier.length > 0 && (
         <Card className="grid gap-2 p-5">
-          <h2 className="text-lg font-semibold">Your earlier questions</h2>
+          <h2 className="text-lg font-semibold">{t('Your earlier questions')}</h2>
           <ul className="grid gap-2">
             {earlier.map((j) => (
               <li key={j.id}><button type="button" disabled={waiting} onClick={() => setJob(j)} className="w-full cursor-pointer rounded-2xl border border-border px-3 py-2 text-left hover:border-accent/50 disabled:cursor-not-allowed">{j.request.question}</button></li>
