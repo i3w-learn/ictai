@@ -58,6 +58,19 @@ Do each one from the Server PC and watch the student PC.
 | **Take the pen back** | lose the pen tools |
 | Add your video to Class 6 → **Open** → **Show to Class 6** → play, pause, skip | play, pause and skip at the same moments |
 
+## Step 5b: Our locked videos
+
+Our own videos and books come locked: the file name ends in `.ictlock` and it plays only inside
+ICT App. Do this when you have the pack with the `videos` folder and `2-add-videos.bat`.
+
+1. Server PC: double-click `2-add-videos.bat` and say **Yes** when Windows asks.
+2. Wait a minute. Open **Videos**: every video from the folder is there, under its class.
+3. Open one. Play, pause and skip to the middle. Do the last row of Step 5 with it.
+4. Student PC: sign in as a student of that class → **Videos** → the video plays.
+
+Check that the file is no use outside the app: in `C:\Program Files\ICT App\server\starter-videos\`
+double-click a `.ictlock` file, or try to open it with a video player. It must not play.
+
 ## Step 6: A quick quiz
 
 1. Server PC: **Today** → **New quiz** → Class 6, two questions → save → **Start Lab Mode**.
