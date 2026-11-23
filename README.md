@@ -226,6 +226,16 @@ Server data lives in `C:\ProgramData\ICT App\server`.
 3. In the console, check that every PC shows as connected, then press **Lock the lab**.
 4. Teachers add classes and students. Students then sign in with class, roll number and name.
 
+### Videos that come with the app
+
+Our own videos and books are given out **locked**, so that a copy of the file plays in no other program. A locked file is named like `G6-...mp4.ictlock`. Only an ICT App server built with our key can play it, and it stays locked on the Server PC's disk too.
+
+1. The key is 64 letters and digits. It is kept in two places: the file `~/.ict/content-key` on the Mac, and the GitHub secret `ICT_CONTENT_KEY`, which the build writes into the server. Keep a third copy somewhere safe. **If the key is lost, the locked files can never be opened.**
+2. Lock the videos: `node installer/lock-videos.mjs <folder of videos> --out <folder for the zip>`.
+3. Give out only the `.ictlock` files. In the school, `2-add-videos.bat` copies them from the `videos` folder beside it into the server.
+
+The lock stops someone copying the file and playing it elsewhere. It does not stop someone filming or recording the screen, and a skilled person could dig the key out of the server program.
+
 To test a new build on real Windows PCs, follow [`docs/windows-test-guide.md`](docs/windows-test-guide.md).
 
 ## Ports

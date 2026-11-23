@@ -72,6 +72,8 @@ export function createContainer(opts: {
   dataDir?: string;
   // The folder of videos that come with the app. Left out, the server has none to add.
   starterDir?: string;
+  // Opens our locked videos and books (see modules/content/lock.ts).
+  contentKey?: Buffer | null;
   ai?: { runtime: AiRuntimeInfo & { ensureReady?(): Promise<void> }; llm: Llm };
   // The server's diary (events.log). Left out in tests, which then write nothing.
   log?: EventLog;
@@ -123,7 +125,7 @@ export function createContainer(opts: {
   const timetable = new TimetableService(now, repos.timetable, repos.classes, () => repos.settings.periods(), audit);
   const settings = new SettingsService(now, repos.settings, audit, db, (periodId) => timetable.dropPeriod(periodId));
 
-  const fileStore = new FileStore(opts.dataDir ?? mkdtempSync(join(tmpdir(), 'ict-files-')));
+  const fileStore = new FileStore(opts.dataDir ?? mkdtempSync(join(tmpdir(), 'ict-files-')), opts.contentKey ?? null);
   // Is this student signed in on a lab PC right now? A student who has left cannot hold the pen.
   const signedIn = (studentId: string) => repos.sessions.liveStudentDevice(studentId, '', now()) !== undefined;
   const showStore = new ShowStore(now, repos.content, signedIn, opts.log);

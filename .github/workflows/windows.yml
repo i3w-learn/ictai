@@ -49,7 +49,11 @@ jobs:
       - name: Build client (Tauri, no bundle; Inno Setup packages it)
         run: pnpm --filter @ict/client tauri build --no-bundle
 
+      # The key that opens our locked videos is the secret ICT_CONTENT_KEY. It is written into
+      # server.cjs here and is nowhere in the code. No secret: the server is built without a key.
       - name: Build server bundle
+        env:
+          ICT_CONTENT_KEY: ${{ secrets.ICT_CONTENT_KEY }}
         run: pnpm --filter @ict/server build
 
       - name: Stage files
@@ -76,9 +80,24 @@ jobs:
           VIDEOS_REPO: ${{ vars.STARTER_VIDEOS_REPO || github.repository }}
         run: |
           New-Item -ItemType Directory -Force stage/server/starter-videos | Out-Null
-          gh release download starter-videos --repo $env:VIDEOS_REPO --pattern "*.mp4" --pattern "*.webm" --pattern "*.pdf" --dir stage/server/starter-videos
+          gh release download starter-videos --repo $env:VIDEOS_REPO --pattern "*.mp4" --pattern "*.webm" --pattern "*.pdf" --pattern "*.ictlock" --dir stage/server/starter-videos
           if ($LASTEXITCODE) { Write-Host "No starter videos or books found; building without them."; $global:LASTEXITCODE = 0 }
           Get-ChildItem stage/server/starter-videos | ForEach-Object { "{0}  {1:N0} MB" -f $_.Name, ($_.Length / 1MB) }
+
+      # No video or book leaves here in a form that plays outside the app: whatever came unlocked
+      # is locked now, and the unlocked file is thrown away.
+      - name: Lock the starter videos
+        shell: pwsh
+        env:
+          ICT_CONTENT_KEY: ${{ secrets.ICT_CONTENT_KEY }}
+        run: |
+          $plain = @(Get-ChildItem stage/server/starter-videos -File | Where-Object { $_.Extension -in ".mp4", ".webm", ".pdf" })
+          if ($plain.Count -eq 0) { "Nothing to lock."; exit 0 }
+          if (!$env:ICT_CONTENT_KEY) { Write-Host "::warning::The secret ICT_CONTENT_KEY is not set, so $($plain.Count) starter file(s) go into the installer unlocked."; exit 0 }
+          node installer/lock-videos.mjs stage/server/starter-videos
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $plain | Remove-Item
+          Get-ChildItem stage/server/starter-videos | ForEach-Object { $_.Name }
 
       - name: Smoke-test the staged server
         shell: pwsh
@@ -117,6 +136,9 @@ jobs:
     needs: installer
     runs-on: windows-latest
     timeout-minutes: 15
+    env:
+      # Only to lock a test video the way a real one is locked. Empty when the secret is not set.
+      ICT_CONTENT_KEY: ${{ secrets.ICT_CONTENT_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -201,6 +223,49 @@ jobs:
           $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
           $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ })
           if ($items.Count -ne 1) { throw "Expected still 1 library item, found $($items.Count)" }
+
+      # A video locked with our key: the app plays it, and the Server PC's disk never holds it unlocked.
+      - name: A locked video plays in the app and stays locked on the disk
+        if: env.ICT_CONTENT_KEY != ''
+        shell: pwsh
+        run: |
+          $pack = "$env:RUNNER_TEMP\ICT App Windows"
+          $name = "G7-Mar-Sci-07Lig02-Light and Shadow -Part 1-DMV-ILL.mp4"
+          $plainDir = "$env:RUNNER_TEMP\unlocked"
+          New-Item -ItemType Directory -Force $plainDir | Out-Null
+          $rest = New-Object byte[] 300000
+          [Random]::new(7).NextBytes($rest)
+          $bytes = [byte[]]([byte[]](0, 0, 0, 0x20) + [Text.Encoding]::ASCII.GetBytes("ftypisom") + $rest)
+          [IO.File]::WriteAllBytes("$plainDir\$name", $bytes)
+          node installer/lock-videos.mjs $plainDir --out "$pack\videos"
+          if ($LASTEXITCODE) { throw "lock-videos.mjs ended with $LASTEXITCODE" }
+          cmd /c "`"$pack\2-add-videos.bat`" < nul"
+          if ($LASTEXITCODE) { throw "add-videos.bat ended with $LASTEXITCODE" }
+          if (!(Test-Path -LiteralPath "$env:ProgramFiles\ICT App\server\starter-videos\$name.ictlock")) { throw "The locked video was not copied beside the server" }
+
+          $base = "https://localhost:7700"
+          $v = $null
+          foreach ($i in 1..30) {
+            Start-Sleep 2
+            try {
+              $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
+              $v = Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ } | Where-Object { $_.title -eq "Light and Shadow - Part 1" }
+              if ($v) { break }
+            } catch { Write-Host "not yet: $_" }
+          }
+          if (!$v) { Get-Content "$env:ProgramData\ICT App\server\events.log" -ErrorAction SilentlyContinue; throw "The locked video is not in the library" }
+          $v | Format-List title, kind, className, subject, size, mime, fileName
+          if ($v.className -ne "7" -or $v.subject -ne "Science" -or $v.kind -ne "video" -or $v.size -ne $bytes.Length -or $v.fileName -ne $name) { throw "The locked video was filed wrongly" }
+
+          # The app gets the real video back, byte for byte.
+          curl.exe -k -s --fail -o "$env:RUNNER_TEMP\played.mp4" -H "authorization: Bearer $token" "$base/api/v1/files/$($v.fileHash)/raw"
+          if ($LASTEXITCODE) { throw "Reading the locked video failed" }
+          if ((Get-FileHash "$env:RUNNER_TEMP\played.mp4").Hash -ne (Get-FileHash -LiteralPath "$plainDir\$name").Hash) { throw "The app did not get the real video back" }
+
+          # What the library keeps on the disk begins with the lock's mark, not with a video's.
+          $kept = "$env:ProgramData\ICT App\server\files\$($v.fileHash.Substring(0, 2))\$($v.fileHash)"
+          $head = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($kept), 0, 8)
+          if ($head -ne "ICTLOCK1") { throw "The video on the server's disk is not locked (it begins '$head')" }
 
       - name: Uninstall leaves no service behind
         shell: pwsh

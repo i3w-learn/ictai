@@ -8,7 +8,7 @@
     "start": "tsx src/main.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=cjs --external:better-sqlite3 --outfile=dist/server.cjs"
+    "build": "node scripts/build.mjs"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",

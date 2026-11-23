@@ -1,5 +1,12 @@
 import { join, resolve } from 'node:path';
 import { PORTS } from '@ict/contracts';
+import { parseKey } from './modules/content/lock.js';
+
+// The key that opens our locked videos and books. The build that makes the Windows installer writes
+// it in here (server/scripts/build.mjs); it is never in the code. A server run from the code has none
+// unless ICT_CONTENT_KEY is set.
+declare const __ICT_CONTENT_KEY__: string | undefined;
+const builtInKey = typeof __ICT_CONTENT_KEY__ === 'string' ? __ICT_CONTENT_KEY__ : undefined;
 
 export interface Config {
   version: string;
@@ -11,6 +18,7 @@ export interface Config {
   bootstrapAdminFile: string;
   // Videos that come with the app: the installer puts them beside the server program.
   starterDir: string;
+  contentKey: Buffer | null;
   apiPort: number;
   beaconPort: number;
   devAdmin: { username: string; password: string } | null;
@@ -36,6 +44,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     startupLog: join(dataDir, 'startup.log'),
     bootstrapAdminFile: join(dataDir, 'bootstrap-admin.json'),
     starterDir: resolve(env.ICT_STARTER_DIR ?? 'starter-videos'),
+    contentKey: parseKey(env.ICT_CONTENT_KEY || builtInKey),
     apiPort: Number(env.ICT_PORT ?? PORTS.api),
     beaconPort: Number(env.ICT_BEACON_PORT ?? PORTS.beacon),
     devAdmin:
