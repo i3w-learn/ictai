@@ -37,6 +37,7 @@ The full list, by who uses it.
 
 **Teacher**
 - Today: how every student is doing, to print, save as PDF or download for Excel.
+- Attendance: a student who signs in on a lab PC is marked present for the day; the teacher can change it, also for a day gone by.
 - Quizzes: write, edit, delete; make one with AI; ask AI a question.
 - Lab Mode: run a quiz live, watch students join and answer, end it.
 - Library: add files or web links by class, subject and chapter.

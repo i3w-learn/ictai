@@ -18,6 +18,7 @@ import { VideosPanel } from '../content/VideosPanel';
 import { ContentPanel } from '../content/ContentPanel';
 import { Viewer } from '../content/Viewer';
 import { Whiteboard } from '../shows/Whiteboard';
+import { AttendancePanel } from '../attendance/AttendancePanel';
 import { NoticesPanel } from '../notices/NoticesPanel';
 import { ReportCardsPanel } from '../report-cards/ReportCardsPanel';
 import { SequencesPanel } from '../sequences/SequencesPanel';
@@ -92,6 +93,7 @@ export function Home() {
     const panels: Record<Page, ReactNode[]> = {
       today: [
         can('results.view') && <ResultsPanel key="results" refresh={refresh} onStudent={(studentId) => setView({ kind: 'student', studentId })} />,
+        can('results.view') && <AttendancePanel key="attendance" refresh={refresh} canEdit={can('students.manage')} />,
         can('teaching.manage') && <QuizzesPanel key="quizzes" refresh={refresh} onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} onAsk={() => setView({ kind: 'ask-ai' })} />,
       ],
       teach: [

@@ -33,7 +33,7 @@ describe('migrations', () => {
     db.prepare("INSERT INTO classes (id, name, created_at) VALUES ('c7', '7', 1)").run();
     db.prepare(`INSERT INTO students (id, name, class_id, roll_no, pin_hash, qr_token_hash, enrol_code_hash, enrol_code_expires_at, created_at, updated_at)
       VALUES ('s1', 'Asha', 'c7', '5', 'a-pin-hash', 'a-qr-hash', 'a-code-hash', 99, 1, 1)`).run();
-    expect(migrate(db, migrations, null)).toEqual([17]);
+    expect(migrate(db, migrations.filter((m) => m.version <= 17), null)).toEqual([17]);
     expect(db.prepare('SELECT name, roll_no, pin_hash, enrol_code_hash, enrol_code_expires_at, qr_token_hash FROM students').all()).toEqual([
       { name: 'Asha', roll_no: '5', pin_hash: null, enrol_code_hash: null, enrol_code_expires_at: null, qr_token_hash: 'a-qr-hash' },
     ]);

@@ -487,4 +487,21 @@ export const migrations: Migration[] = [
     name: 'no_student_pins',
     sql: `UPDATE students SET pin_hash = NULL, enrol_code_hash = NULL, enrol_code_expires_at = NULL;`,
   },
+  {
+    // Who was in the lab on which day. A student with no row for a day did not sign in: absent.
+    version: 18,
+    name: 'attendance',
+    sql: `
+      CREATE TABLE attendance (
+        student_id TEXT NOT NULL REFERENCES students(id),
+        day        TEXT NOT NULL,
+        present    INTEGER NOT NULL,
+        source     TEXT NOT NULL CHECK (source IN ('signin','teacher')),
+        marked_by  TEXT REFERENCES users(id),
+        at         INTEGER NOT NULL,
+        PRIMARY KEY (student_id, day)
+      );
+      CREATE INDEX attendance_day ON attendance(day);
+    `,
+  },
 ];

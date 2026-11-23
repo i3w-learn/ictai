@@ -14,6 +14,7 @@ import { AiAskJob, AiAskRequest, AiJob, AiJobsQuery, AiQuizJob, AiQuizRequest, A
 import { ResultsOverview, ResultsQuery, StudentResults, TeacherActivity, MyProgress } from './results.js';
 import { Note, NoteInput } from './notes.js';
 import { Notice, NoticeInput } from './notices.js';
+import { AttendanceDay, AttendanceMark, AttendanceQuery } from './attendance.js';
 import { SchoolSettings, StudentPrefs } from './settings.js';
 import { SlotInput, SlotQuery, StudentToday, Timetable } from './timetable.js';
 import { ContentItem, ContentQuery, FileChunk, FileChunkParams, FinishUpload, LinkInput, StartUpload, UploadChunk, UploadTicket } from './content.js';
@@ -180,6 +181,10 @@ export const API = {
   'PUT /api/v1/notices/:id': { summary: 'Change a notice', access: staff('teaching.manage'), params: IdParams, body: NoticeInput, status: 200, response: Notice },
   'DELETE /api/v1/notices/:id': { summary: 'Take a notice down for good', access: staff('teaching.manage'), params: IdParams, status: 204 },
   'GET /api/v1/notices/mine': { summary: "Notices for the student's school, class and section that have not expired", access: student, status: 200, response: z.array(Notice) },
+
+  // Attendance: who was in the lab on a day. Signing in on a lab PC marks a student present.
+  'GET /api/v1/attendance': { summary: 'Who of a class was present on a day (today when no date is given)', access: staff('results.view'), query: AttendanceQuery, status: 200, response: AttendanceDay },
+  'PUT /api/v1/attendance/:id': { summary: 'Mark one student present or absent on a day; returns the class for that day', access: staff('students.manage'), params: IdParams, body: AttendanceMark, status: 200, response: AttendanceDay },
 
   // My notes: a student's own notebook. Staff have no route to it.
   'GET /api/v1/notes': { summary: 'Your notes, most recently changed first', access: student, status: 200, response: z.array(Note) },

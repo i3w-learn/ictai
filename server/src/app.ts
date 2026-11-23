@@ -10,6 +10,7 @@ import { aiRoutes } from './modules/ai/ai.routes.js';
 import { resultRoutes } from './modules/results/results.routes.js';
 import { noteRoutes } from './modules/notes/notes.routes.js';
 import { noticeRoutes } from './modules/notices/notices.routes.js';
+import { attendanceRoutes } from './modules/attendance/attendance.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
 import { timetableRoutes } from './modules/timetable/timetable.routes.js';
 import { workRoutes } from './modules/work/work.routes.js';
@@ -54,6 +55,7 @@ export function buildApp(c: Container, opts: AppOptions = {}) {
   resultRoutes(app, { results: c.results, progress: c.progress });
   noteRoutes(app, { notes: c.notes });
   noticeRoutes(app, { notices: c.notices });
+  attendanceRoutes(app, { attendance: c.attendance });
   settingsRoutes(app, { settings: c.settings });
   timetableRoutes(app, { timetable: c.timetable });
   workRoutes(app, { work: c.work });

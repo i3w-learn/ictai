@@ -43,6 +43,9 @@ Check on the Server PC: **School** page → **Devices** lists the student PC as 
 
 Check: the student's home page opens with their name at the top.
 
+Check on the Server PC: **Today** → **Attendance** → Class 6 shows the student as **Present**, with the
+time they signed in. Press **Mark absent**, then **Mark present**: the list changes each time.
+
 ## Step 5: Show to class (the main test)
 
 Do each one from the Server PC and watch the student PC.

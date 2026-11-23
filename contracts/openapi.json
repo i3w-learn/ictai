@@ -14171,6 +14171,271 @@
         }
       }
     },
+    "/api/v1/attendance": {
+      "get": {
+        "summary": "Who of a class was present on a day (today when no date is given)",
+        "x-access": {
+          "kind": "staff",
+          "permission": "results.view"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "classId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "today": {
+                      "type": "string"
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "rollNo": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sectionName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "present": {
+                            "type": "boolean"
+                          },
+                          "by": {
+                            "nullable": true,
+                            "type": "string",
+                            "enum": [
+                              "signin",
+                              "teacher"
+                            ]
+                          },
+                          "at": {
+                            "nullable": true,
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name",
+                          "rollNo",
+                          "sectionName",
+                          "present",
+                          "by",
+                          "at"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "today",
+                    "rows"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attendance/{id}": {
+      "put": {
+        "summary": "Mark one student present or absent on a day; returns the class for that day",
+        "x-access": {
+          "kind": "staff",
+          "permission": "students.manage"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "present": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "date",
+                  "present"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "today": {
+                      "type": "string"
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "rollNo": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sectionName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "present": {
+                            "type": "boolean"
+                          },
+                          "by": {
+                            "nullable": true,
+                            "type": "string",
+                            "enum": [
+                              "signin",
+                              "teacher"
+                            ]
+                          },
+                          "at": {
+                            "nullable": true,
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name",
+                          "rollNo",
+                          "sectionName",
+                          "present",
+                          "by",
+                          "at"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "today",
+                    "rows"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notes": {
       "get": {
         "summary": "Your notes, most recently changed first",

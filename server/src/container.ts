@@ -28,6 +28,8 @@ import { NoteRepository } from './modules/notes/note.repository.js';
 import { NoteService } from './modules/notes/note.service.js';
 import { NoticeRepository } from './modules/notices/notice.repository.js';
 import { NoticeService } from './modules/notices/notice.service.js';
+import { AttendanceRepository } from './modules/attendance/attendance.repository.js';
+import { AttendanceService } from './modules/attendance/attendance.service.js';
 import { SettingsRepository } from './modules/settings/settings.repository.js';
 import { SettingsService } from './modules/settings/settings.service.js';
 import { TimetableRepository } from './modules/timetable/timetable.repository.js';
@@ -92,6 +94,7 @@ export function createContainer(opts: {
     results: new ResultsRepository(db),
     notes: new NoteRepository(db),
     notices: new NoticeRepository(db),
+    attendance: new AttendanceRepository(db),
     settings: new SettingsRepository(db),
     timetable: new TimetableRepository(db),
     work: new WorkRepository(db),
@@ -131,6 +134,8 @@ export function createContainer(opts: {
   const showStore = new ShowStore(now, repos.content, signedIn, opts.log);
   const showPens = new ShowPenService(showStore, relay, signedIn, opts.log);
 
+  const attendance = new AttendanceService(now, repos.attendance, repos.classes, repos.students, audit);
+
   const firstAdmin = () => db.prepare("SELECT id FROM users WHERE role = 'super_admin' AND status = 'active' ORDER BY created_at LIMIT 1").pluck().get() as string | undefined;
 
   return {
@@ -162,7 +167,8 @@ export function createContainer(opts: {
     progress: new ProgressService(now, results, repos.work),
     notes: new NoteService(now, repos.notes),
     notices: new NoticeService(now, repos.notices, repos.classes, audit),
-    studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, audit, repos.sessions, repos.devices),
+    attendance,
+    studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, audit, repos.sessions, repos.devices, (studentId) => attendance.signedIn(studentId)),
   };
 }
 
