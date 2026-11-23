@@ -82,6 +82,8 @@ jobs:
           New-Item -ItemType Directory -Force stage/server/starter-videos | Out-Null
           gh release download starter-videos --repo $env:VIDEOS_REPO --pattern "*.mp4" --pattern "*.webm" --pattern "*.pdf" --pattern "*.ictlock" --dir stage/server/starter-videos
           if ($LASTEXITCODE) { Write-Host "No starter videos or books found; building without them."; $global:LASTEXITCODE = 0 }
+          # The activities that come with the app are small and live in the code.
+          Copy-Item installer/activities/*.html stage/server/starter-videos/
           Get-ChildItem stage/server/starter-videos | ForEach-Object { "{0}  {1:N0} MB" -f $_.Name, ($_.Length / 1MB) }
 
       # No video or book leaves here in a form that plays outside the app: whatever came unlocked
@@ -192,7 +194,7 @@ jobs:
             Start-Sleep 2
             try {
               $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
-              $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ })
+              $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ } | Where-Object { $_.kind -eq "video" })
               if ($items.Count -gt 0) { break }
             } catch { Write-Host "not yet: $_" }
           }
@@ -221,8 +223,21 @@ jobs:
           Start-Sleep 20
           $base = "https://localhost:7700"
           $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
-          $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ })
+          $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ } | Where-Object { $_.kind -eq "video" })
           if ($items.Count -ne 1) { throw "Expected still 1 library item, found $($items.Count)" }
+
+      # The activity that comes with the app is in the library, and is served with the rules that keep it in a closed box.
+      - name: The starter activity is in the library, in its closed box
+        shell: pwsh
+        run: |
+          $base = "https://localhost:7700"
+          $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
+          $a = Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ } | Where-Object { $_.kind -eq "activity" }
+          $a | Format-List title, kind, className, subject, mime
+          if (!$a -or $a.title -ne "Addition practice" -or $a.className -ne "6" -or $a.subject -ne "Maths") { Get-Content "$env:ProgramData\ICT App\server\events.log" -ErrorAction SilentlyContinue; throw "The starter activity was not filed" }
+          $headers = curl.exe -k -s -D - -o NUL -H "authorization: Bearer $token" "$base/api/v1/files/$($a.fileHash)/raw"
+          $headers
+          if (!($headers -match "content-security-policy: sandbox allow-scripts")) { throw "The activity is not served in its closed box" }
 
       # A video locked with our key: the app plays it, and the Server PC's disk never holds it unlocked.
       - name: A locked video plays in the app and stays locked on the disk

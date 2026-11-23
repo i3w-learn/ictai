@@ -58,6 +58,18 @@ describe('videos that come with the app', () => {
     expect(file.rawPayload.length).toBe(mp4(1).length);
   });
 
+  it('puts the activities that come with the app in the library too', async () => {
+    const dir = resolve(__dirname, '../../installer/activities');
+    const files = Object.fromEntries(readdirSync(dir).map((f) => [f, readFileSync(join(dir, f))]));
+    const { c, admin, library, diary } = await server({ ...files, 'G6-Mat-Not a page.html': Buffer.from('MZ a program') });
+    const headers = await admin();
+    expect(await c.starter!.sync()).toBe(true);
+    const items = await library(headers);
+    expect(items).toEqual([expect.objectContaining({ title: 'Addition practice', kind: 'activity', className: '6', subject: 'Maths', mime: 'text/html; charset=utf-8' })]);
+    expect(diary.filter((l) => l.startsWith('starter.activity.added'))).toHaveLength(1);
+    expect(diary.filter((l) => l.startsWith('starter.activity.skipped'))).toHaveLength(1);
+  });
+
   it('adds each video once: not again on a restart, and not after the teacher removed it', async () => {
     const { c, admin, library, app } = await server({ [INTEGERS]: mp4(1) });
     const headers = await admin();

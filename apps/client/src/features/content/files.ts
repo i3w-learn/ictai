@@ -33,7 +33,7 @@ export function clock(seconds: number): string {
   return h > 0 ? `${h}:${two(m)}:${two(s % 60)}` : `${m}:${two(s % 60)}`;
 }
 
-export const KIND_WORDS: Record<ContentKind, string> = { pdf: 'PDF', image: 'Picture', video: 'Video', audio: 'Sound', link: 'Web link' };
+export const KIND_WORDS: Record<ContentKind, string> = { pdf: 'PDF', image: 'Picture', video: 'Video', audio: 'Sound', link: 'Web link', activity: 'Activity' };
 
 type Call = (key: never, input?: never) => Promise<never>;
 interface Api {

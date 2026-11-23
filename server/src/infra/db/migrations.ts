@@ -4,6 +4,9 @@ export interface Migration {
   version: number;
   name: string;
   sql: string;
+  // This one makes a table again from scratch (SQLite cannot change a table's CHECK rule in place).
+  // The runner then switches the links between tables off while it runs and checks them all after.
+  rebuildsTables?: boolean;
 }
 
 export const migrations: Migration[] = [
@@ -527,6 +530,49 @@ export const migrations: Migration[] = [
         answered_at INTEGER NOT NULL,
         PRIMARY KEY (poll_id, student_id)
       );
+    `,
+  },
+  {
+    // Activities: a new kind of library item. The list of kinds is a CHECK rule on content_items, and
+    // SQLite cannot change such a rule, so the table is made again with the longer list and every row
+    // is carried over. Then the table of scores.
+    version: 20,
+    name: 'activities',
+    rebuildsTables: true,
+    sql: `
+      CREATE TABLE content_items_new (
+        id             TEXT PRIMARY KEY,
+        title          TEXT NOT NULL,
+        kind           TEXT NOT NULL CHECK (kind IN ('pdf','image','video','audio','link','activity')),
+        class_id       TEXT NOT NULL REFERENCES classes(id),
+        subject        TEXT,
+        chapter        TEXT,
+        file_hash      TEXT REFERENCES files(sha256),
+        file_name      TEXT,
+        url            TEXT,
+        needs_internet INTEGER NOT NULL DEFAULT 0,
+        created_by     TEXT NOT NULL REFERENCES users(id),
+        created_at     INTEGER NOT NULL,
+        deleted_at     INTEGER
+      );
+      INSERT INTO content_items_new (id, title, kind, class_id, subject, chapter, file_hash, file_name, url, needs_internet, created_by, created_at, deleted_at)
+        SELECT id, title, kind, class_id, subject, chapter, file_hash, file_name, url, needs_internet, created_by, created_at, deleted_at FROM content_items;
+      DROP TABLE content_items;
+      ALTER TABLE content_items_new RENAME TO content_items;
+      CREATE INDEX content_class ON content_items(class_id, subject, chapter);
+      CREATE INDEX content_file ON content_items(file_hash);
+
+      -- One row each time a student finishes an activity. The best one is what the teacher is shown.
+      CREATE TABLE activity_results (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        content_id TEXT NOT NULL REFERENCES content_items(id),
+        student_id TEXT NOT NULL REFERENCES students(id),
+        score      INTEGER NOT NULL,
+        max        INTEGER NOT NULL,
+        seconds    INTEGER NOT NULL,
+        done_at    INTEGER NOT NULL
+      );
+      CREATE INDEX activity_results_item ON activity_results(content_id, student_id);
     `,
   },
 ];

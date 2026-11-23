@@ -10,6 +10,7 @@ import { PenRequests } from '../shows/PenRequests';
 import { PenRow } from '../shows/PenRow';
 import { turnPage } from '../shows/show-pages';
 import { useShowHost } from '../shows/useShowHost';
+import { ActivityPlayer } from './ActivityPlayer';
 import { KIND_WORDS, sizeWords } from './files';
 import { useFileUrl } from './useFileUrl';
 import { VideoPlayer, type PlayerState } from './VideoPlayer';
@@ -171,6 +172,7 @@ export function Viewer({ item, onBack }: { item: ContentItem; onBack: () => void
             />
           )}
           {item.kind === 'audio' && <Card className="p-8"><audio src={url} controls onError={onError} className="w-full" /></Card>}
+          {item.kind === 'activity' && <ActivityPlayer key={url} item={item} url={url} />}
         </>
       )}
     </div>

@@ -11,6 +11,7 @@ import { resultRoutes } from './modules/results/results.routes.js';
 import { noteRoutes } from './modules/notes/notes.routes.js';
 import { noticeRoutes } from './modules/notices/notices.routes.js';
 import { attendanceRoutes } from './modules/attendance/attendance.routes.js';
+import { activityRoutes } from './modules/activities/activities.routes.js';
 import { pollRoutes } from './modules/polls/polls.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
 import { timetableRoutes } from './modules/timetable/timetable.routes.js';
@@ -57,6 +58,7 @@ export function buildApp(c: Container, opts: AppOptions = {}) {
   noteRoutes(app, { notes: c.notes });
   noticeRoutes(app, { notices: c.notices });
   attendanceRoutes(app, { attendance: c.attendance });
+  activityRoutes(app, { activities: c.activities });
   pollRoutes(app, { polls: c.polls });
   settingsRoutes(app, { settings: c.settings });
   timetableRoutes(app, { timetable: c.timetable });

@@ -7,7 +7,9 @@ import { fetchFile } from './files';
 // The kinds whose players can ask for a file part by part and say when that fails. A PDF is one of
 // them only where the app draws the pages itself (PdfPages); the built-in reader needs the whole file.
 export const streams = (kind: ContentItem['kind'], streamPdf = false) =>
-  kind === 'image' || kind === 'video' || kind === 'audio' || (streamPdf && kind === 'pdf');
+  // An activity is in this list for another reason: it must come from the server as its own page, with
+  // the rules that keep it in a closed box. A copy held in the app's memory would run under the app's rules.
+  kind === 'image' || kind === 'video' || kind === 'audio' || kind === 'activity' || (streamPdf && kind === 'pdf');
 
 // An address a picture, PDF, video or sound player can be pointed at for one library file.
 // A picture, video or sound is streamed: the player asks the server for the part it needs, so a big

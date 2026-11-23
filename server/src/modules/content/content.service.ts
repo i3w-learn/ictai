@@ -8,7 +8,7 @@ import type { ClassRepository } from '../students/class.repository.js';
 import type { ContentRepository } from './content.repository.js';
 import type { FileStore } from './file-store.js';
 import { noOffice, officeExt, type OfficeConverter } from './office.js';
-import { sniff } from './sniff.js';
+import { isActivity, sniff } from './sniff.js';
 
 // An upload in progress. Kept in memory: it does not survive a restart, the person uploads again.
 interface Upload { by: string; fileName: string; size: number; received: number; next: number; startedAt: number }
@@ -91,7 +91,8 @@ export class ContentService {
         await this.toPdf(id, office);
         type = sniff(this.store.head(id));
       }
-      if (!type) throw new AppError(415, 'UNSUPPORTED_FILE', 'This kind of file cannot be added. Use a PDF, a picture (PNG, JPG, GIF, WebP), a video (MP4, WebM), sound (MP3, WAV, OGG, M4A), or a Word, Excel or PowerPoint file.');
+      if (!type && isActivity(this.store.head(id, 64), up.fileName)) type = { kind: 'activity', mime: 'text/html; charset=utf-8' };
+      if (!type) throw new AppError(415, 'UNSUPPORTED_FILE', 'This kind of file cannot be added. Use a PDF, a picture (PNG, JPG, GIF, WebP), a video (MP4, WebM), sound (MP3, WAV, OGG, M4A), a Word, Excel or PowerPoint file, or an activity (one .html file).');
       const { hash, size } = await this.store.keep(id);
       this.uploads.delete(id);
       const now = this.now();

@@ -122,6 +122,20 @@ double-click a `.ictlock` file, or try to open it with a video player. It must n
 2. Student PC: **Join the quiz**. Server PC: **Start quiz**.
 3. Student answers. Server PC shows the live score. Press **End quiz**.
 
+## Step 6a: An activity
+
+One activity comes with the app: **Addition practice**, for Class 6.
+
+1. Student PC (a Class 6 student): **My books** → **Addition practice**. Ten sums come up, one at a time.
+2. Answer all ten. The end screen shows the score, and a line above it says **You got … of 10**.
+3. Server PC: **Teach** → **Library** → open **Addition practice**. Under the activity, the table shows
+   that student with the same score and **1** try. Press **Refresh** after the student plays again:
+   tries goes up, and the best score stays the best.
+
+Check: the activity plays with the network cable of the *student PC's internet* out, as always in the lab.
+If the box where the activity should be stays empty on Windows, say so: that part has only been
+tried in a browser on the Mac.
+
 ## Step 6b: A poll
 
 1. Server PC: **Today** → **Polls** → Class 6 → type a question → **Ask the class**.

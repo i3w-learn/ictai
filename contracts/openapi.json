@@ -8056,7 +8056,8 @@
                           "image",
                           "video",
                           "audio",
-                          "link"
+                          "link",
+                          "activity"
                         ]
                       },
                       "classId": {
@@ -8184,7 +8185,8 @@
                           "image",
                           "video",
                           "audio",
-                          "link"
+                          "link",
+                          "activity"
                         ]
                       },
                       "classId": {
@@ -8354,7 +8356,8 @@
                         "image",
                         "video",
                         "audio",
-                        "link"
+                        "link",
+                        "activity"
                       ]
                     },
                     "classId": {
@@ -8695,7 +8698,8 @@
                         "image",
                         "video",
                         "audio",
-                        "link"
+                        "link",
+                        "activity"
                       ]
                     },
                     "classId": {
@@ -9016,7 +9020,8 @@
                             "image",
                             "video",
                             "audio",
-                            "link"
+                            "link",
+                            "activity"
                           ]
                         },
                         "classId": {
@@ -9316,7 +9321,8 @@
                             "image",
                             "video",
                             "audio",
-                            "link"
+                            "link",
+                            "activity"
                           ]
                         },
                         "classId": {
@@ -9660,7 +9666,8 @@
                             "image",
                             "video",
                             "audio",
-                            "link"
+                            "link",
+                            "activity"
                           ]
                         },
                         "classId": {
@@ -10431,7 +10438,8 @@
                             "image",
                             "video",
                             "audio",
-                            "link"
+                            "link",
+                            "activity"
                           ]
                         },
                         "classId": {
@@ -10848,7 +10856,8 @@
                             "image",
                             "video",
                             "audio",
-                            "link"
+                            "link",
+                            "activity"
                           ]
                         },
                         "classId": {
@@ -11138,7 +11147,8 @@
                                     "image",
                                     "video",
                                     "audio",
-                                    "link"
+                                    "link",
+                                    "activity"
                                   ]
                                 },
                                 "classId": {
@@ -11420,7 +11430,8 @@
                                   "image",
                                   "video",
                                   "audio",
-                                  "link"
+                                  "link",
+                                  "activity"
                                 ]
                               },
                               "classId": {
@@ -11679,7 +11690,8 @@
                                     "image",
                                     "video",
                                     "audio",
-                                    "link"
+                                    "link",
+                                    "activity"
                                   ]
                                 },
                                 "classId": {
@@ -14422,6 +14434,222 @@
                       "createdAt"
                     ]
                   }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/activities/{id}/results": {
+      "post": {
+        "summary": "A student finished an activity of their class's library: keep the score. Returns their best try",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "score": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000
+                  },
+                  "max": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  },
+                  "seconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 86400
+                  }
+                },
+                "required": [
+                  "score",
+                  "max",
+                  "seconds"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "best": {
+                      "type": "number"
+                    },
+                    "max": {
+                      "type": "number"
+                    },
+                    "tries": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "best",
+                    "max",
+                    "tries"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Every student of the activity's class with their best score",
+        "x-access": {
+          "kind": "staff",
+          "permission": "results.view"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "className": {
+                      "type": "string"
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "studentId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "rollNo": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "best": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "max": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "tries": {
+                            "type": "number"
+                          },
+                          "lastAt": {
+                            "nullable": true,
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "studentId",
+                          "name",
+                          "rollNo",
+                          "best",
+                          "max",
+                          "tries",
+                          "lastAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "className",
+                    "rows"
+                  ]
                 }
               }
             }

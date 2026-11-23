@@ -8,7 +8,7 @@ import type { ContentRepository } from './content.repository.js';
 import { DISK_RESERVE_BYTES } from './content.service.js';
 import type { FileStore } from './file-store.js';
 import { LOCK_EXT } from './lock.js';
-import { sniff } from './sniff.js';
+import { isActivity, sniff } from './sniff.js';
 
 const SUBJECTS: Record<string, string> = { mat: 'Maths', sci: 'Science', eng: 'English', hin: 'Hindi', sst: 'Social Science', evs: 'EVS', com: 'Computer' };
 
@@ -31,7 +31,7 @@ export function filingFromName(fileName: string): { className: string; subject: 
   return { className: String(Number(grade[1])), subject, title };
 }
 
-// Videos (.mp4, .webm) and books (.pdf) that come with the app. The installer puts them in a folder beside
+// Videos (.mp4, .webm), books (.pdf) and activities (.html) that come with the app. The installer puts them in a folder beside
 // the server; the server adds each one to the library once. Ours come locked (".mp4.ictlock", see lock.ts)
 // and stay locked on this PC's disk: the copy in the library is as unreadable outside the app as the one here. A teacher may remove one afterwards and it stays removed,
 // because the names already added are written down in the data folder.
@@ -52,7 +52,7 @@ export class StarterVideos {
   async sync(): Promise<boolean> {
     if (!existsSync(this.dir)) return true;
     const done = new Set<string>(existsSync(this.doneFile) ? (JSON.parse(readFileSync(this.doneFile, 'utf8')) as string[]) : []);
-    const waiting = readdirSync(this.dir).filter((f) => /\.(mp4|webm|pdf)(\.ictlock)?$/i.test(f) && !done.has(f)).sort();
+    const waiting = readdirSync(this.dir).filter((f) => /\.(mp4|webm|pdf|html?)(\.ictlock)?$/i.test(f) && !done.has(f)).sort();
     if (waiting.length === 0) return true;
     const by = this.owner();
     if (!by) return false;
@@ -64,7 +64,8 @@ export class StarterVideos {
       const name = locked ? onDisk.slice(0, -LOCK_EXT.length) : onDisk;
       const filing = filingFromName(name);
       const isBook = /\.pdf$/i.test(name);
-      const what = isBook ? 'book' : 'video';
+      const isGame = /\.html?$/i.test(name);
+      const what = isBook ? 'book' : isGame ? 'activity' : 'video';
       const size = statSync(path).size;
       if (locked && !this.store.canUnlock) {
         // Not written down as done: a server that has the key adds it.
@@ -79,11 +80,11 @@ export class StarterVideos {
       } else {
         const partId = this.store.newPart();
         this.store.copyIn(partId, path);
-        const type = sniff(this.store.head(partId));
-        const kind = isBook ? 'pdf' : 'video';
+        const kind = isBook ? 'pdf' : isGame ? 'activity' : 'video';
+        const type = !isGame ? sniff(this.store.head(partId)) : isActivity(this.store.head(partId, 64), name) ? { kind: 'activity' as const, mime: 'text/html; charset=utf-8' } : null;
         if (type?.kind !== kind) {
           this.store.discard(partId);
-          this.log(`starter.${what}.skipped`, { file: name, why: isBook ? 'it is not a PDF book' : 'it is not a video the app can play (MP4 or WebM)' });
+          this.log(`starter.${what}.skipped`, { file: name, why: isBook ? 'it is not a PDF book' : isGame ? 'it is not a web page file' : 'it is not a video the app can play (MP4 or WebM)' });
         } else {
           const kept = await this.store.keep(partId);
           const now = this.now();

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { FileText, Film, Image, Link2, Music } from 'lucide-react';
+import { FileText, Film, Gamepad2, Image, Link2, Music } from 'lucide-react';
 import type { ContentItem, ContentKind } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ErrorNote, PageTitle, useAction } from '../../ui/ui';
 import { KIND_WORDS, shelve } from './files';
 import { Viewer } from './Viewer';
 
-export const KIND_ICON: Record<ContentKind, typeof FileText> = { pdf: FileText, image: Image, video: Film, audio: Music, link: Link2 };
+export const KIND_ICON: Record<ContentKind, typeof FileText> = { pdf: FileText, image: Image, video: Film, audio: Music, link: Link2, activity: Gamepad2 };
 
 // PRD student app "My books": everything the teachers have put in the library for this student's class,
 // by subject and chapter. Tap one to open it. With `videos`, the same page holds the videos only.

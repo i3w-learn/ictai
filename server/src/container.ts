@@ -31,6 +31,8 @@ import { NoticeRepository } from './modules/notices/notice.repository.js';
 import { NoticeService } from './modules/notices/notice.service.js';
 import { AttendanceRepository } from './modules/attendance/attendance.repository.js';
 import { AttendanceService } from './modules/attendance/attendance.service.js';
+import { ActivityRepository } from './modules/activities/activity.repository.js';
+import { ActivityService } from './modules/activities/activity.service.js';
 import { PollRepository } from './modules/polls/poll.repository.js';
 import { PollService } from './modules/polls/poll.service.js';
 import { SettingsRepository } from './modules/settings/settings.repository.js';
@@ -102,6 +104,7 @@ export function createContainer(opts: {
     notices: new NoticeRepository(db),
     attendance: new AttendanceRepository(db),
     polls: new PollRepository(db),
+    activities: new ActivityRepository(db),
     settings: new SettingsRepository(db),
     timetable: new TimetableRepository(db),
     work: new WorkRepository(db),
@@ -178,6 +181,7 @@ export function createContainer(opts: {
     notes: new NoteService(now, repos.notes),
     notices: new NoticeService(now, repos.notices, repos.classes, audit),
     attendance,
+    activities: new ActivityService(now, repos.activities, repos.content),
     polls: new PollService(now, repos.polls, repos.classes, relay, audit),
     studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, audit, repos.sessions, repos.devices, (studentId) => attendance.signedIn(studentId)),
   };

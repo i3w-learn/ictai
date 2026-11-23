@@ -19,3 +19,11 @@ export function sniff(head: Buffer): { kind: Exclude<ContentKind, 'link'>; mime:
   if (at(0, 'ID3') || (head[0] === 0xff && (head[1]! & 0xe0) === 0xe0)) return { kind: 'audio', mime: 'audio/mpeg' };
   return null;
 }
+
+// An activity is one web page file: its name ends in .html and it starts the way a web page does.
+// (Any text file could be named .html; the app runs an activity in a closed box whatever is in it.)
+export function isActivity(head: Buffer, fileName: string): boolean {
+  if (!/\.html?$/i.test(fileName)) return false;
+  const start = head.toString('utf8').replace(/^\uFEFF/, '').trimStart().toLowerCase();
+  return start.startsWith('<!doctype html') || start.startsWith('<html');
+}

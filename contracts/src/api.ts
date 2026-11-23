@@ -15,6 +15,7 @@ import { ResultsOverview, ResultsQuery, StudentResults, TeacherActivity, MyProgr
 import { Note, NoteInput } from './notes.js';
 import { Notice, NoticeInput } from './notices.js';
 import { AttendanceDay, AttendanceMark, AttendanceQuery } from './attendance.js';
+import { ActivityResult, ActivityScores, MyActivityBest } from './activities.js';
 import { Poll, PollAnswer, PollForStudent, PollInput, PollQuery } from './polls.js';
 import { SchoolSettings, StudentPrefs } from './settings.js';
 import { SlotInput, SlotQuery, StudentToday, Timetable } from './timetable.js';
@@ -186,6 +187,10 @@ export const API = {
   'PUT /api/v1/notices/:id': { summary: 'Change a notice', access: staff('teaching.manage'), params: IdParams, body: NoticeInput, status: 200, response: Notice },
   'DELETE /api/v1/notices/:id': { summary: 'Take a notice down for good', access: staff('teaching.manage'), params: IdParams, status: 204 },
   'GET /api/v1/notices/mine': { summary: "Notices for the student's school, class and section that have not expired", access: student, status: 200, response: z.array(Notice) },
+
+  // Activities: interactive library items that report a score.
+  'POST /api/v1/activities/:id/results': { summary: "A student finished an activity of their class's library: keep the score. Returns their best try", access: student, params: IdParams, body: ActivityResult, status: 201, response: MyActivityBest },
+  'GET /api/v1/activities/:id/results': { summary: "Every student of the activity's class with their best score", access: staff('results.view'), params: IdParams, status: 200, response: ActivityScores },
 
   // Polls: one quick question to a class, with no right answer and no score.
   'GET /api/v1/polls': { summary: 'Polls you may see with how the class answered, newest first, optionally for one class', access: staff(), query: PollQuery, status: 200, response: z.array(Poll) },

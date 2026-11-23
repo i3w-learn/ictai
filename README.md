@@ -28,6 +28,7 @@ The full list, by who uses it.
 - Live quiz: join when the teacher opens it, a clock on every question, the score at the end.
 - My books: PDFs, pictures, videos, sound and web links from the library.
 - Videos: the videos for the student's class, including the ones that come with the app.
+- Activities: small interactive lessons and games from the library that need no internet; the score goes to the teacher.
 - Things to do: playlists and learning paths, ticked off step by step.
 - My work: open work the teacher set, hand it in, see the mark.
 - How I am doing: quiz results by subject.
@@ -41,6 +42,7 @@ The full list, by who uses it.
 - Attendance: a student who signs in on a lab PC is marked present for the day; the teacher can change it, also for a day gone by.
 - Quizzes: write, edit, delete; make one with AI; ask AI a question.
 - Lab Mode: run a quiz live, watch students join and answer, end it.
+- Activities: add one (a single `.html` file, see `docs/activities.md`) to the library and see each student's best score.
 - Polls: ask a class one quick question (pick an option, or 1 to 5 stars) and watch the answers come in. No marks, no names.
 - Library: add files or web links by class, subject and chapter. A Word, Excel or PowerPoint file is turned into a PDF (needs LibreOffice on the Server PC).
 - Videos: the videos for the teacher's classes.

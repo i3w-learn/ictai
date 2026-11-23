@@ -35,11 +35,23 @@ export function migrate(db: Db, list: Migration[], file: string | null): number[
   }
 
   for (const m of pending) {
-    db.transaction(() => {
-      db.exec(m.sql);
-      db.prepare('INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)')
-        .run(m.version, m.name, Date.now());
-    })();
+    // A table can only be made again while SQLite is not watching the links to it from other tables
+    // (dropping it would otherwise count as deleting every row). That switch cannot be turned inside
+    // a transaction, so it is turned here, and every link is checked before the change is kept.
+    if (m.rebuildsTables) db.pragma('foreign_keys = OFF');
+    try {
+      db.transaction(() => {
+        db.exec(m.sql);
+        if (m.rebuildsTables) {
+          const broken = db.pragma('foreign_key_check') as unknown[];
+          if (broken.length > 0) throw new Error(`Migration ${m.version} (${m.name}) left ${broken.length} broken links between tables; nothing was changed.`);
+        }
+        db.prepare('INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)')
+          .run(m.version, m.name, Date.now());
+      })();
+    } finally {
+      if (m.rebuildsTables) db.pragma('foreign_keys = ON');
+    }
   }
   return pending.map((m) => m.version);
 }
