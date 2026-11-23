@@ -149,6 +149,17 @@ Check on the Server PC: the bar for that answer grows by one, without pressing a
 3. Ask a second poll with **1 to 5 stars**. The first poll shows as **Closed**. The student taps a star.
 4. Press **Close poll**. The student no longer sees it.
 
+## Step 6c: Plan a lesson with AI (only when the AI kit is on the Server PC)
+
+1. Server PC: **Today** → **Quizzes** → **Plan a lesson**.
+2. Class 6, a subject, a topic (say `Fractions`), 40 minutes → **Plan the lesson**.
+3. Wait. The first plan after the Server PC starts takes longest, because the AI has to load.
+
+Check: the plan has what students will learn, four to six timed steps that add up to **40 minutes**,
+questions to ask the class, and homework. **Print or PDF** opens a clean page of it.
+
+Without the AI kit the page says that AI is not installed, and nothing else on the page is offered.
+
 ## Step 7: Switch off and on
 
 1. Restart the Server PC. Do not open anything.

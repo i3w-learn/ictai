@@ -54,6 +54,33 @@ export type AiTutorRequest = z.infer<typeof AiTutorRequest>;
 export const AiTutorResult = z.object({ answer: z.string() });
 export type AiTutorResult = z.infer<typeof AiTutorResult>;
 
+// Spec 4.3 "Plan a lesson (AI)": the teacher gives a class, a subject, a topic and how long the
+// lesson is; the AI on the Server PC drafts a plan the teacher can read, change in her head and print.
+export const PLAN_MINUTES = { min: 20, max: 90, usual: 40 } as const;
+export const AiPlanRequest = z.object({
+  classId: Id,
+  subject: z.string().trim().min(1).max(60),
+  topic: z.string().trim().min(1).max(120),
+  minutes: z.number().int().min(PLAN_MINUTES.min).max(PLAN_MINUTES.max).default(PLAN_MINUTES.usual),
+  language: AiLanguage.default('en'),
+});
+export type AiPlanRequest = z.infer<typeof AiPlanRequest>;
+
+export const AiPlanStep = z.object({ minutes: z.number(), title: z.string(), what: z.string() });
+export type AiPlanStep = z.infer<typeof AiPlanStep>;
+export const AiPlanResult = z.object({
+  // What students should be able to do by the end.
+  objectives: z.array(z.string()),
+  // The lesson in order. The minutes add up to what was asked for.
+  steps: z.array(AiPlanStep),
+  // Questions to ask the class, to check they have understood.
+  checks: z.array(z.string()),
+  homework: z.string(),
+  // What the library already has for this class and subject. Looked up by the server, not written by the AI.
+  library: z.array(z.object({ title: z.string(), kind: z.string(), chapter: z.string().nullable() })),
+});
+export type AiPlanResult = z.infer<typeof AiPlanResult>;
+
 export const AiJobStatus = z.enum(['queued', 'running', 'done', 'failed']);
 export type AiJobStatus = z.infer<typeof AiJobStatus>;
 
@@ -78,7 +105,10 @@ export type AiTutorJob = z.infer<typeof AiTutorJob>;
 export const MyTutor = z.object({ leftToday: z.number(), dailyCap: z.number(), jobs: z.array(AiTutorJob) });
 export type MyTutor = z.infer<typeof MyTutor>;
 
-export const AiJob = z.discriminatedUnion('kind', [AiQuizJob, AiAskJob, AiTutorJob]);
+export const AiPlanJob = z.object({ ...jobFields, kind: z.literal('plan'), request: AiPlanRequest, result: AiPlanResult.nullable() });
+export type AiPlanJob = z.infer<typeof AiPlanJob>;
+
+export const AiJob = z.discriminatedUnion('kind', [AiQuizJob, AiAskJob, AiTutorJob, AiPlanJob]);
 export type AiJob = z.infer<typeof AiJob>;
 export type AiJobKind = AiJob['kind'];
 export type AiJobOf<K extends AiJobKind> = Extract<AiJob, { kind: K }>;
@@ -87,7 +117,7 @@ export type AiResultOf<K extends AiJobKind> = NonNullable<Extract<AiJob, { kind:
 
 // GET /ai/jobs lists the last few requests of every kind, or of one kind when the screen asks for it,
 // so a run of AI quizzes cannot push a teacher's answered questions out of their list.
-export const AiJobsQuery = z.object({ kind: z.enum(['quiz', 'ask', 'tutor']).optional() });
+export const AiJobsQuery = z.object({ kind: z.enum(['quiz', 'ask', 'tutor', 'plan']).optional() });
 export type AiJobsQuery = z.infer<typeof AiJobsQuery>;
 
 export const AiStatus = z.object({

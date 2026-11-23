@@ -41,6 +41,7 @@ The full list, by who uses it.
 - Today: how every student is doing, to print, save as PDF or download for Excel.
 - Attendance: a student who signs in on a lab PC is marked present for the day; the teacher can change it, also for a day gone by.
 - Quizzes: write, edit, delete; make one with AI; ask AI a question.
+- Plan a lesson with AI: a class, subject, topic and length go in; a timed plan with checks and homework comes out, to read and print.
 - Lab Mode: run a quiz live, watch students join and answer, end it.
 - Activities: add one (a single `.html` file, see `docs/activities.md`) to the library and see each student's best score.
 - Polls: ask a class one quick question (pick an option, or 1 to 5 stars) and watch the answers come in. No marks, no names.

@@ -58,6 +58,7 @@ import { aiNotInstalled } from './core/errors.js';
 import { AiService, type AiRuntimeInfo } from './modules/ai/ai.service.js';
 import { AnswerGenerator } from './modules/ai/answer-generator.js';
 import { TutorGenerator } from './modules/ai/tutor-generator.js';
+import { PlanGenerator } from './modules/ai/plan-generator.js';
 import { JobQueue, type JobRunners } from './modules/ai/job-queue.js';
 import { JobRepository } from './modules/ai/job.repository.js';
 import { noEventLog, type EventLog } from './core/event-log.js';
@@ -127,10 +128,14 @@ export function createContainer(opts: {
   const load = ai.runtime.ensureReady?.bind(ai.runtime);
   const answers = new AnswerGenerator(ai.llm);
   const tutor = new TutorGenerator(ai.llm);
+  // Subjects are matched without caring about capitals, as everywhere else.
+  const planner = new PlanGenerator(ai.llm, (id) => repos.classes.name(id) ?? null, (classId, subject) =>
+    repos.content.all(classId).filter((i) => i.subject?.toLowerCase() === subject.toLowerCase()).map((i) => ({ title: i.title, kind: i.kind, chapter: i.chapter })));
   const runners = {
     quiz: (req, signal) => generator.generate(req, signal),
     ask: (req, signal) => answers.answer(req, signal),
     tutor: (req, signal) => tutor.answer(req, signal),
+    plan: (req, signal) => planner.plan(req, signal),
   } satisfies JobRunners;
   const aiQueue = new JobQueue(now, repos.aiJobs, runners, undefined, load);
 

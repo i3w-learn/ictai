@@ -1,4 +1,4 @@
-import { TUTOR_DAILY_CAP, TUTOR_QUEUE_MAX, type AiAskJob, type AiAskRequest, type AiJob, type AiJobKind, type AiQuizJob, type AiQuizRequest, type AiStatus, type AiTutorJob, type AiTutorRequest, type MyTutor, type StaffPrincipal, type StudentPrincipal } from '@ict/contracts';
+import { TUTOR_DAILY_CAP, TUTOR_QUEUE_MAX, type AiAskJob, type AiAskRequest, type AiPlanJob, type AiPlanRequest, type AiJob, type AiJobKind, type AiQuizJob, type AiQuizRequest, type AiStatus, type AiTutorJob, type AiTutorRequest, type MyTutor, type StaffPrincipal, type StudentPrincipal } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import type { Clock } from '../../core/clock.js';
 import { AppError, aiNotInstalled, aiSwitchedOff, notFound } from '../../core/errors.js';
@@ -49,6 +49,17 @@ export class AiService {
     const job = this.queue.enqueue(actor.userId, 'ask', req);
     this.audit.record({ kind: 'staff', id: actor.userId }, 'ai.ask.request', job.id, { question: req.question });
     return wait ? ((await this.queue.waitFor(job.id, WAIT_MS)) as AiAskJob) : job;
+  }
+
+  async requestPlan(actor: StaffPrincipal, req: AiPlanRequest, wait = false): Promise<AiPlanJob> {
+    const scope = scopeOf(actor);
+    checkMyClass(this.classes, scope, req.classId);
+    checkSubject(scope, req.subject);
+    if (!this.enabled()) throw aiSwitchedOff();
+    if (!this.runtime.installed()) throw aiNotInstalled();
+    const job = this.queue.enqueue(actor.userId, 'plan', req);
+    this.audit.record({ kind: 'staff', id: actor.userId }, 'ai.plan.request', job.id, { topic: req.topic });
+    return wait ? ((await this.queue.waitFor(job.id, WAIT_MS)) as AiPlanJob) : job;
   }
 
   // Someone else's request looks the same as one that doesn't exist.

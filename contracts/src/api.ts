@@ -10,7 +10,7 @@ import {
   AnswerResult, OpenRun, OpenRunForStudent, Quiz, QuizInput, QuizQuery, QuizSummary, RunQuery, RunSummary,
   StudentRunState, SubmitAnswer, TeacherRunState,
 } from './quizzes.js';
-import { AiAskJob, AiAskRequest, AiJob, AiJobsQuery, AiQuizJob, AiQuizRequest, AiStatus, AiTutorJob, AiTutorRequest, AiWaitQuery, MyTutor } from './ai.js';
+import { AiAskJob, AiAskRequest, AiPlanJob, AiPlanRequest, AiJob, AiJobsQuery, AiQuizJob, AiQuizRequest, AiStatus, AiTutorJob, AiTutorRequest, AiWaitQuery, MyTutor } from './ai.js';
 import { ResultsOverview, ResultsQuery, StudentResults, TeacherActivity, MyProgress } from './results.js';
 import { Note, NoteInput } from './notes.js';
 import { Notice, NoticeInput } from './notices.js';
@@ -111,6 +111,7 @@ export const API = {
   'GET /api/v1/ai/status': { summary: 'Is the AI installed and ready, and how many requests wait', access: staff('ai.teacher'), status: 200, response: AiStatus },
   'POST /api/v1/ai/quiz': { summary: 'Ask the AI for a draft quiz; returns the queued job, or with ?wait=1 the finished job with the questions', access: staff('ai.teacher'), query: AiWaitQuery, body: AiQuizRequest, status: 202, response: AiQuizJob },
   'POST /api/v1/ai/ask': { summary: 'Ask the AI a question; returns the queued job, or with ?wait=1 the finished job with the answer', access: staff('ai.teacher'), query: AiWaitQuery, body: AiAskRequest, status: 202, response: AiAskJob },
+  'POST /api/v1/ai/plan': { summary: 'Ask the AI for a lesson plan; returns the queued job, or with ?wait=1 the finished job with the plan', access: staff('ai.teacher'), query: AiWaitQuery, body: AiPlanRequest, status: 202, response: AiPlanJob },
   'GET /api/v1/ai/tutor': { summary: "The student's own questions to the tutor, and how many are left today", access: student, status: 200, response: MyTutor },
   'POST /api/v1/ai/tutor': { summary: 'A student asks the tutor a question; returns the queued job', access: student, body: AiTutorRequest, status: 202, response: AiTutorJob },
   'GET /api/v1/ai/tutor/:id': { summary: "One of the student's own questions, with the answer when done", access: student, params: IdParams, status: 200, response: AiTutorJob },

@@ -5711,6 +5711,268 @@
         }
       }
     },
+    "/api/v1/ai/plan": {
+      "post": {
+        "summary": "Ask the AI for a lesson plan; returns the queued job, or with ?wait=1 the finished job with the plan",
+        "x-access": {
+          "kind": "staff",
+          "permission": "ai.teacher"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wait",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "classId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "subject": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "topic": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "minutes": {
+                    "default": 40,
+                    "type": "integer",
+                    "minimum": 20,
+                    "maximum": 90
+                  },
+                  "language": {
+                    "default": "en",
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "hi"
+                    ]
+                  }
+                },
+                "required": [
+                  "classId",
+                  "subject",
+                  "topic"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "done",
+                        "failed"
+                      ]
+                    },
+                    "position": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "error": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    },
+                    "finishedAt": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "plan"
+                      ]
+                    },
+                    "request": {
+                      "type": "object",
+                      "properties": {
+                        "classId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 60
+                        },
+                        "topic": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "minutes": {
+                          "default": 40,
+                          "type": "integer",
+                          "minimum": 20,
+                          "maximum": 90
+                        },
+                        "language": {
+                          "default": "en",
+                          "type": "string",
+                          "enum": [
+                            "en",
+                            "hi"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "classId",
+                        "subject",
+                        "topic"
+                      ]
+                    },
+                    "result": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "objectives": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "minutes": {
+                                "type": "number"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "what": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "minutes",
+                              "title",
+                              "what"
+                            ]
+                          }
+                        },
+                        "checks": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "homework": {
+                          "type": "string"
+                        },
+                        "library": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string"
+                              },
+                              "chapter": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "title",
+                              "kind",
+                              "chapter"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "objectives",
+                        "steps",
+                        "checks",
+                        "homework",
+                        "library"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "position",
+                    "error",
+                    "createdAt",
+                    "finishedAt",
+                    "kind",
+                    "request",
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ai/tutor": {
       "get": {
         "summary": "The student's own questions to the tutor, and how many are left today",
@@ -6459,6 +6721,167 @@
                           "request",
                           "result"
                         ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "queued",
+                              "running",
+                              "done",
+                              "failed"
+                            ]
+                          },
+                          "position": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "error": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "finishedAt": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "plan"
+                            ]
+                          },
+                          "request": {
+                            "type": "object",
+                            "properties": {
+                              "classId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "subject": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 60
+                              },
+                              "topic": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 120
+                              },
+                              "minutes": {
+                                "default": 40,
+                                "type": "integer",
+                                "minimum": 20,
+                                "maximum": 90
+                              },
+                              "language": {
+                                "default": "en",
+                                "type": "string",
+                                "enum": [
+                                  "en",
+                                  "hi"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "classId",
+                              "subject",
+                              "topic"
+                            ]
+                          },
+                          "result": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "objectives": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "steps": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "minutes": {
+                                      "type": "number"
+                                    },
+                                    "title": {
+                                      "type": "string"
+                                    },
+                                    "what": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "minutes",
+                                    "title",
+                                    "what"
+                                  ]
+                                }
+                              },
+                              "checks": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "homework": {
+                                "type": "string"
+                              },
+                              "library": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "title": {
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "type": "string"
+                                    },
+                                    "chapter": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "title",
+                                    "kind",
+                                    "chapter"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "objectives",
+                              "steps",
+                              "checks",
+                              "homework",
+                              "library"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "position",
+                          "error",
+                          "createdAt",
+                          "finishedAt",
+                          "kind",
+                          "request",
+                          "result"
+                        ]
                       }
                     ]
                   }
@@ -6822,6 +7245,167 @@
                           },
                           "required": [
                             "answer"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "position",
+                        "error",
+                        "createdAt",
+                        "finishedAt",
+                        "kind",
+                        "request",
+                        "result"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "queued",
+                            "running",
+                            "done",
+                            "failed"
+                          ]
+                        },
+                        "position": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "error": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "finishedAt": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "plan"
+                          ]
+                        },
+                        "request": {
+                          "type": "object",
+                          "properties": {
+                            "classId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "subject": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 60
+                            },
+                            "topic": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 120
+                            },
+                            "minutes": {
+                              "default": 40,
+                              "type": "integer",
+                              "minimum": 20,
+                              "maximum": 90
+                            },
+                            "language": {
+                              "default": "en",
+                              "type": "string",
+                              "enum": [
+                                "en",
+                                "hi"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "classId",
+                            "subject",
+                            "topic"
+                          ]
+                        },
+                        "result": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "objectives": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "steps": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "minutes": {
+                                    "type": "number"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "what": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "minutes",
+                                  "title",
+                                  "what"
+                                ]
+                              }
+                            },
+                            "checks": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "homework": {
+                              "type": "string"
+                            },
+                            "library": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "type": "string"
+                                  },
+                                  "chapter": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "kind",
+                                  "chapter"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "objectives",
+                            "steps",
+                            "checks",
+                            "homework",
+                            "library"
                           ]
                         }
                       },

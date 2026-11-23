@@ -575,4 +575,30 @@ export const migrations: Migration[] = [
       CREATE INDEX activity_results_item ON activity_results(content_id, student_id);
     `,
   },
+  {
+    // A fourth kind of AI request: a lesson plan. The kinds are a CHECK rule, so the table is made again.
+    version: 21,
+    name: 'ai_jobs_plan',
+    rebuildsTables: true,
+    sql: `
+      CREATE TABLE ai_jobs_new (
+        id           TEXT PRIMARY KEY,
+        kind         TEXT NOT NULL CHECK (kind IN ('quiz','ask','tutor','plan')),
+        requested_by TEXT NOT NULL,
+        request_json TEXT NOT NULL,
+        status       TEXT NOT NULL CHECK (status IN ('queued','running','done','failed')),
+        result_json  TEXT,
+        error        TEXT,
+        created_at   INTEGER NOT NULL,
+        started_at   INTEGER,
+        finished_at  INTEGER
+      );
+      INSERT INTO ai_jobs_new (id, kind, requested_by, request_json, status, result_json, error, created_at, started_at, finished_at)
+        SELECT id, kind, requested_by, request_json, status, result_json, error, created_at, started_at, finished_at FROM ai_jobs ORDER BY rowid;
+      DROP TABLE ai_jobs;
+      ALTER TABLE ai_jobs_new RENAME TO ai_jobs;
+      CREATE INDEX ai_jobs_queue ON ai_jobs(status, created_at);
+      CREATE INDEX ai_jobs_user ON ai_jobs(requested_by, created_at);
+    `,
+  },
 ];

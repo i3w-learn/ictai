@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { MessageCircleQuestion, Play, Plus, Sparkles } from 'lucide-react';
+import { ClipboardPen, MessageCircleQuestion, Play, Plus, Sparkles } from 'lucide-react';
 import type { QuizSummary, SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
 import { Button, ConfirmButton, ErrorNote, Panel, Select, useAction } from '../../ui/ui';
 
 // The teacher's quizzes, filtered by class, with Lab Mode one click away.
-export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, refresh }: { refresh: number; onEdit: (quizId: string | null) => void; onLab: (runId: string) => void; onAi: () => void; onAsk: () => void }) {
+export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, onPlan, refresh }: { refresh: number; onEdit: (quizId: string | null) => void; onLab: (runId: string) => void; onAi: () => void; onAsk: () => void; onPlan: () => void }) {
   const { call, state } = useApp();
   const can = (p: 'lesson.start' | 'ai.teacher') => state.session?.principal.kind === 'staff' && state.session.principal.permissions.includes(p);
   const canHost = can('lesson.start');
@@ -51,8 +51,9 @@ export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, refresh }: { refresh:
 
   return (
     <Panel title="Quizzes" actions={
-      <div className="flex gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         {canAi && <Button variant="quiet" onClick={onAsk}><MessageCircleQuestion className="size-4" /> Ask AI</Button>}
+        {canAi && <Button variant="quiet" onClick={onPlan}><ClipboardPen className="size-4" /> Plan a lesson</Button>}
         {canAi && <Button variant="quiet" onClick={onAi}><Sparkles className="size-4" /> Make quiz with AI</Button>}
         <Button onClick={() => onEdit(null)}><Plus className="size-4" strokeWidth={2.25} /> New quiz</Button>
       </div>

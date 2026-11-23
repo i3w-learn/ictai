@@ -45,7 +45,7 @@ export function AskAi({ onBack }: { onBack: () => void }) {
                 </label>
                 <Button type="submit" disabled={!canAsk}><Sparkles className="size-4" /> Ask</Button>
                 <span className="text-sm text-muted-foreground">
-                  {ai.busyElsewhere ? 'Your quiz is still being made. Ask when it is done.' : 'The AI runs on the Server PC. Nothing leaves the school.'}
+                  {ai.busyElsewhere ? 'Another AI request of yours is still running. Ask when it is done.' : 'The AI runs on the Server PC. Nothing leaves the school.'}
                 </span>
               </div>
               <ErrorNote message={ask.error} />
