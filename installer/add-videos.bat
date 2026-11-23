@@ -12,7 +12,9 @@ if not exist "%SERVER%\server.cjs" (
   exit /b 1
 )
 if not exist "%SERVER%\starter-videos" mkdir "%SERVER%\starter-videos"
-copy /Y "%~dp0videos\*.mp4" "%SERVER%\starter-videos\" >nul
+rem Our own videos and books come locked (.ictlock): they open only inside ICT App.
+copy /Y "%~dp0videos\*.ictlock" "%SERVER%\starter-videos\" >nul 2>&1
+copy /Y "%~dp0videos\*.mp4" "%SERVER%\starter-videos\" >nul 2>&1
 copy /Y "%~dp0videos\*.webm" "%SERVER%\starter-videos\" >nul 2>&1
 "%SERVER%\ict-server.exe" restart
 echo.

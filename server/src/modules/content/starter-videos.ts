@@ -7,6 +7,7 @@ import type { ClassRepository } from '../students/class.repository.js';
 import type { ContentRepository } from './content.repository.js';
 import { DISK_RESERVE_BYTES } from './content.service.js';
 import type { FileStore } from './file-store.js';
+import { LOCK_EXT } from './lock.js';
 import { sniff } from './sniff.js';
 
 const SUBJECTS: Record<string, string> = { mat: 'Maths', sci: 'Science', eng: 'English', hin: 'Hindi', sst: 'Social Science', evs: 'EVS', com: 'Computer' };
@@ -31,7 +32,8 @@ export function filingFromName(fileName: string): { className: string; subject: 
 }
 
 // Videos (.mp4, .webm) and books (.pdf) that come with the app. The installer puts them in a folder beside
-// the server; the server adds each one to the library once. A teacher may remove one afterwards and it stays removed,
+// the server; the server adds each one to the library once. Ours come locked (".mp4.ictlock", see lock.ts)
+// and stay locked on this PC's disk: the copy in the library is as unreadable outside the app as the one here. A teacher may remove one afterwards and it stays removed,
 // because the names already added are written down in the data folder.
 export class StarterVideos {
   constructor(
@@ -50,18 +52,25 @@ export class StarterVideos {
   async sync(): Promise<boolean> {
     if (!existsSync(this.dir)) return true;
     const done = new Set<string>(existsSync(this.doneFile) ? (JSON.parse(readFileSync(this.doneFile, 'utf8')) as string[]) : []);
-    const waiting = readdirSync(this.dir).filter((f) => /\.(mp4|webm|pdf)$/i.test(f) && !done.has(f)).sort();
+    const waiting = readdirSync(this.dir).filter((f) => /\.(mp4|webm|pdf)(\.ictlock)?$/i.test(f) && !done.has(f)).sort();
     if (waiting.length === 0) return true;
     const by = this.owner();
     if (!by) return false;
 
-    for (const name of waiting) {
-      const path = join(this.dir, name);
+    for (const onDisk of waiting) {
+      const path = join(this.dir, onDisk);
+      const locked = onDisk.toLowerCase().endsWith(LOCK_EXT);
+      // The name the file had before it was locked: that is the one people see.
+      const name = locked ? onDisk.slice(0, -LOCK_EXT.length) : onDisk;
       const filing = filingFromName(name);
       const isBook = /\.pdf$/i.test(name);
       const what = isBook ? 'book' : 'video';
       const size = statSync(path).size;
-      if (!filing) {
+      if (locked && !this.store.canUnlock) {
+        // Not written down as done: a server that has the key adds it.
+        this.log(`starter.${what}.skipped`, { file: name, why: 'it is locked and this server was built without the key that opens it' });
+        continue;
+      } else if (!filing) {
         this.log(`starter.${what}.skipped`, { file: name, why: 'the name does not start with a class, like "G6-"' });
       } else if (this.store.freeBytes() - size < DISK_RESERVE_BYTES) {
         // Not written down as done: it is tried again when the server next starts.
@@ -84,7 +93,7 @@ export class StarterVideos {
           this.log(`starter.${what}.added`, { [what]: filing.title, class: cls.name, subject: filing.subject });
         }
       }
-      done.add(name);
+      done.add(onDisk);
       writeFileSync(this.doneFile, JSON.stringify([...done], null, 2));
     }
     return true;
