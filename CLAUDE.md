@@ -23,3 +23,8 @@ So, in every answer, plan and feature:
 - The Windows build cannot be made or run on the Mac. GitHub makes it on every push
   (`.github/workflows/windows.yml`); the installers are in the run's Artifacts. Say plainly when
   something has only been tried on the Mac.
+
+## How to test on Windows
+
+The step-by-step test for real Windows PCs is in `docs/windows-test-guide.md`. When a change
+touches something that test covers, say which steps should be run again.

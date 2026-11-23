@@ -226,6 +226,8 @@ Server data lives in `C:\ProgramData\ICT App\server`.
 3. In the console, check that every PC shows as connected, then press **Lock the lab**.
 4. Teachers add classes and students. Students then sign in with class, roll number and name.
 
+To test a new build on real Windows PCs, follow [`docs/windows-test-guide.md`](docs/windows-test-guide.md).
+
 ## Ports
 
 | Port | Use |
