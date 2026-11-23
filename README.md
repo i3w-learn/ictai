@@ -34,6 +34,7 @@ The full list, by who uses it.
 - My notes.
 - Ask a question: an AI tutor that gives hints (needs the AI kit on the server).
 - Settings: text size, stronger colours, easy-to-read letters. They follow the student to any lab PC.
+- Locked down: on a student PC there is no right-click menu, no printing, no saving or downloading, and no way to open the page's code.
 
 **Teacher**
 - Today: how every student is doing, to print, save as PDF or download for Excel.

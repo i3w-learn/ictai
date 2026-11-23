@@ -46,6 +46,22 @@ Check: the student's home page opens with their name at the top.
 Check on the Server PC: **Today** → **Attendance** → Class 6 shows the student as **Present**, with the
 time they signed in. Press **Mark absent**, then **Mark present**: the list changes each time.
 
+## Step 4b: The student PC is locked down
+
+On the student PC, with the student signed in, try each of these. Every one must do **nothing**:
+
+- Right-click anywhere (no menu with "Save as", "Print" or "Inspect").
+- Press **Ctrl+P** (print), **Ctrl+S** (save), **Ctrl+J** (downloads), **F12** and **F5**.
+- Drag a picture from **My books** out of the window onto the desktop.
+
+Typing, **Ctrl+C** and **Ctrl+V** must still work, for example in **My notes**.
+
+Check on the Server PC: **Today** → **Download for Excel** still saves a file, and right-click still works.
+The lock-down is for student PCs only.
+
+This does not stop **Alt+Tab** or the **Windows** key. Keeping students inside one app is a Windows
+setting (kiosk mode, "Assigned access"), not something the app can do by itself.
+
 ## Step 5: Show to class (the main test)
 
 Do each one from the Server PC and watch the student PC.
