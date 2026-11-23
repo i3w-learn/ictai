@@ -42,6 +42,7 @@ import { ReportCardService } from './modules/report-cards/report-card.service.js
 import { ContentRepository } from './modules/content/content.repository.js';
 import { ContentService } from './modules/content/content.service.js';
 import { FileStore } from './modules/content/file-store.js';
+import type { OfficeConverter } from './modules/content/office.js';
 import { StarterVideos } from './modules/content/starter-videos.js';
 import { SequenceRepository } from './modules/sequences/sequence.repository.js';
 import { SequenceService } from './modules/sequences/sequence.service.js';
@@ -78,6 +79,8 @@ export function createContainer(opts: {
   // Opens our locked videos and books (see modules/content/lock.ts).
   contentKey?: Buffer | null;
   ai?: { runtime: AiRuntimeInfo & { ensureReady?(): Promise<void> }; llm: Llm };
+  // Turns Word, Excel and PowerPoint files into PDFs (LibreOffice). Left out, there is none.
+  office?: OfficeConverter;
   // The server's diary (events.log). Left out in tests, which then write nothing.
   log?: EventLog;
 }) {
@@ -155,7 +158,7 @@ export function createContainer(opts: {
     settings,
     timetable,
     work: new WorkService(now, repos.work, repos.classes, audit),
-    content: new ContentService(now, repos.content, fileStore, repos.classes, audit),
+    content: new ContentService(now, repos.content, fileStore, repos.classes, audit, opts.office),
     shows: new ShowService(now, showStore, showPens, repos.content, repos.classes, repos.devices, relay, audit, opts.log),
     showPens,
     sequences: new SequenceService(now, repos.sequences, repos.content, repos.work, repos.classes, audit),

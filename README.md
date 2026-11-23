@@ -41,7 +41,7 @@ The full list, by who uses it.
 - Attendance: a student who signs in on a lab PC is marked present for the day; the teacher can change it, also for a day gone by.
 - Quizzes: write, edit, delete; make one with AI; ask AI a question.
 - Lab Mode: run a quiz live, watch students join and answer, end it.
-- Library: add files or web links by class, subject and chapter.
+- Library: add files or web links by class, subject and chapter. A Word, Excel or PowerPoint file is turned into a PDF (needs LibreOffice on the Server PC).
 - Videos: the videos for the teacher's classes.
 - Class show: play a video on every student screen, with a pen to write over it and to hand to a student.
 - Playlists and learning paths made from library items.

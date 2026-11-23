@@ -8616,7 +8616,7 @@
     },
     "/api/v1/content/uploads/{id}/finish": {
       "post": {
-        "summary": "All pieces sent: check the file and file it in the library",
+        "summary": "All pieces sent: check the file and file it in the library. A Word, Excel or PowerPoint file is turned into a PDF first",
         "x-access": {
           "kind": "staff",
           "permission": "setup.content"

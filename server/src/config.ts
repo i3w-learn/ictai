@@ -19,6 +19,8 @@ export interface Config {
   // Videos that come with the app: the installer puts them beside the server program.
   starterDir: string;
   contentKey: Buffer | null;
+  // LibreOffice's program, when it is not in its usual place (see modules/content/office.ts).
+  officeBin: string | null;
   apiPort: number;
   beaconPort: number;
   devAdmin: { username: string; password: string } | null;
@@ -45,6 +47,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     bootstrapAdminFile: join(dataDir, 'bootstrap-admin.json'),
     starterDir: resolve(env.ICT_STARTER_DIR ?? 'starter-videos'),
     contentKey: parseKey(env.ICT_CONTENT_KEY || builtInKey),
+    officeBin: env.ICT_OFFICE_BIN || null,
     apiPort: Number(env.ICT_PORT ?? PORTS.api),
     beaconPort: Number(env.ICT_BEACON_PORT ?? PORTS.beacon),
     devAdmin:

@@ -20,6 +20,8 @@ export interface RawRequest {
   path: string;
   body?: unknown;
   token?: string;
+  // How long to wait for the answer. Left out, the usual ten seconds.
+  timeoutMs?: number;
 }
 
 export interface RawResponse {

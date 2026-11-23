@@ -41,6 +41,8 @@ export interface Endpoint {
   params?: ZodType;
   status: number;
   response?: ZodType;
+  // The answer can take minutes, not seconds; the app waits SLOW_CALL_MS for it.
+  slow?: boolean;
 }
 
 const pub: Access = { kind: 'public' };
@@ -132,7 +134,7 @@ export const API = {
   'POST /api/v1/content/links': { summary: 'Add a web link to the library', access: staff('setup.content'), body: LinkInput, status: 201, response: ContentItem },
   'POST /api/v1/content/uploads': { summary: 'Start sending a file; says how many pieces to send', access: staff('setup.content'), body: StartUpload, status: 201, response: UploadTicket },
   'PUT /api/v1/content/uploads/:id/chunks': { summary: 'Send the next piece of the file', access: staff('setup.content'), params: IdParams, body: UploadChunk, status: 204 },
-  'POST /api/v1/content/uploads/:id/finish': { summary: 'All pieces sent: check the file and file it in the library', access: staff('setup.content'), params: IdParams, body: FinishUpload, status: 201, response: ContentItem },
+  'POST /api/v1/content/uploads/:id/finish': { summary: 'All pieces sent: check the file and file it in the library. A Word, Excel or PowerPoint file is turned into a PDF first', access: staff('setup.content'), params: IdParams, body: FinishUpload, status: 201, response: ContentItem, slow: true },
   'DELETE /api/v1/content/:id': { summary: 'Remove a library item; its file goes when nothing else uses it', access: staff('setup.content'), params: IdParams, status: 204 },
   'GET /api/v1/files/:hash/chunks/:index': { summary: 'One piece of a library file, for someone who may open it', access: { kind: 'signed-in' }, params: FileChunkParams, status: 200, response: FileChunk },
 

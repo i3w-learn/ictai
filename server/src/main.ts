@@ -3,6 +3,7 @@ import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { fileEventLog } from './core/event-log.js';
 import { createContainer } from './container.js';
+import { LibreOffice } from './modules/content/office.js';
 import { systemClock } from './core/clock.js';
 import { openDb } from './infra/db/index.js';
 import { acquireSingleInstance } from './infra/lock.js';
@@ -27,7 +28,7 @@ async function main() {
   const runtime = new AiRuntime(config.ai, nodeSpawner(join(config.dataDir, 'ai.log')));
   // The diary of what happens in the lab (see `just logs`). Each line also goes to this terminal.
   const log = fileEventLog(join(config.dataDir, 'events.log'), systemClock, (line) => console.log(line));
-  const c = createContainer({ db, now: systemClock, version: config.version, dataDir: config.dataDir, starterDir: config.starterDir, contentKey: config.contentKey, ai: { runtime, llm: new LlamaServerLlm(runtime) }, log });
+  const c = createContainer({ db, now: systemClock, version: config.version, dataDir: config.dataDir, starterDir: config.starterDir, contentKey: config.contentKey, ai: { runtime, llm: new LlamaServerLlm(runtime) }, office: new LibreOffice(config.officeBin, join(config.dataDir, 'office')), log });
   c.aiQueue.start();
   // A class is told within seconds when the teacher showing them a video has gone quiet.
   setInterval(() => c.shows.sweep(), 5_000).unref();

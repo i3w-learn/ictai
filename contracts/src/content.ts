@@ -12,6 +12,13 @@ export const STREAM_WINDOW_BYTES = 4 * 1024 * 1024;
 // PRD 4.2: up to 512 MB per upload, streamed to disk in pieces.
 export const MAX_FILE_BYTES = 512 * 1024 * 1024;
 
+// Word, Excel and PowerPoint files, new and old. The server turns them into a PDF (it needs
+// LibreOffice on the Server PC for that) and the library keeps the PDF.
+export const OFFICE_EXTENSIONS = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'] as const;
+export const isOfficeName = (fileName: string) => OFFICE_EXTENSIONS.some((e) => fileName.toLowerCase().endsWith(`.${e}`));
+// How long a screen waits for a call marked `slow` in the API table (turning a big slide deck into a PDF).
+export const SLOW_CALL_MS = 3 * 60_000;
+
 export const ContentKind = z.enum(['pdf', 'image', 'video', 'audio', 'link']);
 export type ContentKind = z.infer<typeof ContentKind>;
 

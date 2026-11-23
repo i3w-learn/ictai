@@ -77,6 +77,20 @@ Do each one from the Server PC and watch the student PC.
 | **Take the pen back** | lose the pen tools |
 | Add your video to Class 6 → **Open** → **Show to Class 6** → play, pause, skip | play, pause and skip at the same moments |
 
+## Step 4c: Word, Excel and PowerPoint files
+
+These need **LibreOffice** on the Server PC. It is free. The lab has no internet, so download its
+Windows installer (`LibreOffice_..._Win_x86-64.msi`, about 350 MB) on another PC, carry it over on a
+pen drive, and install it with every question left as it is. Nothing needs restarting.
+
+1. Server PC: **Teach** → **Library** → pick a `.docx`, `.xlsx` or `.pptx` file → Class 6 → **Add file**.
+   After "Sending…" it says "Turning … into a PDF". The first file after installing can take a minute.
+2. The item shows in the library as a **PDF**. **Open** it: every page is there and reads right.
+3. **Show to Class 6**: the student PC opens it like any other PDF.
+
+Without LibreOffice, step 1 must stop with a message that names LibreOffice and the Server PC,
+and nothing is added to the library.
+
 ## Step 5a: Lock the screens
 
 1. Server PC: **School** → **Devices** → **Lock all screens**.

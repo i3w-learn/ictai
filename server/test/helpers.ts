@@ -5,9 +5,11 @@ import { createContainer } from '../src/container.js';
 import { eventLine, type EventLog } from '../src/core/event-log.js';
 import { openDb } from '../src/infra/db/index.js';
 import type { Llm } from '../src/modules/ai/llm-client.js';
+import type { OfficeConverter } from '../src/modules/content/office.js';
 
 // With `ai`, a fake model stands in for llama-server; without it the server has no AI kit.
-export async function testServer(opts: { ai?: { llm: Llm; installed: boolean } } = {}) {
+// With `office`, a stand-in for LibreOffice; without it the server has none.
+export async function testServer(opts: { ai?: { llm: Llm; installed: boolean }; office?: OfficeConverter } = {}) {
   const clock = { t: 1_800_000_000_000 };
   const db = openDb(':memory:');
   const ai = opts.ai && {
@@ -17,7 +19,7 @@ export async function testServer(opts: { ai?: { llm: Llm; installed: boolean } }
   // Every line the server would write in its diary (events.log), as "event key=value …" without the time.
   const diary: string[] = [];
   const log: EventLog = (event, detail) => diary.push(eventLine(0, event, detail).split('  ').slice(1).join(' '));
-  const c = createContainer({ db, now: () => clock.t, version: 'test', ai, log });
+  const c = createContainer({ db, now: () => clock.t, version: 'test', ai, office: opts.office, log });
   c.aiQueue.start();
   c.identity.setCertFingerprint('AA:BB');
   await c.staffAuth.upsertAccount({ username: 'admin', password: 'admin-pass', role: 'super_admin' });
