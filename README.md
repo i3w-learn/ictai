@@ -21,6 +21,7 @@ The full list, by who uses it.
 - Pick what the PC is: Server PC (staff), student PC or smart board.
 - Find the lab server and join the lab. Change server and Reset device ask before they wipe anything.
 - The app sizes itself to the screen, from a 1024 wide monitor up to 4K.
+- English or Marathi: a switch in the top bar, remembered on each PC. The student screens are in both; the teacher screens are still in English only.
 
 **Student**
 - Sign in by class and roll number (and section or name when needed).
@@ -28,18 +29,24 @@ The full list, by who uses it.
 - Live quiz: join when the teacher opens it, a clock on every question, the score at the end.
 - My books: PDFs, pictures, videos, sound and web links from the library.
 - Videos: the videos for the student's class, including the ones that come with the app.
+- Activities: small interactive lessons and games from the library that need no internet; the score goes to the teacher.
 - Things to do: playlists and learning paths, ticked off step by step.
 - My work: open work the teacher set, hand it in, see the mark.
 - How I am doing: quiz results by subject.
 - My notes.
 - Ask a question: an AI tutor that gives hints (needs the AI kit on the server).
 - Settings: text size, stronger colours, easy-to-read letters. They follow the student to any lab PC.
+- Locked down: on a student PC there is no right-click menu, no printing, no saving or downloading, and no way to open the page's code.
 
 **Teacher**
 - Today: how every student is doing, to print, save as PDF or download for Excel.
+- Attendance: a student who signs in on a lab PC is marked present for the day; the teacher can change it, also for a day gone by.
 - Quizzes: write, edit, delete; make one with AI; ask AI a question.
+- Plan a lesson with AI: a class, subject, topic and length go in; a timed plan with checks and homework comes out, to read and print.
 - Lab Mode: run a quiz live, watch students join and answer, end it.
-- Library: add files or web links by class, subject and chapter.
+- Activities: add one (a single `.html` file, see `docs/activities.md`) to the library and see each student's best score.
+- Polls: ask a class one quick question (pick an option, or 1 to 5 stars) and watch the answers come in. No marks, no names.
+- Library: add files or web links by class, subject and chapter. A Word, Excel or PowerPoint file is turned into a PDF (needs LibreOffice on the Server PC).
 - Videos: the videos for the teacher's classes.
 - Class show: play a video on every student screen, with a pen to write over it and to hand to a student.
 - Playlists and learning paths made from library items.
@@ -47,6 +54,7 @@ The full list, by who uses it.
 - Notices for a class.
 - Report cards: made from quiz results and marked work, with remarks, then published and printed.
 - School: timetable bookings, the student list, the lab PCs.
+- Lock screens: cover one student's screen, or every lab PC at once, with "Look at your teacher" until it is unlocked.
 
 **Super Admin (all of the above, plus)**
 - Teachers: add, change, reset a password, delete.
@@ -54,7 +62,7 @@ The full list, by who uses it.
 - Classes and sections.
 - Lab PCs: see which are connected, remove one, lock the lab so no new PC can join.
 - What teachers have done, and an activity log of who did what and when.
-- System: school name, the periods of the day, AI on or off for teachers.
+- System: school name, the periods of the day, AI on or off for teachers, and a switch that locks the lab PCs by themselves whenever the timetable has no class in the lab.
 - Notices for the whole school, and freezing a report card for good.
 
 **Smart board**

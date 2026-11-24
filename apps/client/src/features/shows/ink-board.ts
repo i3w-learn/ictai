@@ -1,4 +1,5 @@
 import { INK_BATCH_MAX, INK_POINTS_MAX, InkEvent, type Ink, type InkAdd, type InkColour, type InkStroke, type InkWidth } from '@ict/contracts';
+import { tk } from '../../i18n/i18n';
 
 // How the board talks to the server. Kept apart so the board can be tested without one.
 export interface InkApi {
@@ -200,7 +201,7 @@ export class InkBoard {
       await this.api.add(part);
     } catch (e) {
       // The class never saw this line, so it must not stay on this screen either.
-      this.problem = e instanceof Error ? e.message : 'That could not be written.';
+      this.problem = e instanceof Error ? e.message : tk('That could not be written.');
       this.forget(part.strokeId);
       this.changed();
     } finally {

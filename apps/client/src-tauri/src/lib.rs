@@ -9,9 +9,11 @@ mod pinning;
 mod relay;
 mod storage;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use serde_json::Value;
+use tauri::webview::{DownloadEvent, NewWindowResponse, WebviewWindowBuilder};
 use tauri::{AppHandle, Manager, State};
 
 use crate::discovery::Found;
@@ -99,6 +101,17 @@ fn clear_settings(app: AppHandle) -> Result<(), AppError> {
     storage::clear(config_dir(&app)?)
 }
 
+/// On while this is a student PC. The window then refuses every download; see `run`.
+#[derive(Default)]
+struct Lockdown(AtomicBool);
+
+/// The page says whether this is a student PC. A student's page has no way to call this: it has no
+/// developer tools and loads no code but the app's own.
+#[tauri::command]
+fn lock_down(state: State<'_, Lockdown>, on: bool) {
+    state.0.store(on, Ordering::Relaxed);
+}
+
 /// The Windows installer writes the role picked during setup next to the app.
 /// Returns `None` when there is no such file (dev builds, Android).
 #[tauri::command]
@@ -116,6 +129,7 @@ pub fn run() {
         .manage(KeepAlive::default())
         .manage(RelayState::default())
         .manage(FileSource::default())
+        .manage(Lockdown::default())
         // Library files for the page's players: see files.rs.
         .register_asynchronous_uri_scheme_protocol("ictfile", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
@@ -123,6 +137,20 @@ pub fn run() {
                 let source = app.state::<FileSource>().0.lock().unwrap().clone();
                 responder.respond(files::serve(&app.state::<HttpClients>(), source, request).await);
             });
+        })
+        // The window is made here, not by the config file, so that it can be given these two rules:
+        // the app never opens a second window (a link that tries is refused), and on a student PC
+        // nothing can be downloaded. The Server PC still saves its Excel files.
+        .setup(|app| {
+            let config = app.config().app.windows.first().expect("tauri.conf.json has the main window").clone();
+            WebviewWindowBuilder::from_config(app.handle(), &config)?
+                .on_new_window(|_url, _features| NewWindowResponse::Deny)
+                .on_download(|webview, event| match event {
+                    DownloadEvent::Requested { .. } => !webview.state::<Lockdown>().0.load(Ordering::Relaxed),
+                    _ => true,
+                })
+                .build()?;
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             discover_servers,
@@ -136,6 +164,7 @@ pub fn run() {
             save_settings,
             clear_settings,
             set_file_source,
+            lock_down,
             install_role
         ])
         .run(tauri::generate_context!())

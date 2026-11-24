@@ -28,12 +28,49 @@ describe('migrations', () => {
     expect(readdirSync(join(dir, 'backups')).some((f) => f.startsWith('pre-migration-999-'))).toBe(true);
   });
 
+  it('let the library hold activities, and keep every library item and what points at it', () => {
+    const db = openDb(':memory:', migrations.filter((m) => m.version < 20));
+    db.exec(`
+      INSERT INTO users (id, role, username, display_name, password_hash, created_at, updated_at) VALUES ('u1', 'super_admin', 'admin', 'Admin', 'x', 1, 1);
+      INSERT INTO classes (id, name, created_at) VALUES ('c7', '7', 1);
+      INSERT INTO files (sha256, size, mime, created_at) VALUES ('h1', 10, 'application/pdf', 1);
+      INSERT INTO content_items (id, title, kind, class_id, subject, chapter, file_hash, file_name, created_by, created_at) VALUES ('book', 'Water', 'pdf', 'c7', 'Science', 'Ch 1', 'h1', 'water.pdf', 'u1', 5);
+      INSERT INTO content_items (id, title, kind, class_id, url, needs_internet, created_by, created_at, deleted_at) VALUES ('link', 'A page', 'link', 'c7', 'https://example.org', 1, 'u1', 6, 9);
+      INSERT INTO sequences (id, type, title, class_id, created_by, created_at) VALUES ('s1', 'playlist', 'List', 'c7', 'u1', 7);
+      INSERT INTO sequence_steps (id, sequence_id, position, kind, content_id) VALUES ('st1', 's1', 0, 'content', 'book');
+    `);
+    expect(() => db.prepare("INSERT INTO content_items (id, title, kind, class_id, created_by, created_at) VALUES ('a', 'Game', 'activity', 'c7', 'u1', 8)").run()).toThrow(/CHECK/);
+
+    expect(migrate(db, migrations.filter((m) => m.version <= 20), null)).toEqual([20]);
+    expect(db.prepare('SELECT id, title, kind, subject, chapter, file_hash, file_name, url, needs_internet, created_at, deleted_at FROM content_items ORDER BY created_at').all()).toEqual([
+      { id: 'book', title: 'Water', kind: 'pdf', subject: 'Science', chapter: 'Ch 1', file_hash: 'h1', file_name: 'water.pdf', url: null, needs_internet: 0, created_at: 5, deleted_at: null },
+      { id: 'link', title: 'A page', kind: 'link', subject: null, chapter: null, file_hash: null, file_name: null, url: 'https://example.org', needs_internet: 1, created_at: 6, deleted_at: 9 },
+    ]);
+    // An activity goes in now; a made-up kind still does not.
+    db.prepare("INSERT INTO content_items (id, title, kind, class_id, created_by, created_at) VALUES ('a', 'Game', 'activity', 'c7', 'u1', 8)").run();
+    expect(() => db.prepare("INSERT INTO content_items (id, title, kind, class_id, created_by, created_at) VALUES ('b', 'x', 'program', 'c7', 'u1', 8)").run()).toThrow(/CHECK/);
+    // The links between tables are being watched again, and the playlist step still points at its book.
+    expect(db.pragma('foreign_keys', { simple: true })).toBe(1);
+    expect(db.pragma('foreign_key_check')).toEqual([]);
+    expect(() => db.prepare("DELETE FROM content_items WHERE id = 'book'").run()).toThrow(/FOREIGN KEY/);
+    expect(() => db.prepare("INSERT INTO sequence_steps (id, sequence_id, position, kind, content_id) VALUES ('st2', 's1', 1, 'content', 'nothing')").run()).toThrow(/FOREIGN KEY/);
+    expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'content_items' AND name LIKE 'content_%' ORDER BY name").pluck().all()).toEqual(['content_class', 'content_file']);
+  });
+
+  it('keep nothing of a table rebuild that would leave a broken link', () => {
+    const db = openDb(':memory:', migrations.filter((m) => m.version < 20));
+    const bad = { version: 20, name: 'bad', rebuildsTables: true, sql: "CREATE TABLE t1 (id TEXT PRIMARY KEY); CREATE TABLE t2 (t1_id TEXT REFERENCES t1(id)); INSERT INTO t2 VALUES ('missing');" };
+    expect(() => migrate(db, [...migrations.filter((m) => m.version < 20), bad], null)).toThrow(/broken links/);
+    expect(db.prepare("SELECT COUNT(*) FROM sqlite_master WHERE name IN ('t1', 't2')").pluck().get()).toBe(0);
+    expect(db.pragma('foreign_keys', { simple: true })).toBe(1);
+  });
+
   it('wipe the PINs and first sign-in codes a school stored before students stopped using them', () => {
     const db = openDb(':memory:', migrations.filter((m) => m.version < 17));
     db.prepare("INSERT INTO classes (id, name, created_at) VALUES ('c7', '7', 1)").run();
     db.prepare(`INSERT INTO students (id, name, class_id, roll_no, pin_hash, qr_token_hash, enrol_code_hash, enrol_code_expires_at, created_at, updated_at)
       VALUES ('s1', 'Asha', 'c7', '5', 'a-pin-hash', 'a-qr-hash', 'a-code-hash', 99, 1, 1)`).run();
-    expect(migrate(db, migrations, null)).toEqual([17]);
+    expect(migrate(db, migrations.filter((m) => m.version <= 17), null)).toEqual([17]);
     expect(db.prepare('SELECT name, roll_no, pin_hash, enrol_code_hash, enrol_code_expires_at, qr_token_hash FROM students').all()).toEqual([
       { name: 'Asha', roll_no: '5', pin_hash: null, enrol_code_hash: null, enrol_code_expires_at: null, qr_token_hash: 'a-qr-hash' },
     ]);

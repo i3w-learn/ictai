@@ -20,6 +20,8 @@ export interface RawRequest {
   path: string;
   body?: unknown;
   token?: string;
+  // How long to wait for the answer. Left out, the usual ten seconds.
+  timeoutMs?: number;
 }
 
 export interface RawResponse {
@@ -59,6 +61,11 @@ export interface Platform {
    * timers are slowed down when its window is hidden. Left out where there is no native side.
    */
   keepAlive?(req: RawRequest | null, everyMs?: number): Promise<void>;
+  /**
+   * Tells the native side this is a student PC (or no longer is one): while on, it refuses every
+   * download and every new window. Left out where there is no native side.
+   */
+  lockDown?(on: boolean): Promise<void>;
   /** The role chosen in the Windows installer, if any. */
   installRole(): Promise<AppKind | null>;
 }

@@ -14,10 +14,13 @@ import { QuizEditor } from '../quizzes/QuizEditor';
 import { QuizzesPanel } from '../quizzes/QuizzesPanel';
 import { AiQuizMaker, type AiDraft } from '../quizzes/AiQuizMaker';
 import { AskAi } from '../quizzes/AskAi';
+import { LessonPlan } from '../quizzes/LessonPlan';
 import { VideosPanel } from '../content/VideosPanel';
 import { ContentPanel } from '../content/ContentPanel';
 import { Viewer } from '../content/Viewer';
 import { Whiteboard } from '../shows/Whiteboard';
+import { AttendancePanel } from '../attendance/AttendancePanel';
+import { PollsPanel } from '../polls/PollsPanel';
 import { NoticesPanel } from '../notices/NoticesPanel';
 import { ReportCardsPanel } from '../report-cards/ReportCardsPanel';
 import { SequencesPanel } from '../sequences/SequencesPanel';
@@ -47,6 +50,7 @@ type View =
   | { kind: 'lab'; runId: string }
   | { kind: 'ai-quiz' }
   | { kind: 'ask-ai' }
+  | { kind: 'plan' }
   | { kind: 'mark-work'; id: string }
   | { kind: 'content'; item: ContentItem }
   | { kind: 'whiteboard' }
@@ -83,6 +87,7 @@ export function Home() {
     if (view.kind === 'whiteboard') return <Shell><Whiteboard onBack={back} /></Shell>;
     if (view.kind === 'mark-work') return <Shell><MarkWork id={view.id} onBack={back} /></Shell>;
     if (view.kind === 'ask-ai') return <Shell><AskAi onBack={back} /></Shell>;
+    if (view.kind === 'plan') return <Shell><LessonPlan onBack={back} /></Shell>;
     if (view.kind === 'lab') return <Shell><LabSession runId={view.runId} onExit={back} /></Shell>;
     if (view.kind === 'student') return <Shell><StudentResultsPage studentId={view.studentId} onBack={back} /></Shell>;
 
@@ -92,7 +97,9 @@ export function Home() {
     const panels: Record<Page, ReactNode[]> = {
       today: [
         can('results.view') && <ResultsPanel key="results" refresh={refresh} onStudent={(studentId) => setView({ kind: 'student', studentId })} />,
-        can('teaching.manage') && <QuizzesPanel key="quizzes" refresh={refresh} onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} onAsk={() => setView({ kind: 'ask-ai' })} />,
+        can('results.view') && <AttendancePanel key="attendance" refresh={refresh} canEdit={can('students.manage')} />,
+        can('teaching.manage') && <QuizzesPanel key="quizzes" refresh={refresh} onEdit={(quizId) => setView({ kind: 'edit-quiz', quizId })} onLab={(runId) => setView({ kind: 'lab', runId })} onAi={() => setView({ kind: 'ai-quiz' })} onAsk={() => setView({ kind: 'ask-ai' })} onPlan={() => setView({ kind: 'plan' })} />,
+        can('lesson.start') && <PollsPanel key="polls" refresh={refresh} />,
       ],
       teach: [
         can('teaching.manage') && <ContentPanel key="content" refresh={refresh} onChanged={changed} onOpen={(item) => setView({ kind: 'content', item })} onWhiteboard={() => setView({ kind: 'whiteboard' })} />,
@@ -111,7 +118,7 @@ export function Home() {
         can('setup.timetable') && <TimetablePanel key="timetable" refresh={refresh} />,
         can('students.manage') && <StudentsPanel key="students" onChanged={changed} />,
         can('staff.manage') && <StaffPanel key="staff" classesChanged={refresh} />,
-        can('setup.devices') && <DevicesPanel key="devices" />,
+        can('setup.devices') && <DevicesPanel key="devices" canLock={can('lesson.control')} />,
       ],
       system: [
         can('settings.manage') && <SettingsPanel key="settings" onSaved={settingsSaved} />,

@@ -3,12 +3,14 @@ import { Eraser, Pencil, Trash2 } from 'lucide-react';
 import { INK_COLOURS, INK_SCALE, INK_WIDTHS, Show, showRoom, type InkColour, type InkStroke, type InkWidth } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { cn } from '../../ui/ui';
+import { tk, useT } from '../../i18n/i18n';
 import { InkBoard } from './ink-board';
 
 const PAINT: Record<InkColour, string> = { red: '#ff453a', yellow: '#ffd60a', green: '#30d158', blue: '#0a84ff', white: '#ffffff' };
 // How thick a line is, as a share of the picture's width, at a middling press.
 const THICK: Record<InkWidth, number> = { thin: 0.003, medium: 0.006, thick: 0.012 };
-const WIDTH_WORDS: Record<InkWidth, string> = { thin: 'Thin', medium: 'Medium', thick: 'Thick' };
+const WIDTH_WORDS: Record<InkWidth, string> = { thin: tk('Thin line'), medium: tk('Medium line'), thick: tk('Thick line') };
+const COLOUR_WORDS: Record<InkColour, string> = { red: tk('red pen'), yellow: tk('yellow pen'), green: tk('green pen'), blue: tk('blue pen'), white: tk('white pen') };
 // The dark rim round every line, so that it shows on any colour of video.
 // Solid, not see-through: a line is many short parts, and see-through parts would darken where they meet.
 const RIM = '#1a1a1a';
@@ -231,27 +233,28 @@ export function InkLayer({ board, aspect, tools, onPenDown, own }: { board: InkB
 // The pen, its colours and sizes, the rubber, and (for the teacher) "wipe all". Made for a dark bar.
 // `vertical` stands it up, for the side of a page.
 export function InkToolbar({ tools, onTools, onWipe, vertical }: { tools: InkTools; onTools: (t: InkTools) => void; onWipe?: () => void; vertical?: boolean }) {
+  const t = useT();
   const Round = 'grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-white hover:bg-white/15 focus-visible:outline-white';
   const pick = (tool: 'pen' | 'eraser') => onTools({ ...tools, tool: tools.tool === tool ? null : tool });
   return (
-    <div className={cn('flex items-center gap-1', vertical ? 'flex-col' : 'flex-wrap')} role="toolbar" aria-label="Pen tools" aria-orientation={vertical ? 'vertical' : undefined}>
-      <button type="button" className={cn(Round, tools.tool === 'pen' && 'bg-white/25')} onClick={() => pick('pen')} aria-pressed={tools.tool === 'pen'} aria-label="Pen: write on the page"><Pencil className="size-5" /></button>
+    <div className={cn('flex items-center gap-1', vertical ? 'flex-col' : 'flex-wrap')} role="toolbar" aria-label={t('Pen tools')} aria-orientation={vertical ? 'vertical' : undefined}>
+      <button type="button" className={cn(Round, tools.tool === 'pen' && 'bg-white/25')} onClick={() => pick('pen')} aria-pressed={tools.tool === 'pen'} aria-label={t('Pen: write on the page')}><Pencil className="size-5" /></button>
       {tools.tool === 'pen' && (
         <>
           {INK_COLOURS.map((c) => (
-            <button key={c} type="button" onClick={() => onTools({ ...tools, colour: c })} aria-pressed={tools.colour === c} aria-label={`${c} pen`} className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full hover:bg-white/15 focus-visible:outline-white">
+            <button key={c} type="button" onClick={() => onTools({ ...tools, colour: c })} aria-pressed={tools.colour === c} aria-label={t(COLOUR_WORDS[c])} className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full hover:bg-white/15 focus-visible:outline-white">
               <span className={cn('size-5 rounded-full border border-black/40', tools.colour === c && 'ring-2 ring-white ring-offset-2 ring-offset-black')} style={{ background: PAINT[c] }} />
             </button>
           ))}
           {INK_WIDTHS.map((w, i) => (
-            <button key={w} type="button" onClick={() => onTools({ ...tools, width: w })} aria-pressed={tools.width === w} aria-label={`${WIDTH_WORDS[w]} line`} className={cn('grid size-9 shrink-0 cursor-pointer place-items-center rounded-full hover:bg-white/15 focus-visible:outline-white', tools.width === w && 'bg-white/25')}>
+            <button key={w} type="button" onClick={() => onTools({ ...tools, width: w })} aria-pressed={tools.width === w} aria-label={t(WIDTH_WORDS[w])} className={cn('grid size-9 shrink-0 cursor-pointer place-items-center rounded-full hover:bg-white/15 focus-visible:outline-white', tools.width === w && 'bg-white/25')}>
               <span className="rounded-full bg-white" style={{ width: 4 + i * 4, height: 4 + i * 4 }} />
             </button>
           ))}
         </>
       )}
-      <button type="button" className={cn(Round, tools.tool === 'eraser' && 'bg-white/25')} onClick={() => pick('eraser')} aria-pressed={tools.tool === 'eraser'} aria-label="Rubber: touch a line to rub it out"><Eraser className="size-5" /></button>
-      {onWipe && <button type="button" className={Round} onClick={onWipe} aria-label="Wipe all the writing"><Trash2 className="size-5" /></button>}
+      <button type="button" className={cn(Round, tools.tool === 'eraser' && 'bg-white/25')} onClick={() => pick('eraser')} aria-pressed={tools.tool === 'eraser'} aria-label={t('Rubber: touch a line to rub it out')}><Eraser className="size-5" /></button>
+      {onWipe && <button type="button" className={Round} onClick={onWipe} aria-label={t('Wipe all the writing')}><Trash2 className="size-5" /></button>}
     </div>
   );
 }

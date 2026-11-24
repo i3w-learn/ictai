@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 import { DEVICE_PING_MS, type RouteKey } from '@ict/contracts';
 import { ApiCallError, ApiClient, type CallInput, type CallOutput } from '../core/api-client';
 import { RelayClient, type RelayStatus } from '../core/relay-client';
+import { lockDown } from '../core/lockdown';
 import { ServerLocator } from '../core/server-locator';
 import { Current, SettingsStore, baseUrl, type ServerTarget } from '../core/settings';
 import type { Platform } from '../platform/platform';
@@ -52,6 +53,17 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
   }, [store, state.loaded, state.settings]);
 
   const role: Role | null = state.settings.role;
+  // Spec 6 "Locked-down shell": a student PC cannot print, save, download or open the page's code.
+  // Not while the app is being developed: there the right-click menu and the developer tools are needed.
+  useEffect(() => {
+    if (role !== 'student' || import.meta.env.DEV) return;
+    void platform.lockDown?.(true)?.catch(() => undefined);
+    const off = lockDown(window, document.documentElement);
+    return () => {
+      off();
+      void platform.lockDown?.(false)?.catch(() => undefined);
+    };
+  }, [platform, role]);
   const locator = useMemo(() => (role ? new ServerLocator(platform, role) : null), [platform, role]);
   const api = useMemo(
     () =>
@@ -73,14 +85,17 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
     return () => relay.detach();
   }, [relay]);
   const sessionToken = state.session?.token ?? null;
+  const deviceToken = state.settings.device?.token ?? null;
+  // A lab PC or board keeps the socket open as itself while nobody is signed in, so a teacher can
+  // lock its screen at any time.
+  const relayToken = sessionToken ?? deviceToken;
   useEffect(() => {
-    if (sessionToken) relay.connect(sessionToken);
+    if (relayToken) relay.connect(relayToken);
     else relay.disconnect();
-  }, [relay, sessionToken]);
+  }, [relay, relayToken]);
 
   // A lab PC or board tells the server "I am here" every few seconds, signed in or not, so the
   // console can show which PCs are connected.
-  const deviceToken = state.settings.device?.token ?? null;
   useEffect(() => {
     if (!api || !deviceToken) return;
     const ping = () => void api.call('POST /api/v1/devices/ping', {}, deviceToken).catch((e) => {

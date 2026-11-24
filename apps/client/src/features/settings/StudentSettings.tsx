@@ -1,25 +1,27 @@
 import type { StudentPrefs, TextSize } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, Card, ErrorNote, PageTitle, cn } from '../../ui/ui';
+import { tk, useT } from '../../i18n/i18n';
 
 const SIZES: { value: TextSize; label: string; sample: string }[] = [
-  { value: 'normal', label: 'Normal', sample: 'text-base' },
-  { value: 'large', label: 'Large', sample: 'text-xl' },
-  { value: 'xlarge', label: 'Very large', sample: 'text-2xl' },
+  { value: 'normal', label: tk('Normal'), sample: 'text-base' },
+  { value: 'large', label: tk('Large'), sample: 'text-xl' },
+  { value: 'xlarge', label: tk('Very large'), sample: 'text-2xl' },
 ];
 
 // PRD student app "Settings": text size, high contrast, an easy-to-read font, and sign out.
 // Each choice is saved the moment it is made and follows the student to any lab PC.
-// (Choosing the app's language is not here yet: the screens exist in English only.)
+// (The app's language is not one of them: it is a choice of the PC, made with the switch in the top bar.)
 export function StudentSettings({ prefs, onChange, error }: { prefs: StudentPrefs; onChange: (p: StudentPrefs) => void; error: string | null }) {
   const { signOut } = useApp();
+  const t = useT();
   return (
     <div className="mx-auto grid w-full max-w-2xl gap-6">
-      <PageTitle sub="Your choices are saved for you. They will be here on any lab PC you sign in to.">Settings</PageTitle>
+      <PageTitle sub={t('Your choices are saved for you. They will be here on any lab PC you sign in to.')}>{t('Settings')}</PageTitle>
 
       <Card className="grid gap-3 p-5">
-        <h2 className="text-lg font-semibold">Text size</h2>
-        <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Text size">
+        <h2 className="text-lg font-semibold">{t('Text size')}</h2>
+        <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label={t('Text size')}>
           {SIZES.map((s) => (
             <button
               key={s.value} type="button" role="radio" aria-checked={prefs.textSize === s.value}
@@ -27,19 +29,19 @@ export function StudentSettings({ prefs, onChange, error }: { prefs: StudentPref
               onClick={() => onChange({ ...prefs, textSize: s.value })}
             >
               <span className={cn('block', s.sample)}>Aa</span>
-              <span className="text-sm">{s.label}</span>
+              <span className="text-sm">{t(s.label)}</span>
             </button>
           ))}
         </div>
       </Card>
 
       <Card className="grid gap-4 p-5">
-        <Switch id="pref-contrast" label="Stronger colours" hint="Darker text and lines, easier to see." checked={prefs.highContrast} onChange={(v) => onChange({ ...prefs, highContrast: v })} />
-        <Switch id="pref-font" label="Easy-to-read letters" hint="Rounder letters with more space between them." checked={prefs.easyFont} onChange={(v) => onChange({ ...prefs, easyFont: v })} />
+        <Switch id="pref-contrast" label={t('Stronger colours')} hint={t('Darker text and lines, easier to see.')} checked={prefs.highContrast} onChange={(v) => onChange({ ...prefs, highContrast: v })} />
+        <Switch id="pref-font" label={t('Easy-to-read letters')} hint={t('Rounder letters with more space between them.')} checked={prefs.easyFont} onChange={(v) => onChange({ ...prefs, easyFont: v })} />
       </Card>
 
       <ErrorNote message={error} />
-      <div><Button variant="quiet" onClick={() => signOut()}>Sign out</Button></div>
+      <div><Button variant="quiet" onClick={() => signOut()}>{t('Sign out')}</Button></div>
     </div>
   );
 }

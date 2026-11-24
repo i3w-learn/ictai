@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useT } from '../i18n/i18n';
 
 // Three children, close up, in a bold flat style: big round faces, big eyes, simple shapes. Drawn in
 // code with no picture file, so it shows with no internet. One wears a graduation cap, one has
@@ -42,8 +43,9 @@ function Face({ skin, cheek, look = 1 }: { skin: string; cheek: string; look?: 1
 }
 
 export function KidsArt({ className }: { className?: string }) {
+  const t = useT();
   return (
-    <svg className={className} viewBox="0 0 600 680" preserveAspectRatio="xMidYMax slice" role="img" aria-label="Three smiling children: one in a graduation cap, one with headphones, one with a pencil behind her ear">
+    <svg className={className} viewBox="0 0 600 680" preserveAspectRatio="xMidYMax slice" role="img" aria-label={t('Three smiling children: one in a graduation cap, one with headphones, one with a pencil behind her ear')}>
       <defs><clipPath id="kid-head"><circle r="100" /></clipPath></defs>
       <rect width="600" height="680" fill={CREAM} />
       {/* Big pale balloons far behind. */}

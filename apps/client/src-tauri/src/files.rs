@@ -86,7 +86,8 @@ async fn answer(clients: &HttpClients, source: Option<Source>, request: Request<
     let status = StatusCode::from_u16(res.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     let mut out = Response::builder().status(status);
     // Only what a player needs is passed back; everything else the server sent stays here.
-    for name in ["content-type", "content-range", "accept-ranges", "cache-control", "x-content-type-options"] {
+    // content-security-policy: the server sends one with an activity, to keep that page in a closed box.
+    for name in ["content-type", "content-range", "accept-ranges", "cache-control", "x-content-type-options", "content-security-policy"] {
         if let Some(value) = res.headers().get(name).and_then(|v| v.to_str().ok()) {
             out = out.header(name, value);
         }

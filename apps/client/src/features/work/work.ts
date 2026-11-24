@@ -1,4 +1,5 @@
 import type { MyWork } from '@ict/contracts';
+import { tk } from '../../i18n/i18n';
 
 // "Due 14 Nov" means the end of that day.
 export function endOfDay(day: string): number {
@@ -6,7 +7,7 @@ export function endOfDay(day: string): number {
   return new Date(y!, m! - 1, d!, 23, 59, 59, 999).getTime();
 }
 
-export const dayShort = (at: number) => new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+export const dayShort = (at: number, locale?: string) => new Date(at).toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 
 // The student's list in the order they should look at it: still to do (overdue first, then soonest due),
 // then handed in, then marked.
@@ -16,4 +17,4 @@ export function sortWork(list: MyWork[]): MyWork[] {
   return [...list].sort((a, b) => rank[a.status] - rank[b.status] || Number(b.overdue) - Number(a.overdue) || due(a) - due(b));
 }
 
-export const STATUS_WORDS = { todo: 'To do', submitted: 'Handed in', marked: 'Marked' } as const;
+export const STATUS_WORDS = { todo: tk('To do'), submitted: tk('Handed in'), marked: tk('Marked') } as const;

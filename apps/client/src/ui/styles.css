@@ -85,6 +85,11 @@
   :focus-visible { @apply outline-2 outline-offset-2 outline-ring; }
 }
 
+/* A student PC prints nothing (core/lockdown.ts): should a print ever start, the page comes out empty. */
+@media print {
+  html[data-lockdown] body { display: none !important; }
+}
+
 /* Printing a class sheet: only the sheet prints, flowing across pages. */
 @media print {
   body > *:not(.print-sheet) { display: none !important; }

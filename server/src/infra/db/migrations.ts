@@ -4,6 +4,9 @@ export interface Migration {
   version: number;
   name: string;
   sql: string;
+  // This one makes a table again from scratch (SQLite cannot change a table's CHECK rule in place).
+  // The runner then switches the links between tables off while it runs and checks them all after.
+  rebuildsTables?: boolean;
 }
 
 export const migrations: Migration[] = [
@@ -486,5 +489,116 @@ export const migrations: Migration[] = [
     version: 17,
     name: 'no_student_pins',
     sql: `UPDATE students SET pin_hash = NULL, enrol_code_hash = NULL, enrol_code_expires_at = NULL;`,
+  },
+  {
+    // Who was in the lab on which day. A student with no row for a day did not sign in: absent.
+    version: 18,
+    name: 'attendance',
+    sql: `
+      CREATE TABLE attendance (
+        student_id TEXT NOT NULL REFERENCES students(id),
+        day        TEXT NOT NULL,
+        present    INTEGER NOT NULL,
+        source     TEXT NOT NULL CHECK (source IN ('signin','teacher')),
+        marked_by  TEXT REFERENCES users(id),
+        at         INTEGER NOT NULL,
+        PRIMARY KEY (student_id, day)
+      );
+      CREATE INDEX attendance_day ON attendance(day);
+    `,
+  },
+  {
+    // Polls: one question to a class, and one answer from each student who gives one.
+    version: 19,
+    name: 'polls',
+    sql: `
+      CREATE TABLE polls (
+        id           TEXT PRIMARY KEY,
+        class_id     TEXT NOT NULL REFERENCES classes(id),
+        question     TEXT NOT NULL,
+        kind         TEXT NOT NULL CHECK (kind IN ('choice','rating')),
+        options_json TEXT NOT NULL,
+        created_by   TEXT NOT NULL REFERENCES users(id),
+        created_at   INTEGER NOT NULL,
+        closed_at    INTEGER
+      );
+      CREATE INDEX polls_class ON polls(class_id, created_at);
+      CREATE TABLE poll_answers (
+        poll_id     TEXT NOT NULL REFERENCES polls(id),
+        student_id  TEXT NOT NULL REFERENCES students(id),
+        choice      INTEGER NOT NULL,
+        answered_at INTEGER NOT NULL,
+        PRIMARY KEY (poll_id, student_id)
+      );
+    `,
+  },
+  {
+    // Activities: a new kind of library item. The list of kinds is a CHECK rule on content_items, and
+    // SQLite cannot change such a rule, so the table is made again with the longer list and every row
+    // is carried over. Then the table of scores.
+    version: 20,
+    name: 'activities',
+    rebuildsTables: true,
+    sql: `
+      CREATE TABLE content_items_new (
+        id             TEXT PRIMARY KEY,
+        title          TEXT NOT NULL,
+        kind           TEXT NOT NULL CHECK (kind IN ('pdf','image','video','audio','link','activity')),
+        class_id       TEXT NOT NULL REFERENCES classes(id),
+        subject        TEXT,
+        chapter        TEXT,
+        file_hash      TEXT REFERENCES files(sha256),
+        file_name      TEXT,
+        url            TEXT,
+        needs_internet INTEGER NOT NULL DEFAULT 0,
+        created_by     TEXT NOT NULL REFERENCES users(id),
+        created_at     INTEGER NOT NULL,
+        deleted_at     INTEGER
+      );
+      INSERT INTO content_items_new (id, title, kind, class_id, subject, chapter, file_hash, file_name, url, needs_internet, created_by, created_at, deleted_at)
+        SELECT id, title, kind, class_id, subject, chapter, file_hash, file_name, url, needs_internet, created_by, created_at, deleted_at FROM content_items;
+      DROP TABLE content_items;
+      ALTER TABLE content_items_new RENAME TO content_items;
+      CREATE INDEX content_class ON content_items(class_id, subject, chapter);
+      CREATE INDEX content_file ON content_items(file_hash);
+
+      -- One row each time a student finishes an activity. The best one is what the teacher is shown.
+      CREATE TABLE activity_results (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        content_id TEXT NOT NULL REFERENCES content_items(id),
+        student_id TEXT NOT NULL REFERENCES students(id),
+        score      INTEGER NOT NULL,
+        max        INTEGER NOT NULL,
+        seconds    INTEGER NOT NULL,
+        done_at    INTEGER NOT NULL
+      );
+      CREATE INDEX activity_results_item ON activity_results(content_id, student_id);
+    `,
+  },
+  {
+    // A fourth kind of AI request: a lesson plan. The kinds are a CHECK rule, so the table is made again.
+    version: 21,
+    name: 'ai_jobs_plan',
+    rebuildsTables: true,
+    sql: `
+      CREATE TABLE ai_jobs_new (
+        id           TEXT PRIMARY KEY,
+        kind         TEXT NOT NULL CHECK (kind IN ('quiz','ask','tutor','plan')),
+        requested_by TEXT NOT NULL,
+        request_json TEXT NOT NULL,
+        status       TEXT NOT NULL CHECK (status IN ('queued','running','done','failed')),
+        result_json  TEXT,
+        error        TEXT,
+        created_at   INTEGER NOT NULL,
+        started_at   INTEGER,
+        finished_at  INTEGER
+      );
+      INSERT INTO ai_jobs_new (id, kind, requested_by, request_json, status, result_json, error, created_at, started_at, finished_at)
+        SELECT id, kind, requested_by, request_json, status, result_json, error, created_at, started_at, finished_at FROM ai_jobs ORDER BY rowid;
+      DROP TABLE ai_jobs;
+      ALTER TABLE ai_jobs_new RENAME TO ai_jobs;
+      CREATE INDEX ai_jobs_queue ON ai_jobs(status, created_at);
+      CREATE INDEX ai_jobs_user ON ai_jobs(requested_by, created_at);
+    `,
   },
 ];

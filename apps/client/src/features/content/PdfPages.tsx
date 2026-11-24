@@ -5,6 +5,7 @@ import { getDocument, GlobalWorkerOptions, PDFDataRangeTransport, type PDFDocume
 import type { DocumentInitParameters } from 'pdfjs-dist/types/src/display/api';
 import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import { useLatest } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 import { fitInside, totalOf } from './pdf-pages';
 
 // pdf.js reads the book in a second thread, so turning pages never freezes the screen.
@@ -75,6 +76,7 @@ export function PdfPages({ url, page, onPages, onAspect, onError, layer }: {
   onError: () => void;
   layer?: ReactNode;
 }) {
+  const t = useT();
   const told = useLatest({ onPages, onAspect, onError });
   const [doc, setDoc] = useState<{ url: string; pdf: PDFDocumentProxy } | null>(null);
   const [shown, setShown] = useState<{ key: string; page: PDFPageProxy } | null>(null);
@@ -153,7 +155,7 @@ export function PdfPages({ url, page, onPages, onAspect, onError, layer }: {
       <div className="absolute inset-0 flex items-center justify-center">
         <canvas ref={canvas} className={ready ? 'bg-white shadow-sm' : 'invisible'} style={fit ? { width: fit.width, height: fit.height } : undefined} />
       </div>
-      {!ready && <p className="absolute inset-0 flex items-center justify-center text-muted-foreground" role="status">Opening page…</p>}
+      {!ready && <p className="absolute inset-0 flex items-center justify-center text-muted-foreground" role="status">{t('Opening page…')}</p>}
       {layer && <div className="absolute inset-0">{layer}</div>}
     </div>
   );

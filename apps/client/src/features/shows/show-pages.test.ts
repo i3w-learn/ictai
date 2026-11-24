@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { InkEvent, Show } from '@ict/contracts';
+import { translate, type T } from '../../i18n/i18n';
 import { pageWords, startingPlace, turnPage } from './show-pages';
+
+const t: T = (s, v) => translate('en', s, v);
 
 describe('turnPage', () => {
   it('goes on and back one page', () => {
@@ -29,10 +32,10 @@ describe('startingPlace', () => {
 
 describe('pageWords', () => {
   it('says the page and how many there are', () => {
-    expect(pageWords(3, 120)).toBe('Page 3 of 120');
+    expect(pageWords(3, 120, t)).toBe('Page 3 of 120');
   });
   it('says only the page while the count is not known', () => {
-    expect(pageWords(3, null)).toBe('Page 3');
+    expect(pageWords(3, null, t)).toBe('Page 3');
   });
 });
 

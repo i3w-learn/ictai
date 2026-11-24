@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { useT } from '../i18n/i18n';
 
 // Joins class names; later Tailwind classes win over earlier ones.
 export function cn(...inputs: ClassValue[]) {
@@ -112,13 +113,14 @@ export function ErrorNote({ message }: { message: string | null }) {
 // A button that asks "Sure?" inline before acting. No browser confirm(): it blocks the webview.
 export function ConfirmButton({ children, question, onConfirm }: { children: ReactNode; question: string; onConfirm: () => void }) {
   const [asking, setAsking] = useState(false);
+  const t = useT();
   // type="button" throughout: inside a form these must never count as the form's Save.
   if (!asking) return <Button type="button" variant="quiet" onClick={() => setAsking(true)}>{children}</Button>;
   return (
     <span className="flex items-center gap-2 text-sm">
       {question}
-      <Button type="button" className="bg-destructive text-white shadow-none hover:bg-destructive/90" onClick={() => { setAsking(false); onConfirm(); }}>Yes</Button>
-      <Button type="button" variant="quiet" onClick={() => setAsking(false)}>No</Button>
+      <Button type="button" className="bg-destructive text-white shadow-none hover:bg-destructive/90" onClick={() => { setAsking(false); onConfirm(); }}>{t('Yes')}</Button>
+      <Button type="button" variant="quiet" onClick={() => setAsking(false)}>{t('No')}</Button>
     </span>
   );
 }

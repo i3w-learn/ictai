@@ -1,7 +1,7 @@
 import { z, type ZodType } from 'zod';
 import { AuditEntry, AuditQuery, Health } from './common.js';
 import { Principal, SessionResult, StaffLogin, StudentRollLogin } from './auth.js';
-import { Device, DeviceEnrol, DeviceEnrolResult, Joining } from './devices.js';
+import { Device, DeviceEnrol, DeviceEnrolResult, Joining, ScreenLock } from './devices.js';
 import {
   ClassQuery, ImportResult, ImportStudents, PromoteClass, PromoteResult, IdParams, NewClass, NewSection, NewStudent, RosterEntry,
   SchoolClass, Section, Student, UpdateStudent,
@@ -10,10 +10,13 @@ import {
   AnswerResult, OpenRun, OpenRunForStudent, Quiz, QuizInput, QuizQuery, QuizSummary, RunQuery, RunSummary,
   StudentRunState, SubmitAnswer, TeacherRunState,
 } from './quizzes.js';
-import { AiAskJob, AiAskRequest, AiJob, AiJobsQuery, AiQuizJob, AiQuizRequest, AiStatus, AiTutorJob, AiTutorRequest, AiWaitQuery, MyTutor } from './ai.js';
+import { AiAskJob, AiAskRequest, AiPlanJob, AiPlanRequest, AiJob, AiJobsQuery, AiQuizJob, AiQuizRequest, AiStatus, AiTutorJob, AiTutorRequest, AiWaitQuery, MyTutor } from './ai.js';
 import { ResultsOverview, ResultsQuery, StudentResults, TeacherActivity, MyProgress } from './results.js';
 import { Note, NoteInput } from './notes.js';
 import { Notice, NoticeInput } from './notices.js';
+import { AttendanceDay, AttendanceMark, AttendanceQuery } from './attendance.js';
+import { ActivityResult, ActivityScores, MyActivityBest } from './activities.js';
+import { Poll, PollAnswer, PollForStudent, PollInput, PollQuery } from './polls.js';
 import { SchoolSettings, StudentPrefs } from './settings.js';
 import { SlotInput, SlotQuery, StudentToday, Timetable } from './timetable.js';
 import { ContentItem, ContentQuery, FileChunk, FileChunkParams, FinishUpload, LinkInput, StartUpload, UploadChunk, UploadTicket } from './content.js';
@@ -40,6 +43,8 @@ export interface Endpoint {
   params?: ZodType;
   status: number;
   response?: ZodType;
+  // The answer can take minutes, not seconds; the app waits SLOW_CALL_MS for it.
+  slow?: boolean;
 }
 
 const pub: Access = { kind: 'public' };
@@ -63,6 +68,8 @@ export const API = {
   'POST /api/v1/auth/device/enrol': { summary: 'A lab PC or board joins the lab by itself, unless staff have locked the lab', access: pub, body: DeviceEnrol, status: 201, response: DeviceEnrolResult },
   'GET /api/v1/devices/joining': { summary: 'Whether new PCs and boards can still join', access: staff('setup.devices'), status: 200, response: Joining },
   'PUT /api/v1/devices/joining': { summary: 'Lock the lab against new devices, or open it again', access: staff('setup.devices'), body: Joining, status: 200, response: Joining },
+  'PUT /api/v1/devices/lock': { summary: 'Lock the screen of every lab PC, or unlock every screen', access: staff('lesson.control'), body: ScreenLock, status: 200, response: z.array(Device) },
+  'PUT /api/v1/devices/:id/lock': { summary: 'Lock or unlock the screen of one PC or board', access: staff('lesson.control'), params: IdParams, body: ScreenLock, status: 200, response: z.array(Device) },
   'POST /api/v1/devices/ping': { summary: 'A lab PC or board says it is switched on and reachable', access: { kind: 'device' }, status: 204 },
   'DELETE /api/v1/devices/:id': { summary: 'Remove a PC or board from the lab; it is signed out and must join again', access: staff('setup.devices'), params: IdParams, status: 204 },
   'GET /api/v1/devices': { summary: 'Devices, whether each is connected, and who is signed in on it', access: staff('setup.devices'), status: 200, response: z.array(Device) },
@@ -104,6 +111,7 @@ export const API = {
   'GET /api/v1/ai/status': { summary: 'Is the AI installed and ready, and how many requests wait', access: staff('ai.teacher'), status: 200, response: AiStatus },
   'POST /api/v1/ai/quiz': { summary: 'Ask the AI for a draft quiz; returns the queued job, or with ?wait=1 the finished job with the questions', access: staff('ai.teacher'), query: AiWaitQuery, body: AiQuizRequest, status: 202, response: AiQuizJob },
   'POST /api/v1/ai/ask': { summary: 'Ask the AI a question; returns the queued job, or with ?wait=1 the finished job with the answer', access: staff('ai.teacher'), query: AiWaitQuery, body: AiAskRequest, status: 202, response: AiAskJob },
+  'POST /api/v1/ai/plan': { summary: 'Ask the AI for a lesson plan; returns the queued job, or with ?wait=1 the finished job with the plan', access: staff('ai.teacher'), query: AiWaitQuery, body: AiPlanRequest, status: 202, response: AiPlanJob },
   'GET /api/v1/ai/tutor': { summary: "The student's own questions to the tutor, and how many are left today", access: student, status: 200, response: MyTutor },
   'POST /api/v1/ai/tutor': { summary: 'A student asks the tutor a question; returns the queued job', access: student, body: AiTutorRequest, status: 202, response: AiTutorJob },
   'GET /api/v1/ai/tutor/:id': { summary: "One of the student's own questions, with the answer when done", access: student, params: IdParams, status: 200, response: AiTutorJob },
@@ -129,7 +137,7 @@ export const API = {
   'POST /api/v1/content/links': { summary: 'Add a web link to the library', access: staff('setup.content'), body: LinkInput, status: 201, response: ContentItem },
   'POST /api/v1/content/uploads': { summary: 'Start sending a file; says how many pieces to send', access: staff('setup.content'), body: StartUpload, status: 201, response: UploadTicket },
   'PUT /api/v1/content/uploads/:id/chunks': { summary: 'Send the next piece of the file', access: staff('setup.content'), params: IdParams, body: UploadChunk, status: 204 },
-  'POST /api/v1/content/uploads/:id/finish': { summary: 'All pieces sent: check the file and file it in the library', access: staff('setup.content'), params: IdParams, body: FinishUpload, status: 201, response: ContentItem },
+  'POST /api/v1/content/uploads/:id/finish': { summary: 'All pieces sent: check the file and file it in the library. A Word, Excel or PowerPoint file is turned into a PDF first', access: staff('setup.content'), params: IdParams, body: FinishUpload, status: 201, response: ContentItem, slow: true },
   'DELETE /api/v1/content/:id': { summary: 'Remove a library item; its file goes when nothing else uses it', access: staff('setup.content'), params: IdParams, status: 204 },
   'GET /api/v1/files/:hash/chunks/:index': { summary: 'One piece of a library file, for someone who may open it', access: { kind: 'signed-in' }, params: FileChunkParams, status: 200, response: FileChunk },
 
@@ -180,6 +188,22 @@ export const API = {
   'PUT /api/v1/notices/:id': { summary: 'Change a notice', access: staff('teaching.manage'), params: IdParams, body: NoticeInput, status: 200, response: Notice },
   'DELETE /api/v1/notices/:id': { summary: 'Take a notice down for good', access: staff('teaching.manage'), params: IdParams, status: 204 },
   'GET /api/v1/notices/mine': { summary: "Notices for the student's school, class and section that have not expired", access: student, status: 200, response: z.array(Notice) },
+
+  // Activities: interactive library items that report a score.
+  'POST /api/v1/activities/:id/results': { summary: "A student finished an activity of their class's library: keep the score. Returns their best try", access: student, params: IdParams, body: ActivityResult, status: 201, response: MyActivityBest },
+  'GET /api/v1/activities/:id/results': { summary: "Every student of the activity's class with their best score", access: staff('results.view'), params: IdParams, status: 200, response: ActivityScores },
+
+  // Polls: one quick question to a class, with no right answer and no score.
+  'GET /api/v1/polls': { summary: 'Polls you may see with how the class answered, newest first, optionally for one class', access: staff(), query: PollQuery, status: 200, response: z.array(Poll) },
+  'POST /api/v1/polls': { summary: "Ask a class one question; it opens on their screens. It closes the class's poll that was open before", access: staff('lesson.start'), body: PollInput, status: 201, response: Poll },
+  'POST /api/v1/polls/:id/close': { summary: 'Close a poll; nobody can answer any more', access: staff('lesson.control'), params: IdParams, status: 200, response: Poll },
+  'DELETE /api/v1/polls/:id': { summary: 'Delete a poll and its answers', access: staff('lesson.control'), params: IdParams, status: 204 },
+  'GET /api/v1/polls/open': { summary: "The poll open for the student's class right now, if any, with their own answer", access: student, status: 200, response: PollForStudent.nullable() },
+  'POST /api/v1/polls/:id/answer': { summary: 'Answer the poll, or change the answer while it is open', access: student, params: IdParams, body: PollAnswer, status: 200, response: PollForStudent },
+
+  // Attendance: who was in the lab on a day. Signing in on a lab PC marks a student present.
+  'GET /api/v1/attendance': { summary: 'Who of a class was present on a day (today when no date is given)', access: staff('results.view'), query: AttendanceQuery, status: 200, response: AttendanceDay },
+  'PUT /api/v1/attendance/:id': { summary: 'Mark one student present or absent on a day; returns the class for that day', access: staff('students.manage'), params: IdParams, body: AttendanceMark, status: 200, response: AttendanceDay },
 
   // My notes: a student's own notebook. Staff have no route to it.
   'GET /api/v1/notes': { summary: 'Your notes, most recently changed first', access: student, status: 200, response: z.array(Note) },

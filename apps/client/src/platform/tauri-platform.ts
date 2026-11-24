@@ -72,6 +72,10 @@ export class TauriPlatform implements Platform {
     return convertFileSrc(hash, 'ictfile');
   }
 
+  lockDown(on: boolean) {
+    return call<void>('lock_down', { on });
+  }
+
   installRole() {
     return call<AppKind | null>('install_role');
   }

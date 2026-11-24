@@ -57,3 +57,24 @@ export function tutorSystem(className: string | null) {
     'If the question is not about school learning, or is unkind or unsafe, say gently that you can only help with school work.',
   ].join(' ');
 }
+
+export const PLAN_SYSTEM =
+  'You are an experienced teacher in an Indian school planning one lesson for a computer lab, where every student has a PC. ' +
+  'The plan is practical: what the teacher says and does, and what the students do. Plain text only: no markdown, no LaTeX, no special symbols.';
+
+export function planPrompt(p: { className: string; subject: string; topic: string; minutes: number; language: AiLanguage; library: string[] }) {
+  return [
+    `Plan one lesson of ${p.minutes} minutes for Class ${p.className}.`,
+    `Subject: ${p.subject}`,
+    `Topic: ${p.topic}`,
+    `Language: write everything in ${LANGUAGE[p.language]}.`,
+    'Give:',
+    '- "objectives": 2 or 3 things students will be able to do by the end. Each starts with a verb.',
+    `- "steps": 4 to 6 steps in order. Each has "minutes" (a whole number), a short "title", and "what": one or two sentences on what the teacher does and what the students do. The minutes must add up to ${p.minutes}.`,
+    '  Start with a short opening that links to what students already know, and end with a short recap.',
+    '- "checks": 3 short questions to ask the class to see whether they understood.',
+    '- "homework": one small task, in one or two sentences.',
+    'Keep the words simple enough for this class. Do not plan anything that needs the internet.',
+    ...(p.library.length ? ['The school library already has these for this class and subject. Use one in a step where it fits, by its title:', ...p.library.map((t) => `- ${t}`)] : []),
+  ].join('\n');
+}

@@ -5,12 +5,14 @@ import { useApp } from '../../app/app-context';
 import { useSections } from '../home/useSections';
 import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, TextArea, useAction } from '../../ui/ui';
 import { endOfDay, whoFor, whenShort } from './notices';
+import { useLang } from '../../i18n/i18n';
 
 const BLANK = { title: '', body: '', classId: '', sectionId: '', pinned: false, until: '' };
 
 // PRD "Notices": staff put up one-way messages for the whole school, a class or a section.
 export function NoticesPanel({ refresh }: { refresh: number }) {
   const { call, state } = useApp();
+  const { t, locale } = useLang();
   const p = state.session?.principal;
   // A teacher limited to some classes cannot write for the whole school.
   const limited = p?.kind === 'staff' && p.classIds != null;
@@ -105,7 +107,7 @@ export function NoticesPanel({ refresh }: { refresh: number }) {
                 {n.expired && <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-muted-foreground">Expired: students no longer see it</span>}
                 {n.body && <span className="mt-0.5 block text-sm whitespace-pre-wrap text-muted-foreground">{n.body}</span>}
                 <span className="mt-1 block text-xs text-muted-foreground">
-                  {[whoFor(n), `by ${n.byName}`, whenShort(n.createdAt), n.expiresAt && !n.expired ? `shows until ${whenShort(n.expiresAt)}` : null].filter(Boolean).join(' · ')}
+                  {[whoFor(n, t), `by ${n.byName}`, whenShort(n.createdAt, locale), n.expiresAt && !n.expired ? `shows until ${whenShort(n.expiresAt, locale)}` : null].filter(Boolean).join(' · ')}
                 </span>
               </span>
               {mayChange(n) && (

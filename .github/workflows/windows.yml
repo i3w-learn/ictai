@@ -82,6 +82,8 @@ jobs:
           New-Item -ItemType Directory -Force stage/server/starter-videos | Out-Null
           gh release download starter-videos --repo $env:VIDEOS_REPO --pattern "*.mp4" --pattern "*.webm" --pattern "*.pdf" --pattern "*.ictlock" --dir stage/server/starter-videos
           if ($LASTEXITCODE) { Write-Host "No starter videos or books found; building without them."; $global:LASTEXITCODE = 0 }
+          # The activities that come with the app are small and live in the code.
+          Copy-Item installer/activities/*.html stage/server/starter-videos/
           Get-ChildItem stage/server/starter-videos | ForEach-Object { "{0}  {1:N0} MB" -f $_.Name, ($_.Length / 1MB) }
 
       # No video or book leaves here in a form that plays outside the app: whatever came unlocked
@@ -135,7 +137,7 @@ jobs:
   install-test:
     needs: installer
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       # Only to lock a test video the way a real one is locked. Empty when the secret is not set.
       ICT_CONTENT_KEY: ${{ secrets.ICT_CONTENT_KEY }}
@@ -192,7 +194,7 @@ jobs:
             Start-Sleep 2
             try {
               $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
-              $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ })
+              $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ } | Where-Object { $_.kind -eq "video" })
               if ($items.Count -gt 0) { break }
             } catch { Write-Host "not yet: $_" }
           }
@@ -221,8 +223,21 @@ jobs:
           Start-Sleep 20
           $base = "https://localhost:7700"
           $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
-          $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ })
+          $items = @(Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ } | Where-Object { $_.kind -eq "video" })
           if ($items.Count -ne 1) { throw "Expected still 1 library item, found $($items.Count)" }
+
+      # The activity that comes with the app is in the library, and is served with the rules that keep it in a closed box.
+      - name: The starter activity is in the library, in its closed box
+        shell: pwsh
+        run: |
+          $base = "https://localhost:7700"
+          $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
+          $a = Invoke-RestMethod "$base/api/v1/content" -Headers @{ authorization = "Bearer $token" } -SkipCertificateCheck | ForEach-Object { $_ } | Where-Object { $_.kind -eq "activity" }
+          $a | Format-List title, kind, className, subject, mime
+          if (!$a -or $a.title -ne "Addition practice" -or $a.className -ne "6" -or $a.subject -ne "Maths") { Get-Content "$env:ProgramData\ICT App\server\events.log" -ErrorAction SilentlyContinue; throw "The starter activity was not filed" }
+          $headers = curl.exe -k -s -D - -o NUL -H "authorization: Bearer $token" "$base/api/v1/files/$($a.fileHash)/raw"
+          $headers
+          if (!($headers -match "content-security-policy: sandbox allow-scripts")) { throw "The activity is not served in its closed box" }
 
       # A video locked with our key: the app plays it, and the Server PC's disk never holds it unlocked.
       - name: A locked video plays in the app and stays locked on the disk
@@ -266,6 +281,49 @@ jobs:
           $kept = "$env:ProgramData\ICT App\server\files\$($v.fileHash.Substring(0, 2))\$($v.fileHash)"
           $head = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($kept), 0, 8)
           if ($head -ne "ICTLOCK1") { throw "The video on the server's disk is not locked (it begins '$head')" }
+
+      # Word, Excel and PowerPoint files are turned into PDFs by LibreOffice, which a school installs on
+      # the Server PC by itself. Install it here the same way, then add a real Word file.
+      - name: Install LibreOffice
+        id: office
+        shell: pwsh
+        run: |
+          choco install libreoffice-fresh -y --no-progress
+          if ($LASTEXITCODE -or !(Test-Path "$env:ProgramFiles\LibreOffice\program\soffice.com")) {
+            Write-Host "::warning::LibreOffice could not be installed on this machine, so the Word file check was skipped."
+            "ok=false" >> $env:GITHUB_OUTPUT
+            $global:LASTEXITCODE = 0
+            exit 0
+          }
+          "ok=true" >> $env:GITHUB_OUTPUT
+
+      - name: A Word file added to the library becomes a PDF
+        if: steps.office.outputs.ok == 'true'
+        shell: pwsh
+        run: |
+          $base = "https://localhost:7700"
+          $token = (Invoke-RestMethod "$base/api/v1/auth/staff" -Method Post -ContentType "application/json" -Body '{"username":"admin","password":"admin-pass-1"}' -SkipCertificateCheck).token
+          $h = @{ authorization = "Bearer $token" }
+          $classId = @(Invoke-RestMethod "$base/api/v1/classes" -Headers $h -SkipCertificateCheck | ForEach-Object { $_ })[0].id
+          if (!$classId) { throw "No class to file the Word file under" }
+          $bytes = [IO.File]::ReadAllBytes("installer/test-files/hello.docx")
+          try {
+            $start = Invoke-RestMethod "$base/api/v1/content/uploads" -Method Post -Headers $h -ContentType "application/json" -Body (@{ fileName = "hello.docx"; size = $bytes.Length } | ConvertTo-Json) -SkipCertificateCheck
+            Invoke-RestMethod "$base/api/v1/content/uploads/$($start.uploadId)/chunks" -Method Put -Headers $h -ContentType "application/json" -Body (@{ index = 0; data = [Convert]::ToBase64String($bytes) } | ConvertTo-Json) -SkipCertificateCheck
+            # The first run of LibreOffice on a PC sets itself up, so this one call may take a minute.
+            $item = Invoke-RestMethod "$base/api/v1/content/uploads/$($start.uploadId)/finish" -Method Post -Headers $h -ContentType "application/json" -Body (@{ title = "Hello from Word"; classId = $classId } | ConvertTo-Json) -SkipCertificateCheck -TimeoutSec 180
+          } catch {
+            Write-Host "The server said: $($_.ErrorDetails.Message)"
+            Get-ChildItem "$env:ProgramData\ICT App\server" -Recurse -Depth 2 -ErrorAction SilentlyContinue | Format-Table FullName, Length
+            throw
+          }
+          $item | Format-List title, kind, mime, size, fileName
+          if ($item.kind -ne "pdf" -or $item.mime -ne "application/pdf") { throw "The Word file was not filed as a PDF" }
+          curl.exe -k -s --fail -o "$env:RUNNER_TEMP\hello.pdf" -H "authorization: Bearer $token" "$base/api/v1/files/$($item.fileHash)/raw"
+          if ($LASTEXITCODE) { throw "Reading the PDF back failed" }
+          $pdf = [IO.File]::ReadAllBytes("$env:RUNNER_TEMP\hello.pdf")
+          if ([Text.Encoding]::ASCII.GetString($pdf, 0, 5) -ne "%PDF-") { throw "What came back is not a PDF" }
+          "The PDF is $($pdf.Length) bytes."
 
       - name: Uninstall leaves no service behind
         shell: pwsh

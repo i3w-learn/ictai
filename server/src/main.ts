@@ -3,6 +3,7 @@ import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { fileEventLog } from './core/event-log.js';
 import { createContainer } from './container.js';
+import { LibreOffice } from './modules/content/office.js';
 import { systemClock } from './core/clock.js';
 import { openDb } from './infra/db/index.js';
 import { acquireSingleInstance } from './infra/lock.js';
@@ -27,10 +28,25 @@ async function main() {
   const runtime = new AiRuntime(config.ai, nodeSpawner(join(config.dataDir, 'ai.log')));
   // The diary of what happens in the lab (see `just logs`). Each line also goes to this terminal.
   const log = fileEventLog(join(config.dataDir, 'events.log'), systemClock, (line) => console.log(line));
-  const c = createContainer({ db, now: systemClock, version: config.version, dataDir: config.dataDir, starterDir: config.starterDir, contentKey: config.contentKey, ai: { runtime, llm: new LlamaServerLlm(runtime) }, log });
+  const c = createContainer({ db, now: systemClock, version: config.version, dataDir: config.dataDir, starterDir: config.starterDir, contentKey: config.contentKey, ai: { runtime, llm: new LlamaServerLlm(runtime) }, office: new LibreOffice(config.officeBin, join(config.dataDir, 'office')), log });
   c.aiQueue.start();
   // A class is told within seconds when the teacher showing them a video has gone quiet.
   setInterval(() => c.shows.sweep(), 5_000).unref();
+  // The lab PCs lock when the timetable has no class in the lab, if the Super Admin switched that on.
+  // Looked at now (a server started outside a period locks at once) and then every 15 seconds.
+  let lockPolicyFailed = false;
+  const lockByTimetable = () => {
+    try {
+      c.lockPolicy.tick();
+      lockPolicyFailed = false;
+    } catch (err) {
+      // Said once, not every few seconds, until it works again.
+      if (!lockPolicyFailed) log('lock.policy.failed', { why: err instanceof Error ? err.message : String(err) });
+      lockPolicyFailed = true;
+    }
+  };
+  setInterval(lockByTimetable, 15_000).unref();
+  lockByTimetable();
   // However Node ends (crash included), take llama-server and its memory with it.
   process.on('exit', () => runtime.stop());
   if (config.devAdmin) await c.staffAuth.upsertAccount({ ...config.devAdmin, role: 'super_admin' });

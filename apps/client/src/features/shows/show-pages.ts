@@ -1,4 +1,5 @@
 import { SHOW_KINDS, type ShowKind } from '@ict/contracts';
+import type { T } from '../../i18n/i18n';
 
 // The page one step (`by` = -1 back, +1 on) from `page`, kept between 1 and the last page. While the
 // number of pages is not yet known (`pages` is null) there is nowhere to go on to.
@@ -16,6 +17,6 @@ export function startingPlace(kind: ShowKind, at: { page: number; pages?: number
 
 // The page a student's screen says it is on: "Page 3 of 120", or "Page 3" while the teacher's app
 // has not yet counted the pages.
-export function pageWords(page: number, pages: number | null): string {
-  return pages ? `Page ${page} of ${pages}` : `Page ${page}`;
+export function pageWords(page: number, pages: number | null, t: T): string {
+  return pages ? t('Page {page} of {pages}', { page, pages }) : t('Page {page}', { page });
 }

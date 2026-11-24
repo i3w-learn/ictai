@@ -3,6 +3,7 @@ import { MonitorPlay, Pause, Pencil, Volume2, VolumeX } from 'lucide-react';
 import { Show, showPosition, showRoom, WHITEBOARD_ASPECT, type ContentItem, type ScreenEvent } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { useLatest } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 import { useFileUrl } from '../content/useFileUrl';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from './Ink';
 import type { InkBoard } from './ink-board';
@@ -67,6 +68,7 @@ export function ClassShow({ live }: { live: LiveShow }) {
 function ClassPages({ live }: { live: LiveShow }) {
   const { show } = live;
   const { call, state } = useApp();
+  const t = useT();
   const me = state.session?.principal;
   const myId = me?.kind === 'student' ? me.studentId : '';
   const board = useInk(show, myId, me?.kind === 'student' ? me.name : '');
@@ -75,7 +77,7 @@ function ClassPages({ live }: { live: LiveShow }) {
   const [picked, setPicked] = useState<InkTools>({ tool: 'pen', colour: 'blue', width: 'medium' });
   const tools: InkTools = hasPen ? picked : { ...picked, tool: null };
   const [failed, setFailed] = useState(false);
-  const title = show.item?.title ?? 'Whiteboard';
+  const title = show.item?.title ?? t('Whiteboard');
 
   // Tells the server how the show is going on this PC, for its diary, as for a video. Each is said
   // once for this show (also when React runs an effect twice, as it does in development).
@@ -91,21 +93,21 @@ function ClassPages({ live }: { live: LiveShow }) {
   const fail = () => { setFailed(true); say.current('failed'); };
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={`Your teacher is showing: ${title}`}>
+    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={t('Your teacher is showing: {title}', { title })}>
       <div className="flex flex-wrap items-center gap-3 px-5 py-3">
         <MonitorPlay className="size-5 shrink-0 text-white/70" />
         <p className="min-w-48 flex-1 text-lg font-semibold">{title}</p>
-        {show.kind !== 'image' && <p className="text-lg font-semibold tabular-nums" role="status">{pageWords(show.page, show.pages)}</p>}
-        <p className="text-sm text-white/70">{show.byName} is showing this to Class {show.className}</p>
+        {show.kind !== 'image' && <p className="text-lg font-semibold tabular-nums" role="status">{pageWords(show.page, show.pages, t)}</p>}
+        <p className="text-sm text-white/70">{t('{teacher} is showing this to Class {name}', { teacher: show.byName, name: show.className })}</p>
         {!failed && hasPen && (
           <div className="flex flex-wrap items-center gap-2 rounded-full bg-primary px-4 py-1 text-sm font-semibold text-primary-foreground" role="status">
             <Pencil className="size-4" />
-            <span>You have the pen. Write on the page.</span>
+            <span>{t('You have the pen. Write on the page.')}</span>
             <InkToolbar tools={tools} onTools={setPicked} />
           </div>
         )}
         {!failed && myId && !hasPen && <PenAsk show={show} />}
-        {!failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{inkProblem}</p>}
+        {!failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{t(inkProblem)}</p>}
       </div>
       <div className="relative min-h-0 flex-1">
         {show.kind === 'whiteboard' ? (
@@ -139,6 +141,7 @@ function ShownFile({ item, page, board, tools, own, failed, onReady, onFail }: P
   item: ContentItem; page: number; failed: boolean; onFail: () => void;
 }) {
   // A streamed file that cannot be read is fetched whole instead; past that, the screen says so.
+  const t = useT();
   const { url, percent, error, onError } = useFileUrl(item, { streamPdf: true });
   const [aspect, setAspect] = useState<number | null>(null);
   const told = useLatest(onFail);
@@ -147,10 +150,10 @@ function ShownFile({ item, page, board, tools, own, failed, onReady, onFail }: P
   const layer = <InkLayer board={board} aspect={aspect} tools={tools} own={own} />;
 
   if (failed || error) {
-    const what = item.kind === 'pdf' ? 'This book cannot be opened' : 'This picture cannot be shown';
-    return <p className="absolute inset-0 grid place-items-center p-8 text-center text-lg text-white/80">{what} on this PC. Tell your teacher.</p>;
+    const what = item.kind === 'pdf' ? t('This book cannot be opened on this PC. Tell your teacher.') : t('This picture cannot be shown on this PC. Tell your teacher.');
+    return <p className="absolute inset-0 grid place-items-center p-8 text-center text-lg text-white/80">{what}</p>;
   }
-  if (!url) return <p className="absolute inset-0 grid place-items-center text-lg text-white/80" role="status">Opening… {percent}%</p>;
+  if (!url) return <p className="absolute inset-0 grid place-items-center text-lg text-white/80" role="status">{t('Opening… {percent}%', { percent })}</p>;
   if (item.kind === 'image') {
     return (
       <>
@@ -164,7 +167,7 @@ function ShownFile({ item, page, board, tools, own, failed, onReady, onFail }: P
   }
   return (
     <div className="absolute inset-0 text-white/80">
-      <Suspense fallback={<p className="grid h-full place-items-center" role="status">Opening…</p>}>
+      <Suspense fallback={<p className="grid h-full place-items-center" role="status">{t('Opening…')}</p>}>
         <PdfPages
           url={url} page={page} onPages={() => undefined} onError={broken} layer={layer}
           onAspect={(a) => { setAspect(a); onReady(); }}
@@ -177,6 +180,7 @@ function ShownFile({ item, page, board, tools, own, failed, onReady, onFail }: P
 function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow['show']['item']> }) {
   const { show } = live;
   const { call, state } = useApp();
+  const t = useT();
   const me = state.session?.principal;
   const myId = me?.kind === 'student' ? me.studentId : '';
   const board = useInk(show, myId, me?.kind === 'student' ? me.name : '');
@@ -267,41 +271,41 @@ function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow
   const sound = () => { const v = video.current; if (!v) return; v.muted = !v.muted; setMuted(v.muted); };
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={`Your teacher is showing: ${item.title}`}>
+    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={t('Your teacher is showing: {title}', { title: item.title })}>
       <div className="flex flex-wrap items-center gap-3 px-5 py-3">
         <MonitorPlay className="size-5 shrink-0 text-white/70" />
         <p className="min-w-48 flex-1 text-lg font-semibold">{item.title}</p>
-        <p className="text-sm text-white/70">{show.byName} is showing this to Class {show.className}</p>
+        <p className="text-sm text-white/70">{t('{teacher} is showing this to Class {name}', { teacher: show.byName, name: show.className })}</p>
         {/* These sit up here, never on the picture: a lesson often has writing right at its bottom edge. */}
         {url && !failed && waiting && (
-          <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">Waiting for the Server PC…</p>
+          <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{t('Waiting for the Server PC…')}</p>
         )}
         {url && !failed && hasPen && (
           <div className="flex flex-wrap items-center gap-2 rounded-full bg-primary px-4 py-1 text-sm font-semibold text-primary-foreground" role="status">
             <Pencil className="size-4" />
-            <span>{show.playing ? 'You have the pen. You can write when your teacher pauses the video.' : 'You have the pen. Write on the video.'}</span>
+            <span>{show.playing ? t('You have the pen. You can write when your teacher pauses the video.') : t('You have the pen. Write on the video.')}</span>
             {!show.playing && <InkToolbar tools={tools} onTools={setPicked} />}
           </div>
         )}
         {url && !failed && myId && !hasPen && <PenAsk show={show} />}
-        {url && !failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{inkProblem}</p>}
+        {url && !failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{t(inkProblem)}</p>}
         {url && !failed && !show.playing && (
-          <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="status"><Pause className="size-4 fill-current" strokeWidth={0} /> Paused by your teacher</p>
+          <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="status"><Pause className="size-4 fill-current" strokeWidth={0} /> {t('Paused by your teacher')}</p>
         )}
         {url && !failed && muted && show.playing && (
-          <button type="button" onClick={sound} className="flex cursor-pointer items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-white"><Volume2 className="size-4" /> Turn sound on</button>
+          <button type="button" onClick={sound} className="flex cursor-pointer items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-white"><Volume2 className="size-4" /> {t('Turn sound on')}</button>
         )}
         {url && !failed && (
-          <button type="button" onClick={sound} aria-label={muted ? 'Turn sound on' : 'Turn sound off'} className="grid size-11 cursor-pointer place-items-center rounded-full hover:bg-white/15 focus-visible:outline-white">
+          <button type="button" onClick={sound} aria-label={muted ? t('Turn sound on') : t('Turn sound off')} className="grid size-11 cursor-pointer place-items-center rounded-full hover:bg-white/15 focus-visible:outline-white">
             {muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
           </button>
         )}
       </div>
       <div className="relative min-h-0 flex-1">
         {failed || error ? (
-          <p className="absolute inset-0 grid place-items-center p-8 text-center text-lg text-white/80">This video cannot be played on this PC. Tell your teacher.</p>
+          <p className="absolute inset-0 grid place-items-center p-8 text-center text-lg text-white/80">{t('This video cannot be played on this PC. Tell your teacher.')}</p>
         ) : !url ? (
-          <p className="absolute inset-0 grid place-items-center text-lg text-white/80" role="status">Opening… {percent}%</p>
+          <p className="absolute inset-0 grid place-items-center text-lg text-white/80" role="status">{t('Opening… {percent}%', { percent })}</p>
         ) : (
           <video
             key={`${url} ${attempt}`} ref={video} src={url} playsInline preload="auto" disablePictureInPicture

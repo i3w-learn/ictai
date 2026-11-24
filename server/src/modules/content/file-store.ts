@@ -38,6 +38,23 @@ export class FileStore {
     copyFileSync(from, this.partPath(partId));
   }
 
+  // Where a half-finished upload sits on the disk, for a program that has to read it (LibreOffice).
+  partFile(partId: string): string {
+    return this.partPath(partId);
+  }
+
+  // Swaps a half-finished upload for another file on this disk (the PDF made from it).
+  replacePart(partId: string, from: string) {
+    renameSync(from, this.partPath(partId));
+  }
+
+  // A fresh empty folder for such a program to work in, and the way to throw it away.
+  workDir(): { dir: string; remove: () => void } {
+    const dir = join(this.parts, `work-${randomUUID()}`);
+    mkdirSync(dir, { recursive: true });
+    return { dir, remove: () => rmSync(dir, { recursive: true, force: true }) };
+  }
+
   discard(partId: string) {
     rmSync(this.partPath(partId), { force: true });
   }

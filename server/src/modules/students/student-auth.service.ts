@@ -22,6 +22,8 @@ export class StudentAuthService {
     private readonly audit: AuditLog,
     private readonly sessionRows: SessionRepository,
     private readonly devices: DeviceRepository,
+    // Told about every sign-in: it is what marks the student present for the day.
+    private readonly onSignIn: (studentId: string) => void = () => undefined,
   ) {}
 
   listClasses(): SchoolClass[] {
@@ -67,6 +69,7 @@ export class StudentAuthService {
 
   private start(device: DevicePrincipal, st: StudentAuthRow, method: string): SessionResult {
     this.audit.record({ kind: 'student', id: st.id }, 'signin', device.deviceId, { method });
+    this.onSignIn(st.id);
     return this.sessions.start('student', st.id, device.deviceId, STUDENT_SESSION);
   }
 }
