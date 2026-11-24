@@ -26,7 +26,8 @@ The full list, by who uses it.
 **Student**
 - Sign in by class and roll number (and section or name when needed).
 - Home: today's lab period, notices, books, results and things to do.
-- Live quiz: join when the teacher opens it, a clock on every question, the score at the end.
+- Live quiz: join when the teacher opens it, a clock on every question, the score at the end. When the teacher plays it in teams, the student sees their team's colour and, at the end, every team's place.
+- Practice quizzes: under Things to do. No clock, as many tries as they like, and the best try is kept.
 - My books: PDFs, pictures, videos, sound and web links from the library.
 - Videos: the videos for the student's class, including the ones that come with the app.
 - Activities: small interactive lessons and games from the library that need no internet; the score goes to the teacher.
@@ -43,7 +44,8 @@ The full list, by who uses it.
 - Attendance: a student who signs in on a lab PC is marked present for the day; the teacher can change it, also for a day gone by.
 - Quizzes: write, edit, delete; make one with AI; ask AI a question.
 - Plan a lesson with AI: a class, subject, topic and length go in; a timed plan with checks and homework comes out, to read and print.
-- Lab Mode: run a quiz live, watch students join and answer, end it.
+- Lab Mode: run a quiz live, watch students join and answer, end it. It can be played in 2, 3 or 4 teams; a team's score is the average of its members' scores.
+- Give a quiz as practice: the class does it in their own time with no clock. The teacher sees each student's tries and best score. Practice is not used for results or report cards.
 - Activities: add one (a single `.html` file, see `docs/activities.md`) to the library and see each student's best score.
 - Polls: ask a class one quick question (pick an option, or 1 to 5 stars) and watch the answers come in. No marks, no names.
 - Library: add files or web links by class, subject and chapter. A Word, Excel or PowerPoint file is turned into a PDF (needs LibreOffice on the Server PC).

@@ -14,12 +14,14 @@ export function quizRoutes(app: FastifyInstance, deps: { quizzes: QuizService; r
   route(app, 'DELETE /api/v1/quizzes/:id', ({ params, principal }) => quizzes.remove(asStaff(principal), params.id));
 
   // Lab Mode
-  route(app, 'POST /api/v1/quiz-runs', ({ body, principal }) => runs.open(asStaff(principal), body.quizId));
+  route(app, 'POST /api/v1/quiz-runs', ({ body, principal }) => runs.open(asStaff(principal), body));
   route(app, 'GET /api/v1/quiz-runs', ({ query, principal }) => runs.list(scopeOf(asStaff(principal)), query.quizId));
   route(app, 'GET /api/v1/quiz-runs/:id', ({ params, principal }) => runs.view(scopeOf(asStaff(principal)), params.id));
   route(app, 'POST /api/v1/quiz-runs/:id/start', ({ params, principal }) => runs.start(asStaff(principal), params.id));
   route(app, 'POST /api/v1/quiz-runs/:id/end', ({ params, principal }) => runs.end(asStaff(principal), params.id));
   route(app, 'GET /api/v1/quiz-runs/open', ({ principal }) => runs.openFor(asStudent(principal)));
+  route(app, 'GET /api/v1/quiz-runs/practice', ({ principal }) => runs.practiceFor(asStudent(principal)));
+  route(app, 'POST /api/v1/quiz-runs/:id/retry', ({ params, principal }) => runs.retry(asStudent(principal), params.id));
   route(app, 'POST /api/v1/quiz-runs/:id/join', ({ params, principal }) => runs.join(asStudent(principal), params.id));
   route(app, 'GET /api/v1/quiz-runs/:id/play', ({ params, principal }) => runs.play(asStudent(principal), params.id));
   route(app, 'POST /api/v1/quiz-runs/:id/answers', ({ params, body, principal }) =>

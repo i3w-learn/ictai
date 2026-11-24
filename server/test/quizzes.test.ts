@@ -125,7 +125,7 @@ describe('Lab Mode', () => {
     expect((await answer(1, 0)).json()).toEqual({ accepted: true }); // wrong
 
     const live = (await inject('GET', `/api/v1/quiz-runs/${run.runId}`, teacher)).json();
-    expect(live.participants).toEqual([{ studentId: asha.id, name: 'Asha', rollNo: '1111', answered: 2, correct: 1, score: 2, finished: false }]);
+    expect(live.participants).toEqual([{ studentId: asha.id, name: 'Asha', rollNo: '1111', answered: 2, correct: 1, score: 2, finished: false, team: null, tries: 1, best: null }]);
 
     const done = (await inject('POST', `/api/v1/quiz-runs/${run.runId}/finish`, me)).json();
     expect(done).toMatchObject({ finished: true, score: 2, myAnswers: [1, 0] });

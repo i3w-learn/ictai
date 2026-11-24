@@ -601,4 +601,19 @@ export const migrations: Migration[] = [
       CREATE INDEX ai_jobs_user ON ai_jobs(requested_by, created_at);
     `,
   },
+  {
+    // A quiz can be given as practice (no clock, many tries), and a live quiz can be played in teams.
+    // Old runs are all live with no teams, which is what the defaults say.
+    version: 22,
+    name: 'quiz_practice_and_teams',
+    sql: `
+      ALTER TABLE quiz_runs ADD COLUMN mode TEXT NOT NULL DEFAULT 'live' CHECK (mode IN ('live','practice'));
+      ALTER TABLE quiz_runs ADD COLUMN teams INTEGER NOT NULL DEFAULT 0;
+      -- team: 1, 2, ... in a quiz played in teams. tries: tries started (practice). best_score: the best
+      -- score of the tries finished before the one in quiz_answers now.
+      ALTER TABLE quiz_participants ADD COLUMN team INTEGER;
+      ALTER TABLE quiz_participants ADD COLUMN tries INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE quiz_participants ADD COLUMN best_score INTEGER;
+    `,
+  },
 ];

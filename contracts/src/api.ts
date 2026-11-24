@@ -8,7 +8,7 @@ import {
 } from './students.js';
 import {
   AnswerResult, OpenRun, OpenRunForStudent, Quiz, QuizInput, QuizQuery, QuizSummary, RunQuery, RunSummary,
-  StudentRunState, SubmitAnswer, TeacherRunState,
+  StudentRunState, SubmitAnswer, TeacherRunState, PracticeForStudent,
 } from './quizzes.js';
 import { AiAskJob, AiAskRequest, AiPlanJob, AiPlanRequest, AiJob, AiJobsQuery, AiQuizJob, AiQuizRequest, AiStatus, AiTutorJob, AiTutorRequest, AiWaitQuery, MyTutor } from './ai.js';
 import { ResultsOverview, ResultsQuery, StudentResults, TeacherActivity, MyProgress } from './results.js';
@@ -97,12 +97,14 @@ export const API = {
   'PUT /api/v1/quizzes/:id': { summary: 'Replace a quiz; refused while it is running', access: staff('teaching.manage'), params: IdParams, body: QuizInput, status: 200, response: Quiz },
   'DELETE /api/v1/quizzes/:id': { summary: 'Delete a quiz', access: staff('teaching.manage'), params: IdParams, status: 204 },
 
-  'POST /api/v1/quiz-runs': { summary: 'Open a Lab Mode run; the students of that class see it on their screens', access: staff('lesson.start'), body: OpenRun, status: 201, response: TeacherRunState },
+  'POST /api/v1/quiz-runs': { summary: 'Open a Lab Mode run (optionally in teams), or give the quiz to the class as practice', access: staff('lesson.start'), body: OpenRun, status: 201, response: TeacherRunState },
   'GET /api/v1/quiz-runs': { summary: 'Runs of a quiz, newest first', access: staff(), query: RunQuery, status: 200, response: z.array(RunSummary) },
   'GET /api/v1/quiz-runs/:id': { summary: 'Live view of a run for the teacher', access: staff(), params: IdParams, status: 200, response: TeacherRunState },
   'POST /api/v1/quiz-runs/:id/start': { summary: 'Let joined students start answering', access: staff('lesson.control'), params: IdParams, status: 200, response: TeacherRunState },
   'POST /api/v1/quiz-runs/:id/end': { summary: 'End the run; nobody can join or answer any more', access: staff('lesson.control'), params: IdParams, status: 200, response: TeacherRunState },
   'GET /api/v1/quiz-runs/open': { summary: "Quizzes open for the student's class that they have not handed in", access: student, status: 200, response: z.array(OpenRunForStudent) },
+  'GET /api/v1/quiz-runs/practice': { summary: "Practice quizzes given to the student's class, with their tries and best score", access: student, status: 200, response: z.array(PracticeForStudent) },
+  'POST /api/v1/quiz-runs/:id/retry': { summary: 'Practice only: start another try; the best finished try is kept', access: student, params: IdParams, status: 200, response: StudentRunState },
   'POST /api/v1/quiz-runs/:id/join': { summary: "Student joins a run opened for their class", access: student, params: IdParams, status: 200, response: StudentRunState },
   'GET /api/v1/quiz-runs/:id/play': { summary: "The student's view of a run", access: student, params: IdParams, status: 200, response: StudentRunState },
   'POST /api/v1/quiz-runs/:id/answers': { summary: 'Answer one question; the first answer counts', access: student, params: IdParams, body: SubmitAnswer, status: 200, response: AnswerResult },

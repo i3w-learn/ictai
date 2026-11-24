@@ -57,11 +57,15 @@ export class QuizRepository {
         ? this.db.prepare(`SELECT ${COLUMNS} FROM quizzes WHERE status = 'active' AND class_id = ? ORDER BY updated_at DESC`).all(classId)
         : this.db.prepare(`SELECT ${COLUMNS} FROM quizzes WHERE status = 'active' ORDER BY updated_at DESC`).all()
     ) as QuizRow[];
+    const openRun = this.db.prepare(`SELECT id AS runId, mode FROM quiz_runs WHERE quiz_id = ? AND status != 'ended'`);
+    const lastPractice = this.db.prepare(`SELECT id FROM quiz_runs WHERE quiz_id = ? AND mode = 'practice' AND status = 'ended' ORDER BY ended_at DESC LIMIT 1`).pluck();
     return rows.map((r) => {
       const { questions, ...rest } = toQuiz(r);
+      const open = openRun.get(r.id) as { runId: string; mode: 'live' | 'practice' } | undefined;
       return {
         id: rest.id, title: rest.title, classId: rest.classId, subject: rest.subject, topic: rest.topic,
         questionCount: questions.length, totalMarks: rest.totalMarks, updatedAt: rest.updatedAt,
+        open: open ?? null, lastPracticeRunId: (lastPractice.get(r.id) as string | undefined) ?? null,
       };
     });
   }

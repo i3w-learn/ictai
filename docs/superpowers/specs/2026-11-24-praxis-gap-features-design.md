@@ -20,7 +20,7 @@ Last changed: 2026-11-24.
 | # | Feature | State |
 |---|---|---|
 | 1 | Lock policy | **Built and tested on the Mac.** Not yet tried on Windows. |
-| 2 | Quiz: at your own speed, and teams | Not started |
+| 2 | Quiz: at your own speed, and teams | **Built and tested on the Mac.** Not yet tried on Windows. |
 | 3 | Messages | Not started |
 | 4 | Next steps | Not started |
 | 5 | Lesson recording | Not started |
@@ -47,6 +47,34 @@ Last changed: 2026-11-24.
   unlock by hand is lost.
 - **Still to do:** run "Step 5a-2" and "Step 5a" of `docs/windows-test-guide.md` on two Windows PCs.
   Have a Marathi speaker read the one new Marathi sentence in `apps/client/src/i18n/mr.ts`.
+
+### Feature 2, Quiz (practice and teams): what was done
+
+- **Built, practice:** a teacher presses "Give as practice" on a quiz. The class finds it under Things to
+  do, with no clock, and can try again as often as they like; the best finished try is kept. The last
+  answer hands the try in by itself. The teacher sees each student's tries and best score live. Practice
+  never counts for results or report cards. While practice is open the quiz's line says so and leads
+  back to it; after it ends, "Practice scores" opens it again.
+- **Built, teams:** when opening Lab Mode the teacher picks 2, 3 or 4 teams. Students are put in the
+  smallest team as they join, and see their team's colour (Red, Blue, Green, Yellow). A team's score is
+  the average of its members' scores. The teacher sees the teams' places live; a student sees them once
+  done. Teams that are level share a place.
+- **A child in practice can still be reached:** what the teacher shows the class, a live quiz and a poll
+  come up over a practice quiz.
+- **Tested by the computer:** 16 new tests. The whole set (474 server tests, 125 app tests) passes, and
+  was run three times in a row.
+- **Tested on the real screens, on the Mac:** as teacher, as student and as Super Admin. Sixteen steps,
+  all passed. Report with pictures: `docs/test-reports/2026-11-24-quiz-practice-teams.html`.
+- **Found by testing and review, and fixed:** an open practice was a trap (no sign of it on the list,
+  and a wrong message on Edit); a child in practice could not be reached by the teacher; level teams
+  were shown as first and second; a try was lost if the PC went off after the last answer.
+- **Left as it is:** a team with one student shows that student's score to the class as the team's
+  average. A student who joins and never answers counts as 0 in the team's average. With more teams than
+  students, the empty teams are not listed. "Quizzes run" on the Teachers report counts practice too.
+- **Different from the first plan:** the plan said the server would keep a "try number" per answer. It
+  keeps one set of answers and the best score so far, which is simpler and enough.
+- **Still to do:** steps 6-2, 6-3 and then 6 of `docs/windows-test-guide.md` on Windows PCs. A Marathi
+  speaker should read the 18 new Marathi lines (practice, teams, the four colour names).
 
 ## What we build (in this order)
 

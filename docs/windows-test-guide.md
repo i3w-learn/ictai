@@ -159,6 +159,37 @@ double-click a `.ictlock` file, or try to open it with a video player. It must n
 2. Student PC: **Join the quiz**. Server PC: **Start quiz**.
 3. Student answers. Server PC shows the live score. Press **End quiz**.
 
+## Step 6-2: A quiz as practice
+
+1. Server PC: **Today** → on the quiz's line press **Give as practice**. The page says "Practice".
+2. Student PC: nothing pops up. Open **Things to do**: the quiz is under **Practice quizzes**. Press **Start**.
+
+Check: there is **no clock**. Wait three minutes on a question; it must still be there.
+
+3. Answer every question, one of them wrong. The score shows, with **Try again**. The student did not
+   have to press anything to hand it in.
+4. Press **Try again** and answer all of them right. The page says "Best so far" with the better score
+   and "Tries: 2".
+5. Server PC: the line for that student shows 2 tries and the best score, without pressing anything.
+6. Server PC: go back to **Today**. The quiz's line says **Practice is open** with **See it**. It has no
+   Start button while practice is open.
+7. With the student in the middle of a practice try, start **Lab Mode** for another quiz (or use Show to
+   class). It must come up **over** the practice on the student PC.
+8. Server PC: **See it** → **End practice**. On **Today** the quiz's line now has **Practice scores**.
+9. Server PC: **Reports**. The practice score must **not** be in the student's results.
+
+## Step 6-3: A quiz in teams (two student PCs are better; one is enough)
+
+1. Server PC: **Today** → on the quiz's line choose **2 teams** → **Start Lab Mode**.
+2. Student PC: **Join the quiz**. The waiting page shows the student's team by colour, for example
+   **Team Red**. On the Server PC the student's name has the same colour.
+3. Server PC: **Start quiz**. The student answers. The Server PC shows **Teams** with each team's
+   average, and a **Team** column in the list.
+4. When the student is done, the student PC shows the teams and marks **Your team**.
+5. Server PC: **End quiz**. The page says "Teams · final places", with a cup for the best team.
+
+After these, do Step 6 once more: a plain quiz with no teams must work as before.
+
 ## Step 6a: An activity
 
 One activity comes with the app: **Addition practice**, for Class 6.

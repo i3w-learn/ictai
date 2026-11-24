@@ -64,7 +64,19 @@ export function StudentHome({ name }: { name: string }) {
 
   // A quiz takes the whole page, with no menu to wander off into. "Back to home" after it means
   // home, not the page the quiz popped up over.
-  if (playing) return <Shell><PlayQuiz initial={playing} onExit={() => { setPlaying(null); clearQuiz(); setPage('home'); }} /></Shell>;
+  // Practice has no clock, so a child can sit in it for a whole period. The teacher must still be able
+  // to reach them: what she shows the class, a live quiz and a quick question come up over it.
+  if (playing) {
+    const reachable = playing.mode === 'practice';
+    return (
+      <Shell>
+        {reachable && classShow && <ClassShow live={classShow} />}
+        {reachable && quiz && quiz.runId !== later && !classShow && <QuizPopup quiz={quiz} onJoined={setPlaying} onLater={() => setLater(quiz.runId)} />}
+        {reachable && poll && poll.myChoice === null && poll.id !== pollLater && !classShow && !(quiz && quiz.runId !== later) && <PollPopup poll={poll} onAnswered={setPoll} onLater={() => setPollLater(poll.id)} />}
+        <PlayQuiz key={playing.runId} initial={playing} onExit={() => { setPlaying(null); clearQuiz(); setPage('home'); }} />
+      </Shell>
+    );
+  }
 
   // The one warm-coloured thing on the screen, so "I am stuck" is always easy to find.
   const ask = (
@@ -93,7 +105,7 @@ export function StudentHome({ name }: { name: string }) {
           top={<>{quiz && <QuizWaiting quiz={quiz} onJoined={setPlaying} />}<StudentNotices /></>}
         />
       )}
-      {page === 'todo' && <ThingsToDo onWork={() => setPage('work')} />}
+      {page === 'todo' && <ThingsToDo onWork={() => setPage('work')} onPlay={setPlaying} />}
       {page === 'books' && <MyBooks />}
       {page === 'videos' && <MyBooks key="videos" videos />}
       {page === 'work' && <MyWork />}

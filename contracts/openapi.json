@@ -3308,6 +3308,30 @@
                       },
                       "updatedAt": {
                         "type": "number"
+                      },
+                      "open": {
+                        "nullable": true,
+                        "type": "object",
+                        "properties": {
+                          "runId": {
+                            "type": "string"
+                          },
+                          "mode": {
+                            "type": "string",
+                            "enum": [
+                              "live",
+                              "practice"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "runId",
+                          "mode"
+                        ]
+                      },
+                      "lastPracticeRunId": {
+                        "nullable": true,
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -3318,7 +3342,9 @@
                       "topic",
                       "questionCount",
                       "totalMarks",
-                      "updatedAt"
+                      "updatedAt",
+                      "open",
+                      "lastPracticeRunId"
                     ]
                   }
                 }
@@ -3936,7 +3962,7 @@
     },
     "/api/v1/quiz-runs": {
       "post": {
-        "summary": "Open a Lab Mode run; the students of that class see it on their screens",
+        "summary": "Open a Lab Mode run (optionally in teams), or give the quiz to the class as practice",
         "x-access": {
           "kind": "staff",
           "permission": "lesson.start"
@@ -3957,6 +3983,43 @@
                     "type": "string",
                     "format": "uuid",
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "mode": {
+                    "default": "live",
+                    "type": "string",
+                    "enum": [
+                      "live",
+                      "practice"
+                    ]
+                  },
+                  "teams": {
+                    "default": 0,
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "enum": [
+                          0
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "enum": [
+                          2
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "enum": [
+                          3
+                        ]
+                      },
+                      {
+                        "type": "number",
+                        "enum": [
+                          4
+                        ]
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -3991,6 +4054,13 @@
                     },
                     "className": {
                       "type": "string"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "practice"
+                      ]
                     },
                     "status": {
                       "type": "string",
@@ -4032,6 +4102,17 @@
                           },
                           "finished": {
                             "type": "boolean"
+                          },
+                          "team": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "tries": {
+                            "type": "number"
+                          },
+                          "best": {
+                            "nullable": true,
+                            "type": "number"
                           }
                         },
                         "required": [
@@ -4041,7 +4122,32 @@
                           "answered",
                           "correct",
                           "score",
-                          "finished"
+                          "finished",
+                          "team",
+                          "tries",
+                          "best"
+                        ]
+                      }
+                    },
+                    "teams": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "team": {
+                            "type": "number"
+                          },
+                          "members": {
+                            "type": "number"
+                          },
+                          "score": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "team",
+                          "members",
+                          "score"
                         ]
                       }
                     }
@@ -4052,10 +4158,12 @@
                     "quizId",
                     "title",
                     "className",
+                    "mode",
                     "status",
                     "questionCount",
                     "totalMarks",
-                    "participants"
+                    "participants",
+                    "teams"
                   ]
                 }
               }
@@ -4124,6 +4232,13 @@
                       "title": {
                         "type": "string"
                       },
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "live",
+                          "practice"
+                        ]
+                      },
                       "status": {
                         "type": "string",
                         "enum": [
@@ -4143,6 +4258,7 @@
                       "id",
                       "quizId",
                       "title",
+                      "mode",
                       "status",
                       "createdAt",
                       "participants"
@@ -4224,6 +4340,13 @@
                     "className": {
                       "type": "string"
                     },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "practice"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -4264,6 +4387,17 @@
                           },
                           "finished": {
                             "type": "boolean"
+                          },
+                          "team": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "tries": {
+                            "type": "number"
+                          },
+                          "best": {
+                            "nullable": true,
+                            "type": "number"
                           }
                         },
                         "required": [
@@ -4273,7 +4407,32 @@
                           "answered",
                           "correct",
                           "score",
-                          "finished"
+                          "finished",
+                          "team",
+                          "tries",
+                          "best"
+                        ]
+                      }
+                    },
+                    "teams": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "team": {
+                            "type": "number"
+                          },
+                          "members": {
+                            "type": "number"
+                          },
+                          "score": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "team",
+                          "members",
+                          "score"
                         ]
                       }
                     }
@@ -4284,10 +4443,12 @@
                     "quizId",
                     "title",
                     "className",
+                    "mode",
                     "status",
                     "questionCount",
                     "totalMarks",
-                    "participants"
+                    "participants",
+                    "teams"
                   ]
                 }
               }
@@ -4366,6 +4527,13 @@
                     "className": {
                       "type": "string"
                     },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "practice"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -4406,6 +4574,17 @@
                           },
                           "finished": {
                             "type": "boolean"
+                          },
+                          "team": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "tries": {
+                            "type": "number"
+                          },
+                          "best": {
+                            "nullable": true,
+                            "type": "number"
                           }
                         },
                         "required": [
@@ -4415,7 +4594,32 @@
                           "answered",
                           "correct",
                           "score",
-                          "finished"
+                          "finished",
+                          "team",
+                          "tries",
+                          "best"
+                        ]
+                      }
+                    },
+                    "teams": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "team": {
+                            "type": "number"
+                          },
+                          "members": {
+                            "type": "number"
+                          },
+                          "score": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "team",
+                          "members",
+                          "score"
                         ]
                       }
                     }
@@ -4426,10 +4630,12 @@
                     "quizId",
                     "title",
                     "className",
+                    "mode",
                     "status",
                     "questionCount",
                     "totalMarks",
-                    "participants"
+                    "participants",
+                    "teams"
                   ]
                 }
               }
@@ -4508,6 +4714,13 @@
                     "className": {
                       "type": "string"
                     },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "practice"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -4548,6 +4761,17 @@
                           },
                           "finished": {
                             "type": "boolean"
+                          },
+                          "team": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "tries": {
+                            "type": "number"
+                          },
+                          "best": {
+                            "nullable": true,
+                            "type": "number"
                           }
                         },
                         "required": [
@@ -4557,7 +4781,32 @@
                           "answered",
                           "correct",
                           "score",
-                          "finished"
+                          "finished",
+                          "team",
+                          "tries",
+                          "best"
+                        ]
+                      }
+                    },
+                    "teams": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "team": {
+                            "type": "number"
+                          },
+                          "members": {
+                            "type": "number"
+                          },
+                          "score": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "team",
+                          "members",
+                          "score"
                         ]
                       }
                     }
@@ -4568,10 +4817,12 @@
                     "quizId",
                     "title",
                     "className",
+                    "mode",
                     "status",
                     "questionCount",
                     "totalMarks",
-                    "participants"
+                    "participants",
+                    "teams"
                   ]
                 }
               }
@@ -4673,9 +4924,92 @@
         }
       }
     },
-    "/api/v1/quiz-runs/{id}/join": {
+    "/api/v1/quiz-runs/practice": {
+      "get": {
+        "summary": "Practice quizzes given to the student's class, with their tries and best score",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "runId": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "questionCount": {
+                        "type": "number"
+                      },
+                      "totalMarks": {
+                        "type": "number"
+                      },
+                      "tries": {
+                        "type": "number"
+                      },
+                      "best": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "finished": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "runId",
+                      "title",
+                      "questionCount",
+                      "totalMarks",
+                      "tries",
+                      "best",
+                      "finished"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quiz-runs/{id}/retry": {
       "post": {
-        "summary": "Student joins a run opened for their class",
+        "summary": "Practice only: start another try; the best finished try is kept",
         "x-access": {
           "kind": "student"
         },
@@ -4713,6 +5047,13 @@
                     },
                     "title": {
                       "type": "string"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "practice"
+                      ]
                     },
                     "status": {
                       "type": "string",
@@ -4761,6 +5102,7 @@
                           "type": "number"
                         },
                         "remainingMs": {
+                          "nullable": true,
                           "type": "number"
                         }
                       },
@@ -4778,12 +5120,47 @@
                     },
                     "totalMarks": {
                       "type": "number"
+                    },
+                    "team": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "teams": {
+                      "nullable": true,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "team": {
+                            "type": "number"
+                          },
+                          "members": {
+                            "type": "number"
+                          },
+                          "score": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "team",
+                          "members",
+                          "score"
+                        ]
+                      }
+                    },
+                    "tries": {
+                      "type": "number"
+                    },
+                    "best": {
+                      "nullable": true,
+                      "type": "number"
                     }
                   },
                   "required": [
                     "kind",
                     "runId",
                     "title",
+                    "mode",
                     "status",
                     "secondsPerQuestion",
                     "questions",
@@ -4791,7 +5168,207 @@
                     "current",
                     "finished",
                     "score",
-                    "totalMarks"
+                    "totalMarks",
+                    "team",
+                    "teams",
+                    "tries",
+                    "best"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quiz-runs/{id}/join": {
+      "post": {
+        "summary": "Student joins a run opened for their class",
+        "x-access": {
+          "kind": "student"
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "student"
+                      ]
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "practice"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "lobby",
+                        "active",
+                        "ended"
+                      ]
+                    },
+                    "secondsPerQuestion": {
+                      "type": "number"
+                    },
+                    "questions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "text",
+                          "options"
+                        ]
+                      }
+                    },
+                    "myAnswers": {
+                      "type": "array",
+                      "items": {
+                        "nullable": true,
+                        "type": "number"
+                      }
+                    },
+                    "current": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "index": {
+                          "type": "number"
+                        },
+                        "remainingMs": {
+                          "nullable": true,
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "index",
+                        "remainingMs"
+                      ]
+                    },
+                    "finished": {
+                      "type": "boolean"
+                    },
+                    "score": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "totalMarks": {
+                      "type": "number"
+                    },
+                    "team": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "teams": {
+                      "nullable": true,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "team": {
+                            "type": "number"
+                          },
+                          "members": {
+                            "type": "number"
+                          },
+                          "score": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "team",
+                          "members",
+                          "score"
+                        ]
+                      }
+                    },
+                    "tries": {
+                      "type": "number"
+                    },
+                    "best": {
+                      "nullable": true,
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "runId",
+                    "title",
+                    "mode",
+                    "status",
+                    "secondsPerQuestion",
+                    "questions",
+                    "myAnswers",
+                    "current",
+                    "finished",
+                    "score",
+                    "totalMarks",
+                    "team",
+                    "teams",
+                    "tries",
+                    "best"
                   ]
                 }
               }
@@ -4863,6 +5440,13 @@
                     "title": {
                       "type": "string"
                     },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "practice"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -4910,6 +5494,7 @@
                           "type": "number"
                         },
                         "remainingMs": {
+                          "nullable": true,
                           "type": "number"
                         }
                       },
@@ -4927,12 +5512,47 @@
                     },
                     "totalMarks": {
                       "type": "number"
+                    },
+                    "team": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "teams": {
+                      "nullable": true,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "team": {
+                            "type": "number"
+                          },
+                          "members": {
+                            "type": "number"
+                          },
+                          "score": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "team",
+                          "members",
+                          "score"
+                        ]
+                      }
+                    },
+                    "tries": {
+                      "type": "number"
+                    },
+                    "best": {
+                      "nullable": true,
+                      "type": "number"
                     }
                   },
                   "required": [
                     "kind",
                     "runId",
                     "title",
+                    "mode",
                     "status",
                     "secondsPerQuestion",
                     "questions",
@@ -4940,7 +5560,11 @@
                     "current",
                     "finished",
                     "score",
-                    "totalMarks"
+                    "totalMarks",
+                    "team",
+                    "teams",
+                    "tries",
+                    "best"
                   ]
                 }
               }
@@ -5103,6 +5727,13 @@
                     "title": {
                       "type": "string"
                     },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "practice"
+                      ]
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -5150,6 +5781,7 @@
                           "type": "number"
                         },
                         "remainingMs": {
+                          "nullable": true,
                           "type": "number"
                         }
                       },
@@ -5167,12 +5799,47 @@
                     },
                     "totalMarks": {
                       "type": "number"
+                    },
+                    "team": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "teams": {
+                      "nullable": true,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "team": {
+                            "type": "number"
+                          },
+                          "members": {
+                            "type": "number"
+                          },
+                          "score": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "team",
+                          "members",
+                          "score"
+                        ]
+                      }
+                    },
+                    "tries": {
+                      "type": "number"
+                    },
+                    "best": {
+                      "nullable": true,
+                      "type": "number"
                     }
                   },
                   "required": [
                     "kind",
                     "runId",
                     "title",
+                    "mode",
                     "status",
                     "secondsPerQuestion",
                     "questions",
@@ -5180,7 +5847,11 @@
                     "current",
                     "finished",
                     "score",
-                    "totalMarks"
+                    "totalMarks",
+                    "team",
+                    "teams",
+                    "tries",
+                    "best"
                   ]
                 }
               }

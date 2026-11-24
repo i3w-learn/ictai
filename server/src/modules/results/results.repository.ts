@@ -63,7 +63,7 @@ export class ResultsRepository {
          JOIN quiz_runs r ON r.id = p.run_id
          JOIN quizzes q ON q.id = r.quiz_id
          JOIN students s ON s.id = p.student_id
-         WHERE s.status = 'active' AND r.started_at IS NOT NULL AND (r.status = 'ended' OR p.finished_at IS NOT NULL)${cls.sql}${student.sql}
+         WHERE s.status = 'active' AND r.mode = 'live' AND r.started_at IS NOT NULL AND (r.status = 'ended' OR p.finished_at IS NOT NULL)${cls.sql}${student.sql}
          ORDER BY at DESC`,
       )
       .all(...cls.params, ...student.params) as (Omit<Attempt, 'totalMarks'> & { questions: string; savedTotal: number | null })[];
