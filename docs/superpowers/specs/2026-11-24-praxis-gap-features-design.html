@@ -112,7 +112,7 @@ ul.plain { padding-left: 22px; max-width: 68ch; }
     <p>Last changed: 2026-11-24.</p>
     <div class="wide"><table><thead><tr><th>#</th><th>Feature</th><th>State</th></tr></thead><tbody>
       <tr><td class="num">1</td><td>Lock policy</td><td><span class="tag">Built</span> Tested on the Mac. Not yet tried on Windows.</td></tr>
-      <tr><td class="num">2</td><td>Quiz: at your own speed, and teams</td><td>Not started</td></tr>
+      <tr><td class="num">2</td><td>Quiz: at your own speed, and teams</td><td><span class="tag">Built</span> Tested on the Mac. Not yet tried on Windows.</td></tr>
       <tr><td class="num">3</td><td>Messages</td><td>Not started</td></tr>
       <tr><td class="num">4</td><td>Next steps</td><td>Not started</td></tr>
       <tr><td class="num">5</td><td>Lesson recording</td><td>Not started</td></tr>
@@ -130,6 +130,20 @@ ul.plain { padding-left: 22px; max-width: 68ch; }
         <li><strong>Left as it is:</strong> with two booked periods one after the other, a teacher's lock from the first carries into the second. If the <code>ICTServer</code> service restarts when no class is booked, a teacher's unlock by hand is lost.</li>
       </ul>
       <div class="note risk"><b>Still to do</b>Run "Step 5a-2" and "Step 5a" of <code>docs/windows-test-guide.md</code> on two Windows PCs. Have a Marathi speaker read the one new Marathi sentence.</div>
+    </section>
+
+    <section class="card">
+      <div class="head"><span class="n">2</span><h3>Quiz (practice and teams): what was done</h3></div>
+      <ul>
+        <li><strong>Built, practice:</strong> a teacher presses "Give as practice" on a quiz. The class finds it under Things to do, with no clock, and can try again as often as they like; the best finished try is kept. The last answer hands the try in by itself. The teacher sees each student's tries and best score live. Practice never counts for results or report cards.</li>
+        <li><strong>Built, teams:</strong> when opening Lab Mode the teacher picks 2, 3 or 4 teams. Students are put in the smallest team as they join, and see their team's colour. A team's score is the average of its members' scores. Teams that are level share a place.</li>
+        <li><strong>A child in practice can still be reached:</strong> what the teacher shows the class, a live quiz and a poll come up over a practice quiz.</li>
+        <li><strong>Tested by the computer:</strong> 16 new tests. The whole set (474 server tests, 125 app tests) passes, and was run three times in a row.</li>
+        <li><strong>Tested on the real screens, on the Mac:</strong> as teacher, student and Super Admin. Sixteen steps, all passed. Report: <code>docs/test-reports/2026-11-24-quiz-practice-teams.html</code>.</li>
+        <li><strong>Found and fixed:</strong> an open practice was a trap for the teacher; a child in practice could not be reached; level teams were shown as first and second; a try was lost if the PC went off after the last answer.</li>
+        <li><strong>Left as it is:</strong> a team with one student shows that student's score as the team's average. A student who joins and never answers counts as 0 in the team's average. Empty teams are not listed. "Quizzes run" on the Teachers report counts practice too.</li>
+      </ul>
+      <div class="note risk"><b>Still to do</b>Steps 6-2, 6-3 and then 6 of <code>docs/windows-test-guide.md</code> on Windows PCs. A Marathi speaker should read the 18 new Marathi lines.</div>
     </section>
 
     <h2 id="order">What we build, in this order</h2>

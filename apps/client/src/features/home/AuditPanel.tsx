@@ -24,6 +24,7 @@ const ACTION: Record<string, string> = {
   'device.enrol': 'joined the lab',
   'device.remove': 'removed a device from the lab',
   'quiz.open': 'opened Lab Mode for',
+  'quiz.practice': 'gave as practice the quiz',
   'quiz.start': 'started the quiz',
   'quiz.end': 'ended the quiz',
   'ai.quiz.request': 'asked the AI for a quiz',

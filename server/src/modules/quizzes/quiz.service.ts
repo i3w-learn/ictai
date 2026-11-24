@@ -8,7 +8,7 @@ import type { ClassRepository } from '../students/class.repository.js';
 import type { QuizRepository } from './quiz.repository.js';
 import type { RunRepository } from './run.repository.js';
 
-const running = () => new AppError(409, 'QUIZ_RUNNING', 'This quiz is running in Lab Mode. End it first.');
+const running = () => new AppError(409, 'QUIZ_RUNNING', 'This quiz is open now, in Lab Mode or as practice. End it first.');
 
 // Spec 4.3: teachers write quizzes by hand (AI generation comes in M5).
 export class QuizService {
