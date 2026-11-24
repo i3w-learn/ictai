@@ -44,6 +44,10 @@ export const Device = z.object({
 // Spec 4.2 "Devices": a teacher locks one screen, or every lab PC at once, to get the class to look up.
 export const ScreenLock = z.object({ locked: z.boolean() });
 export type ScreenLock = z.infer<typeof ScreenLock>;
+// What a PC hears about its own screen. byTimetable: it is locked because no class has the lab right
+// now (see the lock policy), not because a teacher pressed Lock; the screen says so.
+export const ScreenLockState = z.object({ locked: z.boolean(), byTimetable: z.boolean() });
+export type ScreenLockState = z.infer<typeof ScreenLockState>;
 // The live room a PC listens to for its own lock: "device:<its id>".
 export const deviceRoom = (deviceId: string) => `device:${deviceId}`;
 

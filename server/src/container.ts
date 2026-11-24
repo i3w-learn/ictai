@@ -12,6 +12,7 @@ import { StaffAuthService } from './modules/auth/staff-auth.service.js';
 import { StaffRepository } from './modules/auth/staff.repository.js';
 import { DeviceEnrolmentService } from './modules/devices/device-enrolment.service.js';
 import { DeviceRepository } from './modules/devices/device.repository.js';
+import { LockPolicy } from './modules/devices/lock-policy.js';
 import { ScreenLocks } from './modules/devices/screen-locks.js';
 import { ClassRepository } from './modules/students/class.repository.js';
 import { StudentAdminService } from './modules/students/student-admin.service.js';
@@ -178,6 +179,7 @@ export function createContainer(opts: {
     staffAdmin: new StaffAdminService(now, repos.staff, repos.sessions, repos.classes, audit),
     enrolment: new DeviceEnrolmentService(now, repos.devices, identity, new FailureLimiter(now), audit, repos.sessions, db, screenLocks),
     screenLocks,
+    lockPolicy: new LockPolicy(now, () => settings.lockOutsidePeriods(), () => repos.settings.periods(), () => repos.timetable.all(), screenLocks),
     studentAdmin: new StudentAdminService(now, repos.classes, repos.students, repos.sessions, audit),
     quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes, audit),
     runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, audit),

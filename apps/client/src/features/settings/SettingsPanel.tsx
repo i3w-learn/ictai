@@ -55,6 +55,10 @@ export function SettingsPanel({ onSaved }: { onSaved: (saved: SchoolSettings) =>
           <input id="set-ai" type="checkbox" className="size-4 accent-[var(--primary)]" checked={form.aiEnabled} onChange={(e) => change({ aiEnabled: e.target.checked })} />
           Teachers can use AI (Ask AI, Make quiz with AI)
         </label>
+        <label htmlFor="set-lock" className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm">
+          <input id="set-lock" type="checkbox" className="size-4 accent-[var(--primary)]" checked={form.lockOutsidePeriods} onChange={(e) => change({ lockOutsidePeriods: e.target.checked })} />
+          Lock the lab PCs when no class is booked in the lab
+        </label>
       </div>
 
       <div className="grid gap-2">

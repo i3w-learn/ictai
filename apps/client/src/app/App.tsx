@@ -1,5 +1,5 @@
 import { GraduationCap, Lock, LogOut } from 'lucide-react';
-import { deviceRoom, type Principal, type ScreenLock } from '@ict/contracts';
+import { deviceRoom, type Principal, type ScreenLockState } from '@ict/contracts';
 import { EnrolDevice } from '../features/setup/EnrolDevice';
 import { FindServer } from '../features/setup/FindServer';
 import { RolePicker } from '../features/setup/RolePicker';
@@ -57,14 +57,16 @@ function Screen({ phase }: { phase: Exclude<Phase, 'home'> }) {
 }
 
 // What a locked PC shows over everything else. There is nothing to press: only the teacher opens it.
-function LockedScreen() {
+function LockedScreen({ byTimetable }: { byTimetable: boolean }) {
   const t = useT();
   return (
     <div role="alertdialog" aria-label={t('This screen is locked')} className="fixed inset-0 z-[100] grid place-items-center bg-foreground/95 p-8 text-center text-background">
       <div className="grid justify-items-center gap-5">
         <span className="grid size-24 place-items-center rounded-full bg-background/15"><Lock className="size-11" strokeWidth={1.75} /></span>
-        <h1 className="font-display text-5xl font-semibold tracking-tight">{t('Look at your teacher')}</h1>
-        <p className="max-w-xl text-xl text-background/80">{t('Your teacher has locked this screen. It opens again when your teacher unlocks it.')}</p>
+        <h1 className="font-display text-5xl font-semibold tracking-tight">{byTimetable ? t('The lab is closed for now') : t('Look at your teacher')}</h1>
+        <p className="max-w-xl text-xl text-background/80">{byTimetable
+          ? t('No class has the lab right now. This screen opens when a lab period starts, or when a teacher unlocks it.')
+          : t('Your teacher has locked this screen. It opens again when your teacher unlocks it.')}</p>
       </div>
     </div>
   );
@@ -90,11 +92,12 @@ function AppScreens() {
   const person = personOf(state.session?.principal);
   const look = person && PERSON[person.kind];
   // A lab PC or board listens for a teacher locking its screen, signed in or not.
-  const locked = useRelayRoom<ScreenLock>(device ? deviceRoom(device.deviceId) : null).state?.locked === true;
+  const lock = useRelayRoom<ScreenLockState>(device ? deviceRoom(device.deviceId) : null).state;
+  const locked = lock?.locked === true;
 
   return (
     <>
-    {locked && <LockedScreen />}
+    {locked && <LockedScreen byTimetable={lock?.byTimetable === true} />}
     {/* While locked, nothing behind the lock can be reached with the keyboard either. */}
     <div inert={locked} className="flex h-screen w-full flex-col overflow-hidden">
       <header className={cn('ui-topbar flex h-16 shrink-0 items-center gap-3 border-b border-border bg-card px-4 lg:px-6', look && ['border-t-4', look.bar])}>

@@ -22,6 +22,8 @@ export const mr: Record<string, string> = {
   'This screen is locked': 'ही स्क्रीन बंद केली आहे',
   'Look at your teacher': 'शिक्षकांकडे पाहा',
   'Your teacher has locked this screen. It opens again when your teacher unlocks it.': 'तुमच्या शिक्षकांनी ही स्क्रीन बंद केली आहे. शिक्षकांनी उघडल्यावर ती पुन्हा सुरू होईल.',
+  'The lab is closed for now': 'लॅब सध्या बंद आहे',
+  'No class has the lab right now. This screen opens when a lab period starts, or when a teacher unlocks it.': 'सध्या कोणत्याही वर्गाचा लॅबचा तास नाही. लॅबचा तास सुरू झाल्यावर किंवा शिक्षकांनी उघडल्यावर ही स्क्रीन सुरू होईल.',
   'Leave this server? This PC must join the lab again.': 'हा सर्व्हर सोडायचा? या पीसीला पुन्हा लॅबमध्ये सामील व्हावे लागेल.',
   'Change server': 'सर्व्हर बदला',
   "Wipe this PC's setup? It must be set up again.": 'या पीसीची मांडणी पुसायची? ती पुन्हा करावी लागेल.',

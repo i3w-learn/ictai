@@ -61,6 +61,7 @@ export class DeviceEnrolmentService {
       return name;
     })();
     this.audit.record({ kind: 'device', id }, 'device.enrol', id, { kind: req.kind, name });
+    this.locks.joined(id, req.kind);
 
     const { serverId, certFp } = this.identity.current();
     return { deviceId: id, name, token, expiresAt, serverId, certFp };

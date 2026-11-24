@@ -62,7 +62,7 @@ The full list, by who uses it.
 - Classes and sections.
 - Lab PCs: see which are connected, remove one, lock the lab so no new PC can join.
 - What teachers have done, and an activity log of who did what and when.
-- System: school name, the periods of the day, AI on or off for teachers.
+- System: school name, the periods of the day, AI on or off for teachers, and a switch that locks the lab PCs by themselves whenever the timetable has no class in the lab.
 - Notices for the whole school, and freezing a report card for good.
 
 **Smart board**

@@ -7478,6 +7478,10 @@
                     "aiEnabled": {
                       "type": "boolean"
                     },
+                    "lockOutsidePeriods": {
+                      "default": false,
+                      "type": "boolean"
+                    },
                     "periods": {
                       "maxItems": 12,
                       "type": "array",
@@ -7570,6 +7574,10 @@
                   "aiEnabled": {
                     "type": "boolean"
                   },
+                  "lockOutsidePeriods": {
+                    "default": false,
+                    "type": "boolean"
+                  },
                   "periods": {
                     "maxItems": 12,
                     "type": "array",
@@ -7626,6 +7634,10 @@
                       "maxLength": 80
                     },
                     "aiEnabled": {
+                      "type": "boolean"
+                    },
+                    "lockOutsidePeriods": {
+                      "default": false,
                       "type": "boolean"
                     },
                     "periods": {

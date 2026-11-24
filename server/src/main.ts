@@ -32,6 +32,21 @@ async function main() {
   c.aiQueue.start();
   // A class is told within seconds when the teacher showing them a video has gone quiet.
   setInterval(() => c.shows.sweep(), 5_000).unref();
+  // The lab PCs lock when the timetable has no class in the lab, if the Super Admin switched that on.
+  // Looked at now (a server started outside a period locks at once) and then every 15 seconds.
+  let lockPolicyFailed = false;
+  const lockByTimetable = () => {
+    try {
+      c.lockPolicy.tick();
+      lockPolicyFailed = false;
+    } catch (err) {
+      // Said once, not every few seconds, until it works again.
+      if (!lockPolicyFailed) log('lock.policy.failed', { why: err instanceof Error ? err.message : String(err) });
+      lockPolicyFailed = true;
+    }
+  };
+  setInterval(lockByTimetable, 15_000).unref();
+  lockByTimetable();
   // However Node ends (crash included), take llama-server and its memory with it.
   process.on('exit', () => runtime.stop());
   if (config.devAdmin) await c.staffAuth.upsertAccount({ ...config.devAdmin, role: 'super_admin' });

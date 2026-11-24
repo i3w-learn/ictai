@@ -44,13 +44,13 @@ describe('Locking screens', () => {
     const { app, auth, teacher, pc1, lockOne } = await lab();
     const pc = await openRelay(app, auth(pc1.token));
     pc.ws.send(JSON.stringify({ t: 'join', room: `device:${pc1.deviceId}` }));
-    expect((await pc.next('state')).p).toEqual({ locked: false });
+    expect((await pc.next('state')).p).toEqual({ locked: false, byTimetable: false });
     const before = pc.got.length;
     await lockOne(teacher, pc1.deviceId);
-    expect((await pc.next('state', before)).p).toEqual({ locked: true });
+    expect((await pc.next('state', before)).p).toEqual({ locked: true, byTimetable: false });
     const then = pc.got.length;
     await lockOne(teacher, pc1.deviceId, false);
-    expect((await pc.next('state', then)).p).toEqual({ locked: false });
+    expect((await pc.next('state', then)).p).toEqual({ locked: false, byTimetable: false });
     pc.ws.terminate();
   });
 
@@ -64,7 +64,7 @@ describe('Locking screens', () => {
     await lockAll(teacher);
     const pc = await openRelay(app, auth(token));
     pc.ws.send(JSON.stringify({ t: 'join', room: `device:${deviceId}` }));
-    expect((await pc.next('state')).p).toEqual({ locked: true });
+    expect((await pc.next('state')).p).toEqual({ locked: true, byTimetable: false });
     pc.ws.terminate();
   });
 

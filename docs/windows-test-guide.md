@@ -113,6 +113,33 @@ in or the PC is waiting on the sign-in screen.
 3. Try **Lock screen** on one PC's line: only that PC is covered.
 4. Lock a screen, then restart the student PC. When the app opens again it is still locked.
 
+## Step 5a-2: Locking by the timetable
+
+The lab PCs can lock themselves when no class is booked in the lab. Both PCs must show the right
+time and day for this test (it does not work on a Sunday: there are no lab periods then).
+
+1. Server PC: **School** → **Settings**. Add a period that is running now (for example, if it is
+   10:12, from 10:00 to 11:00). Tick **Lock the lab PCs when no class is booked in the lab**. Save.
+2. Server PC: **School** → **Timetable**. Give any class the lab in that period, today.
+
+Check on the student PC: it is **not** covered. A class is booked, so the lab is open.
+
+3. Server PC: **Settings**. Change the period so that it has already ended (10:00 to 10:05). Save.
+
+Check on the student PC: within 15 seconds it is covered by **The lab is closed for now** (not
+"Look at your teacher": no teacher locked it). Press the मराठी button first on one try: the words
+must be in Marathi.
+
+4. Server PC: **Devices** → **Unlock all screens**. The student PC opens. Wait one minute: it must
+   **stay** open. (A teacher's own unlock holds until the next period starts or ends.)
+5. Change the period back so that it is running now, save, and wait 15 seconds. Then change it to
+   have ended again, and save. The student PC is covered again within 15 seconds.
+6. Untick the switch and save. Within 15 seconds the student PC opens, and it does not lock again.
+7. Server PC: Windows Start menu → **Services** → restart `ICTServer` with the switch ticked and the
+   period ended. The student PC is covered within a few seconds of the service starting.
+
+After this, do Step 5a once more: locking by hand must work as before.
+
 ## Step 5b: Our locked videos
 
 Our own videos and books come locked: the file name ends in `.ictlock` and it plays only inside
