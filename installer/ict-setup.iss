@@ -44,6 +44,8 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\ict-client.exe
+; The setup file itself shows the app's icon. The path is from this script's folder.
+SetupIconFile=..\apps\client\src-tauri\icons\icon.ico
 
 [Files]
 Source: "{#Stage}\client\ict-client.exe"; DestDir: "{app}"; Flags: ignoreversion
