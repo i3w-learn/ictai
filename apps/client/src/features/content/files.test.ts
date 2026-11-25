@@ -6,6 +6,9 @@ import { clock, fetchFile, fileProblem, fromBase64, sendFile, shelve, sizeWords,
 const t: T = (s, v) => translate('en', s, v);
 
 const bytesOf = (n: number) => Uint8Array.from({ length: n }, (_, i) => (i * 31 + 7) % 256);
+// A plain byte-by-byte check. `toEqual` on a megabyte of bytes is slow enough to run a test out of time
+// on a busy build machine.
+const same = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
 
 describe('library files', () => {
   it('turns bytes into text and back without losing any', () => {
@@ -33,7 +36,7 @@ describe('library files', () => {
     const api = { chunk: async (_h: string, i: number) => ({ data: toBase64(data.subarray(i * CHUNK_BYTES, (i + 1) * CHUNK_BYTES)), last: i === 1 }) };
     const blob = await fetchFile(api, { fileHash: 'h', mime: 'application/pdf', size: data.length }, () => undefined, () => false);
     expect(blob!.type).toBe('application/pdf');
-    expect(new Uint8Array(await blob!.arrayBuffer())).toEqual(data);
+    expect(same(new Uint8Array(await blob!.arrayBuffer()), data)).toBe(true);
   });
 
   it('gives up quietly when the screen was closed', async () => {

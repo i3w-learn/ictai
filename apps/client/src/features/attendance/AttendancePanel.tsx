@@ -3,6 +3,8 @@ import type { AttendanceDay, AttendanceRow, SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Field, Panel, Select, cn, useAction } from '../../ui/ui';
 
+const ASK_EVERY_MS = 10_000;
+
 const timeOf = (at: number) => new Date(at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
 // Why the student is marked the way they are, in a few words.
@@ -36,6 +38,16 @@ export function AttendancePanel({ refresh, canEdit }: { refresh: number; canEdit
     if (!data) return;
     setData(await call('PUT /api/v1/attendance/:id', { params: { id: r.studentId }, body: { date: data.date, present } }));
   });
+
+  // Today's list is asked for again every few seconds, so a student who signs in shows as present
+  // without the teacher leaving the page. Not for a day gone by (nobody signs in there), and not while
+  // a mark is being saved: an answer asked for before the save would put the old mark back.
+  useEffect(() => {
+    if (!classId || date || mark.busy) return;
+    let alive = true;
+    const timer = setInterval(() => void call('GET /api/v1/attendance', { query: { classId } }).then((d) => { if (alive) setData(d); }, () => undefined), ASK_EVERY_MS);
+    return () => { alive = false; clearInterval(timer); };
+  }, [call, classId, date, mark.busy]);
 
   const present = data?.rows.filter((r) => r.present).length ?? 0;
 
