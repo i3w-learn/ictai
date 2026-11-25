@@ -18,6 +18,8 @@ function greeting(t: T, name: string) {
 // How many of each thing fit on the home screen; the rest is one press away on its own page.
 const BOOKS = 2, SUBJECTS = 6, TODOS = 2;
 
+const ASK_EVERY_MS = 60_000;
+
 // The student's home screen: today's lab periods, books, results and things to do, all at a glance.
 // Each part is a small look at a page in the menu, and its button goes to that page.
 export function StudentDashboard({ name, top, go }: { name: string; top?: ReactNode; go: (page: 'books' | 'progress' | 'todo') => void }) {
@@ -32,10 +34,16 @@ export function StudentDashboard({ name, top, go }: { name: string; top?: ReactN
     let alive = true;
     // A part that cannot load stays quiet here: its own page says what went wrong.
     const into = <T,>(set: (v: T) => void) => (v: T) => { if (alive) set(v); };
-    call('GET /api/v1/content/mine').then(into(setBooks), () => undefined);
-    call('GET /api/v1/me/progress').then(into(setProgress), () => undefined);
-    call('GET /api/v1/todo').then(into(setTodo), () => undefined);
-    return () => { alive = false; };
+    const ask = () => {
+      call('GET /api/v1/content/mine').then(into(setBooks), () => undefined);
+      call('GET /api/v1/me/progress').then(into(setProgress), () => undefined);
+      call('GET /api/v1/todo').then(into(setTodo), () => undefined);
+    };
+    ask();
+    // Asked again every minute, like the notices above: a book or playlist the teacher adds while the
+    // student sits on this screen shows up by itself.
+    const timer = setInterval(ask, ASK_EVERY_MS);
+    return () => { alive = false; clearInterval(timer); };
   }, [call]);
 
   if (open) return <Viewer item={open} onBack={() => setOpen(null)} />;
