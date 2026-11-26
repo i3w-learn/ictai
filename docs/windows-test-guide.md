@@ -152,6 +152,10 @@ ICT App. Do this when you have the pack with the `videos` folder and `2-add-vide
 2. Wait a minute. Open **Videos**: every video from the folder is there, under its class.
 3. Open one. Play, pause and skip to the middle. Do the last row of Step 5 with it.
 4. Student PC: sign in as a student of that class → **Videos** → the video plays.
+5. On both PCs, look at the picture while the video plays: your school's name is written faintly in a
+   corner, and it moves to another place about every 20 seconds.
+6. A chemistry video (its file name has `-Che-`) is listed under **Chemistry**, not with no subject.
+   This is only true on a fresh install: a Server PC that already added the videos keeps them as they are.
 
 Check that the file is no use outside the app: in `C:\Program Files\ICT App\server\starter-videos\`
 double-click a `.ictlock` file, or try to open it with a video player. It must not play.

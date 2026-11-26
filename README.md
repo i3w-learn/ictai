@@ -29,7 +29,7 @@ The full list, by who uses it.
 - Live quiz: join when the teacher opens it, a clock on every question, the score at the end. When the teacher plays it in teams, the student sees their team's colour and, at the end, every team's place.
 - Practice quizzes: under Things to do. No clock, as many tries as they like, and the best try is kept.
 - My books: PDFs, pictures, videos, sound and web links from the library.
-- Videos: the videos for the student's class, including the ones that come with the app.
+- Videos: the videos for the student's class, including the ones that come with the app. The school's name is written faintly over every playing video, so a filmed copy shows where it came from.
 - Activities: small interactive lessons and games from the library that need no internet; the score goes to the teacher.
 - Things to do: playlists and learning paths, ticked off step by step.
 - My work: open work the teacher set, hand it in, see the mark.

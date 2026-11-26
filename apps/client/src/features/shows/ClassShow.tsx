@@ -5,6 +5,7 @@ import { useApp } from '../../app/app-context';
 import { useLatest } from '../../ui/ui';
 import { useT } from '../../i18n/i18n';
 import { useFileUrl } from '../content/useFileUrl';
+import { SchoolMark } from '../content/SchoolMark';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from './Ink';
 import type { InkBoard } from './ink-board';
 import { PenAsk } from './PenAsk';
@@ -315,6 +316,7 @@ function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow
             onError={() => { if (known.current) return wait(true); if (onError) onError(); else { setFailed(true); say('failed'); } }}
           />
         )}
+        {url && !failed && !error && <SchoolMark />}
         {url && !failed && !error && <InkLayer board={board} aspect={aspect} tools={tools} own={myId} />}
       </div>
     </div>
