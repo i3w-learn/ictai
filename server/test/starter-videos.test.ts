@@ -37,6 +37,9 @@ describe('videos that come with the app', () => {
     expect(filingFromName(INTEGERS)).toEqual({ className: '6', subject: 'Maths', title: 'Addition of Integers - Part 1' });
     expect(filingFromName('G10-Eng-Sci-Light.mp4')).toEqual({ className: '10', subject: 'Science', title: 'Light' });
     expect(filingFromName('g07-Water cycle.webm')).toEqual({ className: '7', subject: null, title: 'Water cycle' });
+    // "Mar" is the language (Marathi), not the subject; "Che" is.
+    expect(filingFromName('G9-Mar-Che-03AAA14-Atomic Size-DMV-ILL.mp4')).toEqual({ className: '9', subject: 'Chemistry', title: 'Atomic Size' });
+    expect(filingFromName('G10-Mar-Che-04CC01-Introduction to Carbon Compounds-DMV-ILL.mp4')).toEqual({ className: '10', subject: 'Chemistry', title: 'Introduction to Carbon Compounds' });
     expect(filingFromName('holiday.mp4')).toBeNull();
   });
 
