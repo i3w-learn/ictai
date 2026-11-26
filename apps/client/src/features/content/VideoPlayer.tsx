@@ -3,6 +3,7 @@ import { Maximize, Minimize, Pause, Play, RotateCcw, RotateCw, Volume2, VolumeX 
 import { Button, cn } from '../../ui/ui';
 import { useT } from '../../i18n/i18n';
 import { clock } from './files';
+import { SchoolMark } from './SchoolMark';
 
 const SPEEDS = [1, 1.25, 1.5, 0.75];
 const JUMP = 10;
@@ -207,6 +208,7 @@ export function VideoPlayer({ src, title, onError, onState, peek, pause, layer, 
           }}
         />
 
+        <SchoolMark />
         {/* The one loud thing: a big button in the middle whenever the video is not playing. */}
         {layer}
         {!playing && !waiting && !stuck && !plain && (

@@ -10,7 +10,7 @@ import type { FileStore } from './file-store.js';
 import { LOCK_EXT } from './lock.js';
 import { isActivity, sniff } from './sniff.js';
 
-const SUBJECTS: Record<string, string> = { mat: 'Maths', sci: 'Science', eng: 'English', hin: 'Hindi', sst: 'Social Science', evs: 'EVS', com: 'Computer' };
+const SUBJECTS: Record<string, string> = { mat: 'Maths', sci: 'Science', eng: 'English', hin: 'Hindi', sst: 'Social Science', evs: 'EVS', com: 'Computer', phy: 'Physics', che: 'Chemistry', bio: 'Biology' };
 
 // Where a starter video or book is filed, read from its file name. They come named like
 //   "G6-Mar-Mat-06Int11-Addition of Integers -Part 1-DMV-ILL.mp4"
