@@ -23,14 +23,16 @@ export class StudentRepository {
 
   insert(s: {
     id: string; name: string; classId: string; sectionId: string | null; rollNo: string | null;
-    qrTokenHash: string; now: number;
+    now: number;
   }): Student {
+    // The qr_token_hash column is left from the sign-in cards, which are gone. It must still hold a
+    // value no other student has, so it gets the student's own id.
     this.db
       .prepare(
         `INSERT INTO students (id, name, class_id, section_id, roll_no, qr_token_hash, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(s.id, s.name, s.classId, s.sectionId, s.rollNo, s.qrTokenHash, s.now, s.now);
+      .run(s.id, s.name, s.classId, s.sectionId, s.rollNo, s.id, s.now, s.now);
     return { id: s.id, name: s.name, classId: s.classId, sectionId: s.sectionId, rollNo: s.rollNo };
   }
 
@@ -75,10 +77,6 @@ export class StudentRepository {
     return same.some((r) => (r === null || rollNo === null ? r === rollNo : rollKey(r) === rollKey(rollNo)));
   }
 
-  setQrHash(id: string, hash: string, now: number) {
-    this.db.prepare('UPDATE students SET qr_token_hash = ?, updated_at = ? WHERE id = ?').run(hash, now, id);
-  }
-
   // Moves every active student; each section is swapped for the new class's section of the same name, or cleared.
   moveClass(fromClassId: string, toClassId: string, sectionMap: Map<string, string | null>, now: number): number {
     const rows = this.db
@@ -101,11 +99,5 @@ export class StudentRepository {
     return this.db
       .prepare(`SELECT ${AUTH_COLUMNS} FROM students WHERE id = ? AND status = 'active'`)
       .get(id) as StudentAuthRow | undefined;
-  }
-
-  findByQrHash(hash: string): StudentAuthRow | undefined {
-    return this.db
-      .prepare(`SELECT ${AUTH_COLUMNS} FROM students WHERE qr_token_hash = ? AND status = 'active'`)
-      .get(hash) as StudentAuthRow | undefined;
   }
 }

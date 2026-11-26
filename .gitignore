@@ -12,3 +12,5 @@ installer/Output/
 .docker-data
 # Videos that come with the app: kept as release files, never in the code.
 starter-videos/
+# Locked copies of our videos and books (installer/lock-videos.mjs).
+*.ictlock

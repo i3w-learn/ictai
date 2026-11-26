@@ -10,6 +10,9 @@ import { aiRoutes } from './modules/ai/ai.routes.js';
 import { resultRoutes } from './modules/results/results.routes.js';
 import { noteRoutes } from './modules/notes/notes.routes.js';
 import { noticeRoutes } from './modules/notices/notices.routes.js';
+import { attendanceRoutes } from './modules/attendance/attendance.routes.js';
+import { activityRoutes } from './modules/activities/activities.routes.js';
+import { pollRoutes } from './modules/polls/polls.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
 import { timetableRoutes } from './modules/timetable/timetable.routes.js';
 import { workRoutes } from './modules/work/work.routes.js';
@@ -46,7 +49,7 @@ export function buildApp(c: Container, opts: AppOptions = {}) {
   relayRoutes(app, { relay: c.relay, resolver: c.resolver });
   systemRoutes(app, { identity: c.identity, audit: c.audit });
   authRoutes(app, { staffAuth: c.staffAuth, sessions: c.sessions });
-  deviceRoutes(app, { enrolment: c.enrolment });
+  deviceRoutes(app, { enrolment: c.enrolment, locks: c.screenLocks });
   staffRoutes(app, { admin: c.staffAdmin });
   quizRoutes(app, { quizzes: c.quizzes, runs: c.runs });
   studentRoutes(app, { admin: c.studentAdmin, auth: c.studentAuth });
@@ -54,12 +57,15 @@ export function buildApp(c: Container, opts: AppOptions = {}) {
   resultRoutes(app, { results: c.results, progress: c.progress });
   noteRoutes(app, { notes: c.notes });
   noticeRoutes(app, { notices: c.notices });
+  attendanceRoutes(app, { attendance: c.attendance });
+  activityRoutes(app, { activities: c.activities });
+  pollRoutes(app, { polls: c.polls });
   settingsRoutes(app, { settings: c.settings });
   timetableRoutes(app, { timetable: c.timetable });
   workRoutes(app, { work: c.work });
   reportCardRoutes(app, { reportCards: c.reportCards });
   contentRoutes(app, { content: c.content });
   sequenceRoutes(app, { sequences: c.sequences });
-  showRoutes(app, { shows: c.shows });
+  showRoutes(app, { shows: c.shows, pens: c.showPens });
   return app;
 }

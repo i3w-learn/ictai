@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AuditEntry } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Panel, useAction } from '../../ui/ui';
+import { cardStudent } from './audit-words';
 
 // Plain words for each logged action. Unknown actions show their raw key.
 const ACTION: Record<string, string> = {
@@ -24,6 +25,7 @@ const ACTION: Record<string, string> = {
   'device.enrol': 'joined the lab',
   'device.remove': 'removed a device from the lab',
   'quiz.open': 'opened Lab Mode for',
+  'quiz.practice': 'gave as practice the quiz',
   'quiz.start': 'started the quiz',
   'quiz.end': 'ended the quiz',
   'ai.quiz.request': 'asked the AI for a quiz',
@@ -36,7 +38,7 @@ const ACTION: Record<string, string> = {
   'path.delete': 'removed the learning path',
   'content.add': 'added to the library',
   'content.delete': 'removed from the library',
-  'report_cards.make': 'made report cards',
+  'report_cards.make': 'made report cards for class',
   'report_card.published': 'published the report card of',
   'report_card.draft': 'took back to draft the report card of',
   'report_card.frozen': 'froze the report card of',
@@ -44,8 +46,8 @@ const ACTION: Record<string, string> = {
   'work.delete': 'took away a piece of work',
   'timetable.set': 'booked the lab in the timetable',
   'timetable.clear': 'freed a lab period in the timetable',
-  'show.start': 'started showing a video to the class',
-  'show.stop': 'stopped showing a video',
+  'show.start': 'started showing to the class',
+  'show.stop': 'stopped showing',
   'notice.create': 'put up a notice',
   'notice.delete': 'took down a notice',
 };
@@ -83,6 +85,7 @@ export function AuditPanel() {
               {e.action === 'ai.quiz.request' && (e.detail as { topic?: string } | null)?.topic && <> on <b className="font-semibold">{(e.detail as { topic: string }).topic}</b></>}
               {e.action === 'ai.ask.request' && (e.detail as { question?: string } | null)?.question && <>: <i>“{shorten((e.detail as { question: string }).question)}”</i></>}
               {(e.action === 'show.start' || e.action === 'show.stop') && (e.detail as { title?: string } | null)?.title && <>: <b className="font-semibold">{(e.detail as { title: string }).title}</b></>}
+              {cardStudent(e) && <> <b className="font-semibold">{cardStudent(e)}</b></>}
               {e.action === 'signin.failed' && e.target && <span className="text-muted-foreground"> as “{e.target}”</span>}
             </span>
           </li>

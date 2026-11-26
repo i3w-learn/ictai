@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { ImportResult, SchoolClass, Section, Student } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ConfirmButton, ErrorNote, Field, Note, Panel, Select, useAction } from '../../ui/ui';
-import { ClassSheet, type Sheet } from './ClassSheet';
 import { toImportRows } from './import';
 import { StudentRow } from './StudentRow';
 
@@ -22,7 +21,6 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
   const [form, setForm] = useState({ name: '', rollNo: '', sectionId: '' });
   const [promoteTo, setPromoteTo] = useState('');
   const [promoted, setPromoted] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<Sheet | null>(null);
   const [imported, setImported] = useState<(ImportResult & { firstLine: number }) | null>(null);
   const filePicker = useRef<HTMLInputElement>(null);
   const className = classes.find((c) => c.id === classId)?.name ?? '';
@@ -90,11 +88,6 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
     onChanged();
   });
 
-  const makeCards = useAction(async () => {
-    setSheet({ className, rows: await call('POST /api/v1/classes/:id/cards', { params: { id: classId } }) });
-    await loadClass.run(classId);
-  });
-
   const promote = useAction(async () => {
     const to = classes.find((c) => c.id === promoteTo)!;
     const { moved } = await call('POST /api/v1/classes/:id/promote', { params: { id: classId }, body: { toClassId: to.id } });
@@ -106,11 +99,10 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
 
   // One line under the panel says what went wrong. It is wiped before each new thing the teacher
   // does, so an old problem (say, from adding a class) is never read as the answer to the new one.
-  const fresh = () => [addClass, addSection, addStudent, importFile, makeCards, promote].forEach((a) => a.clear());
+  const fresh = () => [addClass, addSection, addStudent, importFile, promote].forEach((a) => a.clear());
 
   return (
     <Panel title="Students">
-      {sheet && <ClassSheet sheet={sheet} onClose={() => setSheet(null)} />}
       <div className="flex flex-wrap items-end gap-3">
         <Select aria-label="Class" value={classId} onChange={(e) => pickClass(e.target.value)}>
           <option value="">Choose a class</option>
@@ -165,7 +157,6 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
           {students.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-xl bg-secondary px-3 py-2">
               <span className="text-sm font-medium text-secondary-foreground">Whole class</span>
-              <ConfirmButton question="New cards stop old ones working. Go ahead?" onConfirm={() => { fresh(); void makeCards.run(); }}>Print sign-in cards</ConfirmButton>
               <span className="flex-1" />
               <Select aria-label="Move all to class" value={promoteTo} onChange={(e) => setPromoteTo(e.target.value)}>
                 <option value="">Move all to class…</option>
@@ -189,7 +180,7 @@ export function StudentsPanel({ onChanged }: { onChanged: () => void }) {
           </ul>
         </>
       )}
-      <ErrorNote message={loadClasses.error ?? loadClass.error ?? addClass.error ?? addSection.error ?? addStudent.error ?? importFile.error ?? makeCards.error ?? promote.error} />
+      <ErrorNote message={loadClasses.error ?? loadClass.error ?? addClass.error ?? addSection.error ?? addStudent.error ?? importFile.error ?? promote.error} />
     </Panel>
   );
 }

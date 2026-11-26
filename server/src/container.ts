@@ -12,6 +12,8 @@ import { StaffAuthService } from './modules/auth/staff-auth.service.js';
 import { StaffRepository } from './modules/auth/staff.repository.js';
 import { DeviceEnrolmentService } from './modules/devices/device-enrolment.service.js';
 import { DeviceRepository } from './modules/devices/device.repository.js';
+import { LockPolicy } from './modules/devices/lock-policy.js';
+import { ScreenLocks } from './modules/devices/screen-locks.js';
 import { ClassRepository } from './modules/students/class.repository.js';
 import { StudentAdminService } from './modules/students/student-admin.service.js';
 import { StudentAuthService } from './modules/students/student-auth.service.js';
@@ -28,6 +30,12 @@ import { NoteRepository } from './modules/notes/note.repository.js';
 import { NoteService } from './modules/notes/note.service.js';
 import { NoticeRepository } from './modules/notices/notice.repository.js';
 import { NoticeService } from './modules/notices/notice.service.js';
+import { AttendanceRepository } from './modules/attendance/attendance.repository.js';
+import { AttendanceService } from './modules/attendance/attendance.service.js';
+import { ActivityRepository } from './modules/activities/activity.repository.js';
+import { ActivityService } from './modules/activities/activity.service.js';
+import { PollRepository } from './modules/polls/poll.repository.js';
+import { PollService } from './modules/polls/poll.service.js';
 import { SettingsRepository } from './modules/settings/settings.repository.js';
 import { SettingsService } from './modules/settings/settings.service.js';
 import { TimetableRepository } from './modules/timetable/timetable.repository.js';
@@ -39,15 +47,19 @@ import { ReportCardService } from './modules/report-cards/report-card.service.js
 import { ContentRepository } from './modules/content/content.repository.js';
 import { ContentService } from './modules/content/content.service.js';
 import { FileStore } from './modules/content/file-store.js';
+import type { OfficeConverter } from './modules/content/office.js';
 import { StarterVideos } from './modules/content/starter-videos.js';
 import { SequenceRepository } from './modules/sequences/sequence.repository.js';
 import { SequenceService } from './modules/sequences/sequence.service.js';
+import { ShowPenService } from './modules/shows/show-pen.service.js';
 import { ShowService } from './modules/shows/show.service.js';
+import { ShowStore } from './modules/shows/show.store.js';
 import { Relay } from './relay/relay.js';
 import { aiNotInstalled } from './core/errors.js';
 import { AiService, type AiRuntimeInfo } from './modules/ai/ai.service.js';
 import { AnswerGenerator } from './modules/ai/answer-generator.js';
 import { TutorGenerator } from './modules/ai/tutor-generator.js';
+import { PlanGenerator } from './modules/ai/plan-generator.js';
 import { JobQueue, type JobRunners } from './modules/ai/job-queue.js';
 import { JobRepository } from './modules/ai/job.repository.js';
 import { noEventLog, type EventLog } from './core/event-log.js';
@@ -70,7 +82,11 @@ export function createContainer(opts: {
   dataDir?: string;
   // The folder of videos that come with the app. Left out, the server has none to add.
   starterDir?: string;
+  // Opens our locked videos and books (see modules/content/lock.ts).
+  contentKey?: Buffer | null;
   ai?: { runtime: AiRuntimeInfo & { ensureReady?(): Promise<void> }; llm: Llm };
+  // Turns Word, Excel and PowerPoint files into PDFs (LibreOffice). Left out, there is none.
+  office?: OfficeConverter;
   // The server's diary (events.log). Left out in tests, which then write nothing.
   log?: EventLog;
 }) {
@@ -88,6 +104,9 @@ export function createContainer(opts: {
     results: new ResultsRepository(db),
     notes: new NoteRepository(db),
     notices: new NoticeRepository(db),
+    attendance: new AttendanceRepository(db),
+    polls: new PollRepository(db),
+    activities: new ActivityRepository(db),
     settings: new SettingsRepository(db),
     timetable: new TimetableRepository(db),
     work: new WorkRepository(db),
@@ -110,10 +129,14 @@ export function createContainer(opts: {
   const load = ai.runtime.ensureReady?.bind(ai.runtime);
   const answers = new AnswerGenerator(ai.llm);
   const tutor = new TutorGenerator(ai.llm);
+  // Subjects are matched without caring about capitals, as everywhere else.
+  const planner = new PlanGenerator(ai.llm, (id) => repos.classes.name(id) ?? null, (classId, subject) =>
+    repos.content.all(classId).filter((i) => i.subject?.toLowerCase() === subject.toLowerCase()).map((i) => ({ title: i.title, kind: i.kind, chapter: i.chapter })));
   const runners = {
     quiz: (req, signal) => generator.generate(req, signal),
     ask: (req, signal) => answers.answer(req, signal),
     tutor: (req, signal) => tutor.answer(req, signal),
+    plan: (req, signal) => planner.plan(req, signal),
   } satisfies JobRunners;
   const aiQueue = new JobQueue(now, repos.aiJobs, runners, undefined, load);
 
@@ -121,7 +144,16 @@ export function createContainer(opts: {
   const timetable = new TimetableService(now, repos.timetable, repos.classes, () => repos.settings.periods(), audit);
   const settings = new SettingsService(now, repos.settings, audit, db, (periodId) => timetable.dropPeriod(periodId));
 
-  const fileStore = new FileStore(opts.dataDir ?? mkdtempSync(join(tmpdir(), 'ict-files-')));
+  const fileStore = new FileStore(opts.dataDir ?? mkdtempSync(join(tmpdir(), 'ict-files-')), opts.contentKey ?? null);
+  // Is this student signed in on a lab PC right now? A student who has left cannot hold the pen.
+  const signedIn = (studentId: string) => repos.sessions.liveStudentDevice(studentId, '', now()) !== undefined;
+  const showStore = new ShowStore(now, repos.content, signedIn, opts.log);
+  const showPens = new ShowPenService(showStore, relay, signedIn, opts.log);
+
+  const attendance = new AttendanceService(now, repos.attendance, repos.classes, repos.students, audit);
+
+  const screenLocks = new ScreenLocks(repos.devices, relay, audit);
+
   const firstAdmin = () => db.prepare("SELECT id FROM users WHERE role = 'super_admin' AND status = 'active' ORDER BY created_at LIMIT 1").pluck().get() as string | undefined;
 
   return {
@@ -138,13 +170,16 @@ export function createContainer(opts: {
     settings,
     timetable,
     work: new WorkService(now, repos.work, repos.classes, audit),
-    content: new ContentService(now, repos.content, fileStore, repos.classes, audit),
-    shows: new ShowService(now, repos.content, relay, audit, opts.log, (id) => repos.devices.name(id), (studentId) => repos.sessions.liveStudentDevice(studentId, '', now()) !== undefined),
+    content: new ContentService(now, repos.content, fileStore, repos.classes, audit, opts.office),
+    shows: new ShowService(now, showStore, showPens, repos.content, repos.classes, repos.devices, relay, audit, opts.log),
+    showPens,
     sequences: new SequenceService(now, repos.sequences, repos.content, repos.work, repos.classes, audit),
     reportCards: new ReportCardService(now, repos.reportCards, repos.classes, repos.students, results, repos.work, audit),
     staffAuth: new StaffAuthService(now, repos.staff, sessions, new FailureLimiter(now), audit),
     staffAdmin: new StaffAdminService(now, repos.staff, repos.sessions, repos.classes, audit),
-    enrolment: new DeviceEnrolmentService(now, repos.devices, identity, new FailureLimiter(now), audit, repos.sessions, db),
+    enrolment: new DeviceEnrolmentService(now, repos.devices, identity, new FailureLimiter(now), audit, repos.sessions, db, screenLocks),
+    screenLocks,
+    lockPolicy: new LockPolicy(now, () => settings.lockOutsidePeriods(), () => repos.settings.periods(), () => repos.timetable.all(), screenLocks),
     studentAdmin: new StudentAdminService(now, repos.classes, repos.students, repos.sessions, audit),
     quizzes: new QuizService(now, repos.quizzes, repos.runs, repos.classes, audit),
     runs: new RunService(now, repos.runs, repos.quizzes, repos.classes, relay, audit),
@@ -152,7 +187,10 @@ export function createContainer(opts: {
     progress: new ProgressService(now, results, repos.work),
     notes: new NoteService(now, repos.notes),
     notices: new NoticeService(now, repos.notices, repos.classes, audit),
-    studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, new FailureLimiter(now), audit, repos.sessions, repos.devices),
+    attendance,
+    activities: new ActivityService(now, repos.activities, repos.content),
+    polls: new PollService(now, repos.polls, repos.classes, relay, audit),
+    studentAuth: new StudentAuthService(now, repos.classes, repos.students, sessions, audit, repos.sessions, repos.devices, (studentId) => attendance.signedIn(studentId)),
   };
 }
 

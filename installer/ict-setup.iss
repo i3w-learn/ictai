@@ -18,8 +18,8 @@
 ; Folder with the staged files, laid out by the CI job:
 ;   stage\client\ict-client.exe
 ;   stage\server\{node.exe, server.cjs, node_modules\better-sqlite3\..., ict-server.exe, ict-server.xml}
-;   stage\server\starter-videos\*.mp4   (optional) videos that come with the app; the server
-;                                        adds them to the library the first time it runs.
+;   stage\server\starter-videos\*.mp4, *.webm, *.pdf, *.html   (optional) videos, books and activities that come with
+;                                        the app; the server adds them to the library the first time it runs.
 #ifndef Stage
   #define Stage "..\stage"
 #endif
@@ -44,6 +44,8 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\ict-client.exe
+; The setup file itself shows the app's icon. The path is from this script's folder.
+SetupIconFile=..\apps\client\src-tauri\icons\icon.ico
 
 [Files]
 Source: "{#Stage}\client\ict-client.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -114,7 +116,10 @@ begin
     'You will use this to sign in to the console. The password needs at least 8 characters.');
   AdminPage.Add('Username:', False);
   AdminPage.Add('Password:', True);
-  AdminPage.Values[0] := 'admin';
+  // An install with no questions (/VERYSILENT) has nobody to type these, so they may be given
+  // on the command line: /AdminUser=name /AdminPassword=secret
+  AdminPage.Values[0] := ExpandConstant('{param:AdminUser|admin}');
+  AdminPage.Values[1] := ExpandConstant('{param:AdminPassword|}');
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;

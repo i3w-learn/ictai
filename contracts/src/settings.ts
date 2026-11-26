@@ -18,6 +18,9 @@ export const SchoolSettings = z.object({
   schoolName: z.string().trim().min(1, 'Type the school name').max(80),
   // Off: nobody can ask the AI for a quiz or an answer, even if the AI kit is installed.
   aiEnabled: z.boolean(),
+  // On: the lab PCs lock themselves whenever the timetable has no class in the lab, and open when one starts.
+  // A form saved without it means off.
+  lockOutsidePeriods: z.boolean().default(false),
   periods: z.array(Period).max(MAX_PERIODS),
 });
 export type SchoolSettings = z.infer<typeof SchoolSettings>;

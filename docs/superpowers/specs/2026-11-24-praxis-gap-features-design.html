@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRAXIS Gap Features</title>
+<style>
+/* Same look as the other docs in this folder, but with no outside fonts: the page opens with no internet. */
+:root {
+  --bg: #F4F6F5; --surface: #FFFFFF; --ink: #15211D; --muted: #56645F; --line: #D6DEDA;
+  --accent: #1E6A50; --accent-soft: #E1EEE8; --warm: #A8661C; --warm-soft: #F6EADB;
+  --risk: #A23B2E; --risk-soft: #F6E1DD;
+  --body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1613; --surface: #16201C; --ink: #E3EBE7; --muted: #9AAAA3; --line: #2A3732;
+    --accent: #5FC29B; --accent-soft: #1B3129; --warm: #E2A256; --warm-soft: #33271A;
+    --risk: #F08A7B; --risk-soft: #3A2220; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1613; --surface: #16201C; --ink: #E3EBE7; --muted: #9AAAA3; --line: #2A3732;
+  --accent: #5FC29B; --accent-soft: #1B3129; --warm: #E2A256; --warm-soft: #33271A;
+  --risk: #F08A7B; --risk-soft: #3A2220; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.6; padding: 0 16px; }
+.shell { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; padding-block: 40px 80px; }
+@media (max-width: 900px) { .shell { grid-template-columns: minmax(0, 1fr); gap: 0; padding-block: 24px 64px; } nav { display: none; } }
+nav { position: sticky; top: 24px; align-self: start; font-size: 14px; }
+nav .group { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 20px 0 6px; }
+nav a { display: block; color: var(--ink); text-decoration: none; padding: 3px 0 3px 12px; border-left: 2px solid var(--line); }
+nav a:hover, nav a:focus-visible { border-left-color: var(--accent); color: var(--accent); outline: none; }
+main { min-width: 0; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+h1, h2, h3 { line-height: 1.2; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 46px); letter-spacing: -0.02em; margin-top: 10px; }
+h2 { font-size: 26px; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); }
+h3 { font-size: 20px; }
+p { max-width: 68ch; }
+.lede { font-size: 19px; margin: 16px 0 0; }
+.meta { margin-top: 16px; font-size: 13px; color: var(--muted); font-family: var(--mono); }
+.wide { overflow-x: auto; margin: 16px 0; }
+table { border-collapse: collapse; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; font-size: 15px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-family: var(--mono); color: var(--accent); font-weight: 600; }
+.tag { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.tag.warm { background: var(--warm-soft); color: var(--warm); }
+.tag.risk { background: var(--risk-soft); color: var(--risk); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px 24px; margin-top: 20px; }
+.card .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px; }
+.card .n { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+.card h4 { margin: 18px 0 4px; font-size: 13px; font-family: var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.card ol, .card ul { margin: 6px 0 0; padding-left: 22px; max-width: 68ch; }
+.card li { margin: 4px 0; }
+.note { border-left: 3px solid var(--warm); background: var(--warm-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin-top: 16px; max-width: 72ch; }
+.note.risk { border-left-color: var(--risk); background: var(--risk-soft); }
+.note b { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 2px; }
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-top: 16px; }
+.flow .box { flex: 1 1 150px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 14px; }
+.flow .box b { display: block; color: var(--accent); }
+.flow .arrow { align-self: center; color: var(--muted); font-size: 20px; }
+@media (max-width: 700px) { .flow .arrow { display: none; } }
+code { font-family: var(--mono); font-size: .9em; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+ul.plain { padding-left: 22px; max-width: 68ch; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav aria-label="On this page">
+    <div class="group">Plan</div>
+    <a href="#why">Why</a>
+    <a href="#done">Done so far</a>
+    <a href="#order">What we build</a>
+    <a href="#not">What we do not build</a>
+    <a href="#rules">Rules for all eight</a>
+    <a href="#blocks">Under the hood</a>
+    <div class="group">How each one works</div>
+    <a href="#f1">1 · Lock policy</a>
+    <a href="#f2">2 · Quiz: own speed, teams</a>
+    <a href="#f3">3 · Messages</a>
+    <a href="#f4">4 · Next steps</a>
+    <a href="#f5">5 · Lesson recording</a>
+    <a href="#f6">6 · Seeing a screen</a>
+    <a href="#f7">7 · Smart board lesson</a>
+    <a href="#f8">8 · Teacher app</a>
+    <div class="group">Before we start</div>
+    <a href="#open">Open questions</a>
+    <a href="#test">Testing</a>
+    <a href="#approach">Why this order</a>
+  </nav>
+
+  <main>
+    <header>
+      <div class="eyebrow">ICT App · design</div>
+      <h1>The PRAXIS features we still lack</h1>
+      <p class="lede">What we will build, how each one works, and in what order.</p>
+      <div class="meta">2026-11-24 · draft, waiting for the user's yes</div>
+    </header>
+
+    <h2 id="why">Why</h2>
+    <p>ICT App is meant to do everything PRAXIS does. A check of the code on 2026-11-24 found the PRAXIS features that are still missing. The user chose which of them to build.</p>
+    <p>This page is the map for all eight. Each feature still gets its own short design and the user's yes before its code is written.</p>
+
+    <h2 id="done">What is done so far</h2>
+    <p>Last changed: 2026-11-24.</p>
+    <div class="wide"><table><thead><tr><th>#</th><th>Feature</th><th>State</th></tr></thead><tbody>
+      <tr><td class="num">1</td><td>Lock policy</td><td><span class="tag">Built</span> Tested on the Mac. Not yet tried on Windows.</td></tr>
+      <tr><td class="num">2</td><td>Quiz: at your own speed, and teams</td><td><span class="tag">Built</span> Tested on the Mac. Not yet tried on Windows.</td></tr>
+      <tr><td class="num">3</td><td>Messages</td><td>Not started</td></tr>
+      <tr><td class="num">4</td><td>Next steps</td><td>Not started</td></tr>
+      <tr><td class="num">5</td><td>Lesson recording</td><td>Not started</td></tr>
+      <tr><td class="num">6</td><td>Seeing a student's screen</td><td>Not started</td></tr>
+      <tr><td class="num">7</td><td>Live lesson on the smart board</td><td>Waiting for the user's answer (open question 1)</td></tr>
+      <tr><td class="num">8</td><td>Teacher app</td><td>Waiting for the user's answer (open question 1)</td></tr>
+    </tbody></table></div>
+    <section class="card">
+      <div class="head"><span class="n">1</span><h3>Lock policy: what was done</h3></div>
+      <ul>
+        <li><strong>Built:</strong> a switch on the System screen, "Lock the lab PCs when no class is booked in the lab". With it on, the server looks at the clock and the timetable every 15 seconds and locks or opens the lab PCs when a booked period starts or ends. A PC locked this way says "The lab is closed for now" (English and Marathi), not "Look at your teacher".</li>
+        <li><strong>Tested by the computer:</strong> 20 tests about this feature. The whole set (458 server tests, 125 app tests) passes, and was run three times in a row.</li>
+        <li><strong>Tested on the real screens, on the Mac:</strong> as Super Admin, as a teacher and as a student. Seven steps, all passed. The report with pictures is <code>docs/test-reports/2026-11-24-lock-policy.html</code>.</li>
+        <li><strong>Found by testing and fixed:</strong> turning the switch on during a class, or off, used to open screens a teacher had locked by hand; and a PC locked by the timetable used to say a teacher had locked it.</li>
+        <li><strong>Left as it is:</strong> with two booked periods one after the other, a teacher's lock from the first carries into the second. If the <code>ICTServer</code> service restarts when no class is booked, a teacher's unlock by hand is lost.</li>
+      </ul>
+      <div class="note risk"><b>Still to do</b>Run "Step 5a-2" and "Step 5a" of <code>docs/windows-test-guide.md</code> on two Windows PCs. Have a Marathi speaker read the one new Marathi sentence.</div>
+    </section>
+
+    <section class="card">
+      <div class="head"><span class="n">2</span><h3>Quiz (practice and teams): what was done</h3></div>
+      <ul>
+        <li><strong>Built, practice:</strong> a teacher presses "Give as practice" on a quiz. The class finds it under Things to do, with no clock, and can try again as often as they like; the best finished try is kept. The last answer hands the try in by itself. The teacher sees each student's tries and best score live. Practice never counts for results or report cards.</li>
+        <li><strong>Built, teams:</strong> when opening Lab Mode the teacher picks 2, 3 or 4 teams. Students are put in the smallest team as they join, and see their team's colour. A team's score is the average of its members' scores. Teams that are level share a place.</li>
+        <li><strong>A child in practice can still be reached:</strong> what the teacher shows the class, a live quiz and a poll come up over a practice quiz.</li>
+        <li><strong>Tested by the computer:</strong> 16 new tests. The whole set (474 server tests, 125 app tests) passes, and was run three times in a row.</li>
+        <li><strong>Tested on the real screens, on the Mac:</strong> as teacher, student and Super Admin. Sixteen steps, all passed. Report: <code>docs/test-reports/2026-11-24-quiz-practice-teams.html</code>.</li>
+        <li><strong>Found and fixed:</strong> an open practice was a trap for the teacher; a child in practice could not be reached; level teams were shown as first and second; a try was lost if the PC went off after the last answer.</li>
+        <li><strong>Left as it is:</strong> a team with one student shows that student's score as the team's average. A student who joins and never answers counts as 0 in the team's average. Empty teams are not listed. "Quizzes run" on the Teachers report counts practice too.</li>
+      </ul>
+      <div class="note risk"><b>Still to do</b>Steps 6-2, 6-3 and then 6 of <code>docs/windows-test-guide.md</code> on Windows PCs. A Marathi speaker should read the 18 new Marathi lines.</div>
+    </section>
+
+    <h2 id="order">What we build, in this order</h2>
+    <p>Small ones first, so something useful is finished early. Each one can be installed and used without the ones after it.</p>
+    <div class="wide">
+      <table>
+        <thead><tr><th>#</th><th>Feature</th><th>Size</th><th>New on the Windows side</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Lock policy</td><td><span class="tag">Small</span></td><td>Nothing</td></tr>
+          <tr><td class="num">2</td><td>Quiz: at your own speed, and teams</td><td><span class="tag">Medium</span></td><td>Nothing</td></tr>
+          <tr><td class="num">3</td><td>Messages (teacher and student)</td><td><span class="tag">Medium</span></td><td>Nothing</td></tr>
+          <tr><td class="num">4</td><td>Next steps for each student</td><td><span class="tag">Small</span></td><td>Nothing</td></tr>
+          <tr><td class="num">5</td><td>Lesson recording</td><td><span class="tag">Medium</span></td><td>More disk used on the Server PC</td></tr>
+          <tr><td class="num">6</td><td>Seeing a student's screen</td><td><span class="tag warm">Large</span></td><td>Takes pictures of the Windows screen. Cannot be tried on the Mac.</td></tr>
+          <tr><td class="num">7</td><td>Live lesson on the smart board</td><td><span class="tag warm">Large</span></td><td>A new full-screen window</td></tr>
+          <tr><td class="num">8</td><td>Teacher app</td><td><span class="tag risk">Not decided</span></td><td>A new choice in the installer</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="not">What we do not build</h2>
+    <p><strong>The user said no to these four:</strong></p>
+    <ul class="plain">
+      <li>External activities (opening games installed on the PC)</li>
+      <li>Device commands (restart app, reload, open content, re-key)</li>
+      <li>Parents / Family mode</li>
+      <li>Split screen</li>
+    </ul>
+    <p><strong>Claude suggests leaving out these three as well.</strong> The user has not yet said yes to this.</p>
+    <div class="wide">
+      <table>
+        <thead><tr><th>Feature</th><th>Why leave it out</th></tr></thead>
+        <tbody>
+          <tr><td>Cloud: licence, lockdown, shared library, app updates, daily totals</td><td>The lab has no internet, so none of it can run.</td></tr>
+          <tr><td>Android board app</td><td>The school's board is a Windows PC, installed with <code>ICT-Setup</code>.</td></tr>
+          <tr><td>Student PIN, QR card, enrolment code</td><td>Sign-in by class and roll number was chosen on purpose, so young children can sign in by themselves.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="rules">Rules for all eight</h2>
+    <ul class="plain">
+      <li><strong>No internet.</strong> Everything goes between the Server PC and the lab PCs on the school's own network, over the two ports that are already open (TCP 7700, UDP 7701). No new firewall rule.</li>
+      <li><strong>The Server PC is off at night.</strong> Nothing depends on it running then.</li>
+      <li><strong>One database file.</strong> New data goes into the same file in <code>C:\ProgramData\ICT App\server\</code>, each change as a new numbered step, so an installed school is upgraded without losing anything.</li>
+      <li><strong>One open line.</strong> Live things (a message arriving, a lock, a screen picture) use the line the app already keeps open to the server.</li>
+      <li><strong>Two languages.</strong> New student screens are written in English and Marathi.</li>
+    </ul>
+    <div class="flow" role="img" aria-label="Lab PCs and the smart board talk only to the Server PC, on the school network.">
+      <div class="box"><b>Student lab PCs</b>up to 60, Windows</div>
+      <div class="arrow">⇄</div>
+      <div class="box"><b>Server PC</b><code>ICTServer</code> service, the database, the library files</div>
+      <div class="arrow">⇄</div>
+      <div class="box"><b>Smart board</b>Windows</div>
+    </div>
+
+    <h2 id="blocks">Under the hood: the four building blocks</h2>
+    <p>Every feature below is made from these four parts, which the app already has. None of the eight needs a new kind of part. Each feature card ends with its own "Under the hood" list.</p>
+    <div class="wide">
+      <table>
+        <thead><tr><th>Part</th><th>What it does</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Ask and answer</strong></td><td>The app asks the server for something over HTTPS on port 7700. A request goes through three layers: the <em>route</em> (who is asking, what they sent), the <em>service</em> (the rules), the <em>repository</em> (reads and writes the database file).</td><td><code>server/src/modules/</code></td></tr>
+          <tr><td><strong>Rooms on the open line</strong></td><td>Each app keeps one line open to the server and joins named rooms on it: <code>device:&lt;PC&gt;</code> for its own lock, <code>show:&lt;class&gt;</code>, <code>quiz:&lt;run&gt;</code>, <code>poll:&lt;class&gt;</code>. When something changes, the server tells everyone in that room. Each room has a rule for who may join.</td><td><code>server/src/relay/</code></td></tr>
+          <tr><td><strong>Timers on the server</strong></td><td>Small jobs that run every few seconds or minutes, such as ending a show that went quiet.</td><td><code>server/src/main.ts</code></td></tr>
+          <tr><td><strong>The Windows part of the app</strong></td><td>The screens are a web page inside a small Windows program. The page asks that program for things a web page is not allowed to do: finding the server, keeping files, the open line.</td><td><code>apps/client/src-tauri/</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flow" role="img" aria-label="A request goes from the app to the route, the service, the repository and the database. A change then goes back out to everyone in the room.">
+      <div class="box"><b>App</b>asks over HTTPS</div>
+      <div class="arrow">→</div>
+      <div class="box"><b>Route</b>who is asking?</div>
+      <div class="arrow">→</div>
+      <div class="box"><b>Service</b>the rules</div>
+      <div class="arrow">→</div>
+      <div class="box"><b>Repository</b>the database file</div>
+      <div class="arrow">→</div>
+      <div class="box"><b>Room</b>everyone in it is told</div>
+    </div>
+
+    <h2 id="how">How each one works</h2>
+
+    <section class="card" id="f1">
+      <div class="head"><span class="n">1</span><h3>Lock policy</h3><span class="tag">Small</span></div>
+      <p>Lab PCs lock themselves when no class is booked in the lab, and open when a class is. Today a teacher has to press Lock and Unlock by hand.</p>
+      <h4>We already have</h4>
+      <p>The periods of the day, the timetable (which class has the lab in which period), and the lock itself ("Look at your teacher").</p>
+      <h4>How it works</h4>
+      <ol>
+        <li>The Super Admin turns on one switch in System: "Lock the lab PCs when no class is booked".</li>
+        <li>Every 15 seconds the server looks at the clock and the timetable.</li>
+        <li>No class booked right now: every lab PC is locked. A class is booked: they are opened.</li>
+        <li>A teacher can still lock or unlock by hand. What she does holds until the next period starts or ends; then the timetable decides again.</li>
+      </ol>
+      <p>The switch is saved in the database. The locks themselves stay in memory, as today, so a PC is never found locked in the morning because of yesterday.</p>
+      <p>Two more rules. If the timetable is empty, the switch does nothing, so a new school is not locked out before it has filled its timetable. Sunday has no lab periods, so with the switch on the lab PCs are locked all Sunday.</p>
+      <div class="note"><b>Status</b>Built on 2026-11-24. Tried on the Mac only, not yet on Windows.</div>
+          <h4>Under the hood</h4>
+      <ul>
+        <li><strong>Database:</strong> one new setting, "lock when no class is booked", next to the other System settings.</li>
+        <li><strong>Server:</strong> a new small class, <code>LockPolicy</code>, run by a 15-second timer. It reads today's periods and the timetable and answers one question: "should the lab be locked right now?"</li>
+        <li>It acts <strong>only when that answer changes</strong> (a period starts or ends). Then it calls the lock code we have (<code>ScreenLocks</code>), which tells each PC through its <code>device:&lt;PC&gt;</code> room. This is why a teacher's lock or unlock by hand holds until the next change.</li>
+        <li><strong>App:</strong> one switch on the System screen. The lab PCs need no new code; they already obey the lock.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="f2">
+      <div class="head"><span class="n">2</span><h3>Quiz: at your own speed, and teams</h3><span class="tag">Medium</span></div>
+      <h4>At your own speed</h4>
+      <p>Today a quiz runs only live: every student answers the same question on the same clock.</p>
+      <ol>
+        <li>The teacher picks a quiz, presses "Give as practice", and picks the class.</li>
+        <li>Each student finds it under Things to do, and answers the questions one at a time with no clock.</li>
+        <li>The score is saved when the student finishes. The student may try again; the teacher sees the best try.</li>
+        <li>Practice scores are shown to the teacher but are not used for report cards (the same rule as activities).</li>
+      </ol>
+      <h4>Teams, for a live quiz</h4>
+      <ol>
+        <li>When the teacher opens the quiz she picks "Teams" and how many (2, 3 or 4).</li>
+        <li>As students join, the server puts them into teams so the teams are the same size. Each student's screen shows their team's colour.</li>
+        <li>A team's score is the average of its members' scores, so a team with one more student gets no head start.</li>
+        <li>The teacher's screen shows the teams' places. Each student still gets their own score as today.</li>
+      </ol>
+      <h4>In the database</h4>
+      <p>A quiz run gains "live or practice" and "number of teams". A student in a run gains "team".</p>
+          <h4>Under the hood</h4>
+      <ul>
+        <li><strong>Database:</strong> <code>quiz_runs</code> gains <code>mode</code> (live or practice) and <code>teams</code> (0, 2, 3 or 4). <code>quiz_participants</code> gains <code>team</code> and a try number.</li>
+        <li><strong>Practice:</strong> the server makes a run with <code>mode = practice</code>. The same "answer" request is used as in a live quiz; the service skips the clock check. No room is needed, because nobody is watching live. The results rules leave practice runs out of report cards.</li>
+        <li><strong>Teams:</strong> when a student joins, the run service puts them in the team with the fewest members and saves it. Team places are worked out from the answers we already save, and sent with the rest of the quiz state in the <code>quiz:&lt;run&gt;</code> room.</li>
+        <li><strong>App:</strong> a "Give as practice" button and a teams picker for the teacher; a practice player for the student that reuses the question screen of the live quiz without the clock.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="f3">
+      <div class="head"><span class="n">3</span><h3>Messages (teacher and student)</h3><span class="tag">Medium</span></div>
+      <p>A teacher and a student write short notes to each other. A notice goes to a whole class; a message is between two people.</p>
+      <h4>How it works</h4>
+      <ol>
+        <li>A teacher opens a student and writes. A student opens "Messages" on Home, picks one of their teachers and writes.</li>
+        <li>Text only, up to 500 letters. No files, no pictures.</li>
+        <li>If the other person is signed in, the message appears at once. If not, it waits on the server and a number shows on their Home the next time they sign in.</li>
+        <li>A student can write only to teachers of their own class. Students cannot write to students.</li>
+        <li>The Super Admin can read every message, and both screens say so.</li>
+      </ol>
+      <div class="note"><b>Why the Super Admin can read them</b>These are private notes between an adult and a child. A school must be able to check them. Saying so on the screen keeps it honest.</div>
+      <h4>In the database</h4>
+      <p>One new table of messages: who, to whom, the text, when, and when it was read.</p>
+          <h4>Under the hood</h4>
+      <ul>
+        <li><strong>Database:</strong> a new <code>messages</code> table: id, student, teacher, who wrote it, text, written at, read at.</li>
+        <li><strong>Server:</strong> a new <code>messages</code> module (routes, service, repository), built like <code>notices</code>. Requests: list my conversations, read one, write one, mark as read. The service checks that the teacher teaches that student's class.</li>
+        <li><strong>Live:</strong> a new room, one per person (their inbox). Writing a message saves it first, then tells the other person's inbox room. If they are not signed in, nothing is lost: the message is in the database and is fetched at their next sign-in.</li>
+        <li><strong>Super Admin:</strong> a read-only request for any conversation, written to the activity log each time.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="f4">
+      <div class="head"><span class="n">4</span><h3>Next steps for each student</h3><span class="tag">Small</span></div>
+      <p>Up to three plain suggestions for each child, such as "Watch: Fractions, part 2" or "Hand in: Science worksheet". Worked out with simple rules. No AI, so it works on a server with no AI kit.</p>
+      <h4>The rules, in this order</h4>
+      <ol>
+        <li>Work that is set and not handed in, nearest hand-in date first.</li>
+        <li>A playlist or learning path that is started and not finished: its next step.</li>
+        <li>The subject with the lowest quiz results (under half marks): a library item of that subject and chapter that the student has not opened.</li>
+        <li>An activity for the student's class that they have not tried.</li>
+      </ol>
+      <p>The server works this out from what it already keeps, each time it is asked. Nothing new is saved. The student sees it on Home. The teacher sees it when she opens that student.</p>
+          <h4>Under the hood</h4>
+      <ul>
+        <li><strong>Database:</strong> nothing new.</li>
+        <li><strong>Server:</strong> a new service in the <code>results</code> module. It reads from repositories we have (work, playlists and their done steps, quiz results, the library, activity results) and puts them through one plain function that holds the four rules. Data in, three suggestions out, so it is easy to test.</li>
+        <li><strong>Requests:</strong> "my next steps" for a student, and "next steps of this student" for a teacher.</li>
+        <li><strong>To check in this feature's own design:</strong> how well the server knows which library items a student has opened. Rule 3 depends on it.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="f5">
+      <div class="head"><span class="n">5</span><h3>Lesson recording</h3><span class="tag">Medium</span></div>
+      <p>A lesson shown with "Show to Class" can be kept and played again later. We do not save video or sound. We save the <strong>steps</strong> of the lesson.</p>
+      <div class="flow" role="img" aria-label="The teacher records, the server writes down each step with its time, and later the app plays the same steps again.">
+        <div class="box"><b>Teacher presses Record</b>in a show</div>
+        <div class="arrow">→</div>
+        <div class="box"><b>Server writes each step</b>file opened, page turn, play, pause, pen line, wipe, each with its time</div>
+        <div class="arrow">→</div>
+        <div class="box"><b>Past lessons</b>the app opens the same file and does the same steps at the same times</div>
+      </div>
+      <h4>How it works</h4>
+      <ol>
+        <li>In a show, the teacher presses "Record".</li>
+        <li>From then on the server writes down every step with its time from the start.</li>
+        <li>When the show ends, the recording is closed and given a name (class, subject, date).</li>
+        <li>Later, the teacher or a student of that class opens "Past lessons" and presses play. The pen lines draw themselves again.</li>
+      </ol>
+      <div class="note"><b>Why steps and not video</b>An hour of steps is smaller than one photo. An hour of video is hundreds of megabytes and would fill the Server PC's disk in a term. The price: the teacher's voice is not kept.</div>
+      <h4>On Windows</h4>
+      <p>The file that was shown must still be in the library when the lesson is played. A library item used by a recording cannot be deleted until the recording is deleted; the app says so. Recordings older than a number of days the Super Admin sets (90 to start) are removed.</p>
+          <h4>Under the hood</h4>
+      <ul>
+        <li><strong>Database:</strong> <code>recordings</code> (class, subject, teacher, start, end) and <code>recording_events</code> (recording, time from the start in milliseconds, kind of step, its details).</li>
+        <li><strong>Server:</strong> every change to a show already goes through one place, <code>ShowService</code> (start, page, play and pause, pen, stop). A new <code>Recorder</code> is called from those same spots and writes a row. A pen line is saved once, when it is finished, not point by point.</li>
+        <li><strong>If the Server PC is switched off mid-lesson:</strong> on the next start the server closes any recording left open, at the time of its last step.</li>
+        <li><strong>Playing back is done by the app, not the server.</strong> The app fetches the list of steps and walks through it with a clock, feeding each step into the same drawing code that a live show uses. One player, not two, so a recording looks exactly like the lesson did.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="f6">
+      <div class="head"><span class="n">6</span><h3>Seeing a student's screen</h3><span class="tag warm">Large</span></div>
+      <p>The teacher looks at what is on one student's PC, live.</p>
+      <div class="flow" role="img" aria-label="The student PC sends a small picture every two seconds to the server, which passes it to the teacher. Nothing is saved.">
+        <div class="box"><b>Student PC</b>shows the banner, takes a small picture every 2 seconds</div>
+        <div class="arrow">→</div>
+        <div class="box"><b>Server PC</b>passes it on, saves nothing</div>
+        <div class="arrow">→</div>
+        <div class="box"><b>Teacher</b>sees the newest picture</div>
+      </div>
+      <h4>How it works</h4>
+      <ol>
+        <li>The teacher picks a student who is signed in and presses "See screen".</li>
+        <li>That student's PC at once shows a banner that cannot be closed: "Your teacher is looking at your screen". No banner, no pictures. No exceptions.</li>
+        <li>The student PC takes a small picture of its screen about every two seconds and sends it to the server, which passes it straight to the teacher.</li>
+        <li>The pictures are never saved, on any PC. When the teacher closes the view, the pictures stop and the banner goes.</li>
+        <li>A teacher can watch only students of her own classes. Each time is written in the activity log.</li>
+      </ol>
+      <div class="note"><b>The trade-off</b>A picture every two seconds, not smooth video. Smooth video from 60 PCs would fill the school network and slow the lesson. If a PC or the network is slow, old pictures are thrown away, so the teacher sees a slightly old picture and the server's memory stays small.</div>
+      <div class="note risk"><b>Windows only</b>Taking a picture of the screen is done by the Windows part of the app. It cannot be built or run on the Mac. It is only proven when it is tried on two real Windows PCs.</div>
+          <h4>Under the hood</h4>
+      <ul>
+        <li><strong>Start:</strong> the teacher's app sends "watch this PC". The server checks the class, writes the activity log, remembers "teacher T watches PC P" in memory, and adds <code>watched: true</code> to what it tells that PC in its <code>device:&lt;PC&gt;</code> room, the same room that carries the lock.</li>
+        <li><strong>Student PC:</strong> the page shows the banner first, then asks the Windows part for a picture. The Windows part (new Rust code) takes the picture, makes it smaller (about 960 dots wide) and packs it as a JPEG of roughly 50 to 150 KB.</li>
+        <li><strong>Passing it on:</strong> the picture goes up the open line. The server hands it only to the teacher who is watching, and keeps no copy. If the teacher's line is still busy with the last picture, the new one is dropped.</li>
+        <li><strong>Stop:</strong> the teacher closes the view, or her line drops, or the student signs out. The server forgets the pair and tells the PC <code>watched: false</code>; the banner goes and the pictures stop.</li>
+        <li><strong>New:</strong> one Rust library for taking a screen picture on Windows, and a larger size limit on the open line for picture messages only.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="f7">
+      <div class="head"><span class="n">7</span><h3>Live lesson on the smart board</h3><span class="tag warm">Large</span></div>
+      <h4>What we know</h4>
+      <p>The board design of 2026-11-19 says the teacher plugs the Server laptop into the board (HDMI for the picture, USB for touch) and teaches there. So today the board shows the whole console, with its menus and small buttons.</p>
+      <h4>What we build (Claude's proposal)</h4>
+      <p>A board window: a clean, full-screen window for teaching, opened from the console with one button.</p>
+      <ol>
+        <li>It shows only the lesson: the PDF, picture, video or whiteboard, as large as the board.</li>
+        <li>Big buttons for a finger: next page, previous page, pen, eraser, wipe, add page, end.</li>
+        <li>No student lists, marks or menus are on the board for the class to read.</li>
+        <li>A live quiz can be shown too: the question in large letters, and the places at the end.</li>
+        <li>Everything it shows goes to the student PCs the way "Show to Class" does today.</li>
+      </ol>
+      <p>If the school also has a board with its own Windows PC (installed as "Smart board"), that PC shows the same window by following the class's show over the network. This depends on the first open question.</p>
+          <h4>Under the hood</h4>
+      <ul>
+        <li><strong>The Windows part</strong> opens a second window, with no frame, full screen on the second display (the board on HDMI). The console stays on the laptop's own screen.</li>
+        <li><strong>The page in that window</strong> is the same app, started in a "board" layout: only the lesson and the big buttons.</li>
+        <li><strong>Keeping the two windows in step needs no new wiring.</strong> Both windows talk to the server, and both are in the <code>show:&lt;class&gt;</code> room. A page turn on the board goes to the server and comes back to the console and to every student PC the same way.</li>
+        <li><strong>A board with its own PC:</strong> the room's joining rule is widened so a board linked to a class may follow that class's show.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="f8">
+      <div class="head"><span class="n">8</span><h3>Teacher app</h3><span class="tag risk">Not decided</span></div>
+      <p>In PRAXIS the teacher has her own app on a tablet or laptop and drives the board from anywhere in the room.</p>
+      <p><strong>If teachers only use the Server PC,</strong> there is nothing to build: the console is the teacher's app.</p>
+      <p><strong>If they have their own PCs,</strong> the installer gets one more choice, "Teacher PC". It shows the same teacher screens as the Server PC, and talks to the server over the school network like a lab PC does.</p>
+          <h4>Under the hood</h4>
+      <ul>
+        <li><strong>Installer:</strong> one more choice, "Teacher PC".</li>
+        <li><strong>App:</strong> the console screens, but finding the server over the network (UDP 7701) the way a lab PC does, and not expecting the server on the same PC.</li>
+        <li><strong>To check:</strong> that the server lets staff sign in from another PC today, and not only from itself.</li>
+      </ul>
+    </section>
+
+    <h2 id="open">Open questions for the user</h2>
+    <ol class="plain">
+      <li><strong>Do teachers have their own laptop or tablet in the lab, or do they teach only from the Server PC plugged into the board?</strong> This decides whether feature 8 exists, and what feature 7 has to do.</li>
+      <li><strong>Is leaving out the cloud, the Android board app and the student PIN right?</strong></li>
+    </ol>
+
+    <h2 id="test">Testing</h2>
+    <ul class="plain">
+      <li>Every feature gets server tests and one run in the browser on the Mac.</li>
+      <li>Features 1 to 5 use nothing that is special to Windows. They still need one run on real Windows PCs before a school uses them.</li>
+      <li>Feature 6 can only be proven on Windows.</li>
+      <li><code>docs/windows-test-guide.md</code> gets new steps with each feature, and each feature's own design will name the old steps to run again.</li>
+    </ul>
+
+    <h2 id="approach">Why this order</h2>
+    <div class="wide">
+      <table>
+        <thead><tr><th>Way</th><th>What it costs</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>One feature at a time, small ones first</td><td>Each is designed, built, tried and installable before the next starts. A problem in one does not hold up the others.</td><td><span class="tag">Picked</span></td></tr>
+          <tr><td>All eight in one go</td><td>Nothing can be tried on Windows until all of it is done, and a mistake found late touches everything.</td><td></td></tr>
+          <tr><td>The biggest first (board, screens)</td><td>These can only be proven on Windows, so the first weeks would show nothing finished.</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
-  quizRoom, TIMED_OUT, type Quiz, type RunSummary, type StaffPrincipal, type StudentPrincipal,
-  type StudentRunState, type TeacherRunState,
+  quizRoom, TIMED_OUT, type OpenRun, type PracticeForStudent, type Quiz, type RunParticipant, type RunSummary, type StaffPrincipal,
+  type StudentPrincipal, type StudentRunState, type TeacherRunState, type TeamStanding,
   type OpenRunForStudent,
 } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
@@ -12,7 +12,7 @@ import { checkQuiz, scopeOf, seesQuiz, type Scope } from '../../core/scope.js';
 import type { Relay } from '../../relay/relay.js';
 import type { ClassRepository } from '../students/class.repository.js';
 import type { QuizRepository } from './quiz.repository.js';
-import type { RunRepository, RunRow } from './run.repository.js';
+import { bestOf, type RunRepository, type RunRow } from './run.repository.js';
 
 const notActive = (status: RunRow['status']) =>
   new AppError(409, 'NOT_ACTIVE', status === 'lobby' ? 'The quiz has not started yet.' : 'The quiz has ended.');
@@ -23,8 +23,9 @@ const notActive = (status: RunRow['status']) =>
 // Each student works through the questions in order, and the server keeps the clock for each one.
 
 // Where a student is in an active run: the question they are on and when its time ends.
+// In practice there is no clock, so no deadline.
 interface Place {
-  at: { index: number; deadline: number } | null;
+  at: { index: number; deadline: number | null } | null;
   timedOut: number; // questions that ran out of time during this look
 }
 export class RunService {
@@ -48,14 +49,18 @@ export class RunService {
     });
   }
 
-  open(actor: StaffPrincipal, quizId: string): TeacherRunState {
+  // Lab Mode starts in the lobby and waits for the teacher. Practice has no lobby: students can
+  // begin as soon as it is given, each in their own time.
+  open(actor: StaffPrincipal, input: OpenRun): TeacherRunState {
+    const { quizId, mode, teams } = input;
     const quiz = this.quizzes.get(quizId);
     if (!quiz) throw notFound('Quiz');
     checkQuiz(scopeOf(actor), quiz);
-    if (this.runs.hasOpenRun(quizId)) throw new AppError(409, 'QUIZ_RUNNING', 'This quiz is already open in Lab Mode.');
+    if (this.runs.hasOpenRun(quizId)) throw new AppError(409, 'QUIZ_RUNNING', 'This quiz is already open, in Lab Mode or as practice. End it first.');
     const id = randomUUID();
-    this.runs.insert({ id, quizId, classId: quiz.classId, openedBy: actor.userId, now: this.now() });
-    this.audit.record({ kind: 'staff', id: actor.userId }, 'quiz.open', id, { quizId });
+    this.runs.insert({ id, quizId, classId: quiz.classId, openedBy: actor.userId, now: this.now(), mode, teams });
+    if (mode === 'practice') this.runs.start(id, this.now(), quiz.totalMarks);
+    this.audit.record({ kind: 'staff', id: actor.userId }, mode === 'practice' ? 'quiz.practice' : 'quiz.open', id, { quizId, ...(teams ? { teams } : {}) });
     return this.teacherState(id);
   }
 
@@ -90,6 +95,33 @@ export class RunService {
     }));
   }
 
+  // The practice quizzes a student can do now, with how they have done so far.
+  practiceFor(student: StudentPrincipal): PracticeForStudent[] {
+    return this.runs.practiceForClass(student.classId).flatMap((r) => {
+      const quiz = this.quizzes.get(r.quiz_id, { includeDeleted: true });
+      if (!quiz) return [];
+      const me = this.runs.participant(r.id, student.studentId);
+      const finished = me?.finished_at != null;
+      return [{
+        runId: r.id, title: quiz.title, questionCount: quiz.questions.length, totalMarks: quiz.totalMarks,
+        tries: me?.tries ?? 0, best: me ? bestOf(me.best_score, finished ? this.score(r.id, student.studentId) : null) : null, finished,
+      }];
+    });
+  }
+
+  // Practice only. The try just finished is counted into the best score, its answers are wiped,
+  // and the student starts again from the first question.
+  retry(student: StudentPrincipal, id: string): StudentRunState {
+    const run = this.run(id);
+    const me = this.member(student, id);
+    if (run.mode !== 'practice') throw new AppError(409, 'NOT_PRACTICE', 'Only a practice quiz can be tried again.');
+    if (run.status !== 'active') throw notActive(run.status);
+    if (me.finished_at == null) throw new AppError(409, 'NOT_FINISHED', 'Finish this try first.');
+    this.runs.retry(id, student.studentId, bestOf(me.best_score, this.score(id, student.studentId))!, this.now());
+    this.relay.notify(quizRoom(id));
+    return this.studentState(id, student);
+  }
+
   // No code: the quiz is for the student's own class, and that is the check.
   join(student: StudentPrincipal, id: string): StudentRunState {
     const run = this.run(id);
@@ -97,7 +129,7 @@ export class RunService {
       throw forbidden(`This quiz is for Class ${this.classes.name(run.class_id) ?? '?'}. Ask your teacher.`);
     }
     if (run.status === 'ended') throw new AppError(409, 'RUN_ENDED', 'This quiz has ended.');
-    this.runs.addParticipant(run.id, student.studentId, student.deviceId, this.now());
+    this.runs.addParticipant(run.id, student.studentId, student.deviceId, this.now(), run.teams ? this.runs.smallestTeam(run.id, run.teams) : null);
     this.relay.notify(quizRoom(run.id));
     return this.studentState(run.id, student);
   }
@@ -131,6 +163,11 @@ export class RunService {
     this.runs.answer({
       runId: id, studentId: student.studentId, questionIndex, choice, points: choice === q.correct ? q.marks : 0, now: this.now(),
     });
+    // Practice: the last answer hands the try in. Nobody ends a practice quiz for the class, so a
+    // PC switched off just then must not leave a full try marked "not finished".
+    if (run.mode === 'practice' && this.runs.answers(id, student.studentId).length >= quiz.questions.length) {
+      this.runs.finish(id, student.studentId, this.now());
+    }
     this.relay.notify(quizRoom(id));
     return { accepted: true };
   }
@@ -155,16 +192,19 @@ export class RunService {
     const quiz = this.quiz(run);
     // Bring every student's clock up to date first, so one who walked away still shows correctly.
     if (run.status === 'active') for (const studentId of this.runs.unfinishedIds(id)) this.place(run, quiz, studentId);
+    const participants = this.runs.participants(id);
     return {
       kind: 'teacher',
       runId: run.id,
       quizId: quiz.id,
       title: quiz.title,
       className: this.classes.name(run.class_id) ?? '',
+      mode: run.mode,
       status: run.status,
       questionCount: quiz.questions.length,
       totalMarks: quiz.totalMarks,
-      participants: this.runs.participants(id),
+      participants: run.mode === 'practice' ? byBest(participants) : participants,
+      teams: standings(participants),
     };
   }
 
@@ -177,19 +217,27 @@ export class RunService {
     const mine = this.runs.answers(id, student.studentId);
     const myAnswers: (number | null)[] = quiz.questions.map(() => null);
     for (const a of mine) myAnswers[a.question_index] = a.choice;
-    const done = me?.finished_at != null || run.status === 'ended';
+    const finished = me?.finished_at != null;
+    const done = finished || run.status === 'ended';
+    const score = mine.reduce((n, a) => n + a.points, 0);
     return {
       kind: 'student',
       runId: run.id,
       title: quiz.title,
+      mode: run.mode,
       status: run.status,
       secondsPerQuestion: quiz.secondsPerQuestion,
       questions: quiz.questions.map((q) => ({ text: q.text, options: q.options })),
       myAnswers,
-      current: at && { index: at.index, remainingMs: at.deadline - this.now() },
-      finished: me?.finished_at != null,
-      score: done ? mine.reduce((n, a) => n + a.points, 0) : null,
+      current: at && { index: at.index, remainingMs: at.deadline == null ? null : at.deadline - this.now() },
+      finished,
+      score: done ? score : null,
       totalMarks: quiz.totalMarks,
+      team: me?.team ?? null,
+      // Every team's place is shown only once this student can no longer answer.
+      teams: run.teams && done ? standings(this.runs.participants(id)) : null,
+      tries: me?.tries ?? 0,
+      best: me ? bestOf(me.best_score, finished ? score : null) : null,
     };
   }
 
@@ -205,6 +253,10 @@ export class RunService {
 
     const rows = this.runs.answers(run.id, studentId);
     const done = new Set(rows.map((r) => r.question_index));
+    if (run.mode === 'practice') {
+      const index = quiz.questions.findIndex((_q, i) => !done.has(i));
+      return index < 0 ? none : { at: { index, deadline: null }, timedOut: 0 };
+    }
     const perQuestion = quiz.secondsPerQuestion * 1000;
     const now = this.now();
     let start = Math.max(run.started_at, me.joined_at, ...rows.map((r) => r.answered_at));
@@ -239,6 +291,10 @@ export class RunService {
     return run;
   }
 
+  private score(runId: string, studentId: string): number {
+    return this.runs.answers(runId, studentId).reduce((n, a) => n + a.points, 0);
+  }
+
   private member(student: StudentPrincipal, id: string) {
     const me = this.runs.participant(id, student.studentId);
     if (!me) throw forbidden('Join the quiz first.');
@@ -247,3 +303,19 @@ export class RunService {
 
 
 }
+
+// Team places: the average score of each team's members, best first (the lower number first when level).
+function standings(participants: RunParticipant[]): TeamStanding[] {
+  const teams = new Map<number, { members: number; total: number }>();
+  for (const p of participants) {
+    if (p.team == null) continue;
+    const t = teams.get(p.team) ?? { members: 0, total: 0 };
+    teams.set(p.team, { members: t.members + 1, total: t.total + p.score });
+  }
+  return [...teams]
+    .map(([team, t]) => ({ team, members: t.members, score: Math.round((t.total / t.members) * 10) / 10 }))
+    .sort((a, b) => b.score - a.score || a.team - b.team);
+}
+
+// Practice is ranked by the best finished try; students with none yet come last.
+const byBest = (participants: RunParticipant[]) => [...participants].sort((a, b) => (b.best ?? -1) - (a.best ?? -1));

@@ -4,6 +4,8 @@ import { unauthenticated } from '../../core/errors.js';
 import { asStaff, asStudent, route } from '../../core/route.js';
 import type { ContentService } from './content.service.js';
 
+export const ACTIVITY_CSP = "sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:";
+
 export function contentRoutes(app: FastifyInstance, deps: { content: ContentService }) {
   const { content } = deps;
   route(app, 'GET /api/v1/content', ({ query, principal }) => content.list(asStaff(principal), query.classId));
@@ -23,6 +25,9 @@ export function contentRoutes(app: FastifyInstance, deps: { content: ContentServ
     const f = content.fileStream(req.principal, hash, req.headers.range);
     reply.header('accept-ranges', 'bytes').header('x-content-type-options', 'nosniff').header('cache-control', 'private, no-store');
     if (f.status === 416) return reply.status(416).header('content-range', `bytes */${f.size}`).send();
+    // An activity is a web page someone wrote. Wherever it is opened, it runs in a closed box: no
+    // address of its own (so it shares nothing with the app), and nothing loaded from anywhere but itself.
+    if (f.mime.startsWith('text/html')) reply.header('content-security-policy', ACTIVITY_CSP);
     reply.status(f.status).type(f.mime).header('content-length', f.end - f.start + 1);
     if (f.status === 206) reply.header('content-range', `bytes ${f.start}-${f.end}/${f.size}`);
     return reply.send(f.body ?? '');

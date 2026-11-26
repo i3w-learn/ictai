@@ -20,6 +20,8 @@ export interface RawRequest {
   path: string;
   body?: unknown;
   token?: string;
+  // How long to wait for the answer. Left out, the usual ten seconds.
+  timeoutMs?: number;
 }
 
 export interface RawResponse {
@@ -47,7 +49,8 @@ export interface Platform {
   onRelay(listener: (e: RelayEvent) => void): () => void;
   /**
    * Library files as a stream. `setFileSource` says which server and signed-in person files are fetched
-   * for (null = nobody). `fileUrl` is then an address a picture, video or sound player can be pointed at.
+   * for (null = nobody). `fileUrl` is then an address a picture, video or sound player can be pointed at,
+   * and that the teacher's PDF reader reads part by part, so a big book opens before it has all arrived.
    * Left out where there is no native side (tests, the browser harness): screens then fetch in pieces.
    */
   setFileSource?(source: { baseUrl: string; certFp: string; token: string } | null): Promise<void>;
@@ -58,6 +61,11 @@ export interface Platform {
    * timers are slowed down when its window is hidden. Left out where there is no native side.
    */
   keepAlive?(req: RawRequest | null, everyMs?: number): Promise<void>;
+  /**
+   * Tells the native side this is a student PC (or no longer is one): while on, it refuses every
+   * download and every new window. Left out where there is no native side.
+   */
+  lockDown?(on: boolean): Promise<void>;
   /** The role chosen in the Windows installer, if any. */
   installRole(): Promise<AppKind | null>;
 }

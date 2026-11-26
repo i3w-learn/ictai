@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { CHUNK_BYTES, INK_BATCH_MAX, INK_POINTS_MAX, INK_STROKES_MAX, SCREEN_REPORTS_MAX, SHOW_STALE_MS, showPosition, showRoom } from '@ict/contracts';
+import { CHUNK_BYTES, INK_BATCH_MAX, INK_POINTS_MAX, INK_SHOW_STROKES_MAX, INK_STROKES_MAX, SCREEN_REPORTS_MAX, SHOW_STALE_MS, showPosition, showRoom } from '@ict/contracts';
 import { testServer } from './helpers.js';
 
 const mp4 = (size = 2000) => Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42'), Buffer.alloc(size - 12, 1)]);
 const pdf = () => Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(200, 0x20)]);
+const png = () => Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(200, 2)]);
+const mp3 = () => Buffer.concat([Buffer.from('ID3'), Buffer.alloc(200, 3)]);
 
 // Class 7 (Asha) and Class 8 (Kabir). Ravi teaches Maths to Class 7; Tara teaches Class 7 but may not host lessons.
 async function school() {
@@ -43,8 +45,10 @@ async function school() {
   };
   const start = (who: object, contentId = video.id) => inject('POST', '/api/v1/shows', who, { contentId });
   const move = (who: object, id: string, body: object) => inject('PUT', `/api/v1/shows/${id}`, who, body);
+  const turn = (who: object, id: string, body: object) => inject('PUT', `/api/v1/shows/${id}/page`, who, body);
+  const board = (who: object, classId: string) => inject('POST', '/api/v1/shows', who, { whiteboard: true, classId });
   const mine = async (who: object) => (await inject('GET', '/api/v1/shows/mine', who)).json();
-  return { ...t, inject, admin, ravi, raviToken, c7, c8, asha, kabir, video, upload, screen, start, move, mine };
+  return { ...t, inject, admin, ravi, raviToken, c7, c8, asha, kabir, video, upload, screen, start, move, turn, board, mine };
 }
 
 describe('Show to class', () => {
@@ -176,7 +180,7 @@ describe('Show to class', () => {
   it('refuses what cannot be shown, and people who may not show', async () => {
     const { inject, admin, ravi, asha, c7, c8, upload, start, move } = await school();
     const doc = await upload(admin, pdf(), { title: 'Book', classId: c7.id, subject: 'Maths' });
-    expect((await start(ravi, doc.id)).json().message).toBe('Only a video can be shown to the class.');
+    expect((await start(ravi, doc.id)).statusCode).toBe(201); // a PDF may be shown too
     const science = await upload(admin, mp4(3000), { title: 'Science video', classId: c7.id, subject: 'Science' });
     expect((await start(ravi, science.id)).statusCode).toBe(404); // not her subject
     const forEight = await upload(admin, mp4(4000), { title: 'Class 8 video', classId: c8.id, subject: 'Maths' });
@@ -270,7 +274,7 @@ describe('Writing on the video', () => {
     const id = (await s.start(s.ravi)).json().id as string;
     await s.inject('POST', `/api/v1/shows/${id}/screen`, s.asha.as, { event: 'opened' });
     const line = (who: object, points: number[], strokeId: string = randomUUID(), look: object = {}) =>
-      s.inject('POST', `/api/v1/shows/${id}/ink`, who, { strokeId, colour: 'red', width: 'medium', points, ...look });
+      s.inject('POST', `/api/v1/shows/${id}/ink`, who, { strokeId, colour: 'red', width: 'medium', points, page: 1, ...look });
     const ink = async (who: object) => (await s.inject('GET', `/api/v1/shows/${id}/ink`, who)).json();
     const pen = (studentId: string | null, who: object = s.ravi) => s.inject('PUT', `/api/v1/shows/${id}/pen`, who, { studentId });
     return { ...s, id, line, ink, pen };
@@ -284,11 +288,11 @@ describe('Writing on the video', () => {
     expect((await line(ravi, [200, 300, 7000], strokeId)).statusCode).toBe(204);
     // Each message carries only the new part of the line.
     expect(pc.events).toEqual([
-      { kind: 'add', show: id, rev: 1, stroke: { id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', points: [100, 200, 5000, 150, 250, 6000] } },
-      { kind: 'add', show: id, rev: 2, stroke: { id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', points: [200, 300, 7000] } },
+      { kind: 'add', show: id, rev: 1, stroke: { id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', page: 1, points: [100, 200, 5000, 150, 250, 6000] } },
+      { kind: 'add', show: id, rev: 2, stroke: { id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', page: 1, points: [200, 300, 7000] } },
     ]);
     expect(pc.got).toHaveLength(1); // the whole state is not sent again for a pen line
-    expect(await ink(asha.as)).toEqual({ rev: 2, strokes: [{ id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', points: [100, 200, 5000, 150, 250, 6000, 200, 300, 7000] }] });
+    expect(await ink(asha.as)).toEqual({ rev: 2, strokes: [{ id: strokeId, by: 'teacher', byName: 'Ravi K', colour: 'yellow', width: 'thick', page: 1, points: [100, 200, 5000, 150, 250, 6000, 200, 300, 7000] }] });
     expect(await mine(asha.as)).toMatchObject({ inkRev: 2, pen: null });
   });
 
@@ -299,7 +303,7 @@ describe('Writing on the video', () => {
     await move(ravi, id, { playing: false, position: 0 });
     expect((await ink(ravi)).strokes).toHaveLength(1);
     await move(ravi, id, { playing: true, position: 0 });
-    expect(pc.events.at(-1)).toEqual({ kind: 'clear', show: id, rev: 2 });
+    expect(pc.events.at(-1)).toEqual({ kind: 'clear', show: id, rev: 2, page: 1 });
     expect(await ink(ravi)).toEqual({ rev: 2, strokes: [] });
 
     await move(ravi, id, { playing: false, position: 0 });
@@ -346,6 +350,14 @@ describe('Writing on the video', () => {
     void ravi;
   });
 
+  it('leaves the pen with its holder when it cannot be given to a student who is not watching', async () => {
+    const { asha, kabir, pen, mine } = await lesson();
+    await pen(asha.id);
+    const res = await pen(kabir.id);
+    expect(res.json()).toMatchObject({ code: 'NOT_WATCHING', message: "That student's screen does not have the show open." });
+    expect(await mine(asha.as)).toMatchObject({ pen: { studentId: asha.id, name: 'Asha' } });
+  });
+
   it('does not let a student write on a playing video, or touch a line that is not theirs', async () => {
     const { ravi, asha, id, line, pen, move, inject, ink } = await lesson();
     await pen(asha.id);
@@ -377,6 +389,14 @@ describe('Writing on the video', () => {
     expect((await ink(ravi)).strokes).toHaveLength(1);
   });
 
+  it('takes a pen line from an older student PC that does not say the page', async () => {
+    const { ravi, asha, id, pen, ink, inject } = await lesson();
+    await pen(asha.id);
+    const old = await inject('POST', `/api/v1/shows/${id}/ink`, asha.as, { strokeId: randomUUID(), colour: 'red', width: 'medium', points: [1, 1, 1] });
+    expect(old.statusCode).toBe(204);
+    expect((await ink(ravi)).strokes).toMatchObject([{ by: asha.id, page: 1 }]);
+  });
+
   it('stops a line and the board from growing for ever', async () => {
     const { ravi, line, ink } = await lesson();
     const long = randomUUID();
@@ -402,5 +422,312 @@ describe('Writing on the video', () => {
       'show.pen.taken student="Asha"',
       'show.ink.cleared by="Ravi K"',
     ]);
+  });
+});
+
+describe('Showing pages', () => {
+  it('shows a PDF on page 1 and moves every screen when the teacher turns the page', async () => {
+    const { admin, ravi, asha, c7, upload, screen, start, turn } = await school();
+    const book = await upload(admin, pdf(), { title: 'Maths book', classId: c7.id, subject: 'Maths' });
+    const pc = screen(asha.token, c7.id);
+    const res = await start(ravi, book.id);
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ kind: 'pdf', page: 1, pages: null, item: { id: book.id } });
+    const id = res.json().id;
+    // The teacher's app opens the file and says how many pages it has.
+    const told = await turn(ravi, id, { page: 1, pages: 12 });
+    expect(told.statusCode).toBe(200);
+    expect(told.json()).toMatchObject({ page: 1, pages: 12 });
+    expect((await turn(ravi, id, { page: 5 })).json()).toMatchObject({ page: 5, pages: 12 });
+    expect(pc.last()).toMatchObject({ page: 5, pages: 12 });
+    // Only the teacher who is showing turns the page.
+    expect((await turn(asha.as, id, { page: 2 })).statusCode).toBe(403);
+    expect((await turn(admin, id, { page: 2 })).statusCode).toBe(404);
+  });
+
+  it('shows a picture as one page', async () => {
+    const { admin, ravi, c7, upload, start, turn } = await school();
+    const picture = await upload(admin, png(), { title: 'Number line', classId: c7.id, subject: 'Maths' });
+    const res = await start(ravi, picture.id);
+    expect(res.json()).toMatchObject({ kind: 'image', page: 1, pages: 1 });
+    expect((await turn(ravi, res.json().id, { page: 2 })).statusCode).toBe(400);
+    expect((await turn(ravi, res.json().id, { page: 1 })).statusCode).toBe(200);
+  });
+
+  it('starts a whiteboard for a class the teacher teaches, and adds pages up to 30', async () => {
+    const { ravi, asha, c7, c8, screen, board, turn, mine } = await school();
+    const pc = screen(asha.token, c7.id);
+    const res = await board(ravi, c7.id);
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ kind: 'whiteboard', item: null, classId: c7.id, className: '7', page: 1, pages: 1 });
+    expect(pc.last()).toMatchObject({ kind: 'whiteboard', page: 1 });
+    expect(await mine(asha.as)).toMatchObject({ kind: 'whiteboard', item: null });
+    const id = res.json().id;
+    expect((await turn(ravi, id, { page: 2, pages: 2 })).json()).toMatchObject({ page: 2, pages: 2 });
+    expect((await turn(ravi, id, { page: 4, pages: 4 })).statusCode).toBe(400); // grows by one at most
+    expect((await turn(ravi, id, { page: 1, pages: 1 })).statusCode).toBe(400); // and never shrinks
+    expect((await turn(ravi, id, { page: 1 })).json()).toMatchObject({ page: 1, pages: 2 });
+    for (let n = 3; n <= 30; n += 1) expect((await turn(ravi, id, { page: n, pages: n })).statusCode).toBe(200);
+    expect((await turn(ravi, id, { page: 31, pages: 31 })).statusCode).toBe(400);
+    expect(pc.last()).toMatchObject({ page: 30, pages: 30 });
+    // A class she does not teach looks the same as no class.
+    expect((await board(ravi, c8.id)).statusCode).toBe(404);
+    expect((await board(ravi, randomUUID())).statusCode).toBe(404);
+  });
+
+  it('refuses pages that do not exist', async () => {
+    const { admin, ravi, c7, upload, start, turn, move } = await school();
+    const book = await upload(admin, pdf(), { title: 'Maths book', classId: c7.id, subject: 'Maths' });
+    const id = (await start(ravi, book.id)).json().id;
+    await turn(ravi, id, { page: 1, pages: 12 });
+    expect((await turn(ravi, id, { page: 13 })).statusCode).toBe(400);
+    expect((await turn(ravi, id, { page: 0 })).statusCode).toBe(400);
+    const notVideo = await move(ravi, id, { playing: true, position: 0 });
+    expect(notVideo.statusCode).toBe(400);
+    expect(notVideo.json().message).toBe('Only a video plays.');
+    const videoShow = (await start(ravi)).json().id;
+    const res = await turn(ravi, videoShow, { page: 2 });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().message).toBe('A video has no pages.');
+  });
+
+  it('keeps a whiteboard going when library items change, and ends it when it goes quiet', async () => {
+    const { inject, admin, ravi, asha, c7, clock, video, board, mine } = await school();
+    const id = (await board(ravi, c7.id)).json().id;
+    await inject('DELETE', `/api/v1/content/${video.id}`, admin);
+    expect(await mine(asha.as)).toMatchObject({ id, kind: 'whiteboard' });
+    clock.t += SHOW_STALE_MS + 1;
+    expect(await mine(asha.as)).toBeNull();
+  });
+
+  it('refuses sound and web links', async () => {
+    const { inject, admin, ravi, c7, upload, start } = await school();
+    const sound = await upload(admin, mp3(), { title: 'Song', classId: c7.id, subject: 'Maths' });
+    const res = await start(ravi, sound.id);
+    expect(res.statusCode).toBe(400);
+    expect(res.json().message).toBe('Only a video, PDF or picture can be shown to the class.');
+    const link = (await inject('POST', '/api/v1/content/links', admin, { title: 'Site', url: 'https://example.org', classId: c7.id, subject: 'Maths' })).json();
+    expect((await start(ravi, link.id)).json().message).toBe('Only a video, PDF or picture can be shown to the class.');
+  });
+});
+
+describe('Writing on pages', () => {
+  // Ravi shows Class 7 a 12-page PDF; Asha's screen has it open.
+  async function book() {
+    const s = await school();
+    const file = await s.upload(s.admin, pdf(), { title: 'Maths book', classId: s.c7.id, subject: 'Maths' });
+    const id = (await s.start(s.ravi, file.id)).json().id as string;
+    await s.turn(s.ravi, id, { page: 1, pages: 12 });
+    await s.inject('POST', `/api/v1/shows/${id}/screen`, s.asha.as, { event: 'opened' });
+    const line = (who: object, page: number, strokeId: string = randomUUID()) =>
+      s.inject('POST', `/api/v1/shows/${id}/ink`, who, { strokeId, colour: 'red', width: 'medium', points: [1, 1, 1], page });
+    const ink = async (who: object) => (await s.inject('GET', `/api/v1/shows/${id}/ink`, who)).json();
+    return { ...s, id, line, ink };
+  }
+
+  it("keeps each page's writing when the teacher turns away and back", async () => {
+    const { ravi, id, line, ink, turn } = await book();
+    await line(ravi, 1);
+    await turn(ravi, id, { page: 2 });
+    await line(ravi, 2);
+    await turn(ravi, id, { page: 1 });
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([1, 2]);
+  });
+
+  it('wipes only the page the teacher is on', async () => {
+    const { ravi, asha, c7, screen, id, line, ink, turn, inject } = await book();
+    const pc = screen(asha.token, c7.id);
+    await line(ravi, 1);
+    await turn(ravi, id, { page: 2 });
+    await line(ravi, 2);
+    expect((await inject('DELETE', `/api/v1/shows/${id}/ink`, ravi)).statusCode).toBe(204);
+    expect(pc.events.at(-1)).toMatchObject({ kind: 'clear', page: 2 });
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([1]);
+  });
+
+  it('refuses a line for a page the show is not on', async () => {
+    const { ravi, asha, id, line, turn, inject } = await book();
+    await inject('PUT', `/api/v1/shows/${id}/pen`, ravi, { studentId: asha.id });
+    await turn(ravi, id, { page: 3 });
+    const res = await line(asha.as, 1);
+    expect(res.statusCode).toBe(409);
+    expect(res.json()).toMatchObject({ code: 'WRONG_PAGE', message: 'Your teacher has moved to another page.' });
+  });
+
+  it("wipes the page the teacher's screen asks for, even when the server has already moved on", async () => {
+    const { ravi, asha, c7, screen, id, line, ink, turn, inject } = await book();
+    const pc = screen(asha.token, c7.id);
+    await line(ravi, 1);
+    await turn(ravi, id, { page: 2 });
+    await line(ravi, 2);
+    // She pressed Wipe on page 1 just before her page turn reached the server.
+    expect((await inject('DELETE', `/api/v1/shows/${id}/ink?page=1`, ravi)).statusCode).toBe(204);
+    expect(pc.events.at(-1)).toMatchObject({ kind: 'clear', page: 1 });
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([2]);
+  });
+
+  it('lets the teacher write on the page in front of her before the server hears of her page turn', async () => {
+    const { ravi, asha, id, line, ink, inject, turn } = await book();
+    expect((await line(ravi, 2)).statusCode).toBe(204); // the show is still on page 1 at the server
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([2]);
+    expect((await line(ravi, 13)).statusCode).toBe(400); // the book has 12 pages
+    await inject('PUT', `/api/v1/shows/${id}/pen`, ravi, { studentId: asha.id });
+    expect((await line(asha.as, 2)).json()).toMatchObject({ code: 'WRONG_PAGE' }); // a student still may not
+    await turn(ravi, id, { page: 3 });
+    expect((await line(ravi, 1)).statusCode).toBe(204);
+  });
+
+  it("wipes the show's current page for an older teacher's app that does not say the page", async () => {
+    const { ravi, id, line, ink, turn, inject } = await book();
+    await line(ravi, 1);
+    await turn(ravi, id, { page: 2 });
+    await line(ravi, 2);
+    await inject('DELETE', `/api/v1/shows/${id}/ink`, ravi);
+    expect((await ink(ravi)).strokes.map((x: { page: number }) => x.page)).toEqual([1]);
+  });
+
+  it('lets the student with the pen write on a PDF at any time', async () => {
+    const { ravi, asha, id, line, inject } = await book();
+    await inject('PUT', `/api/v1/shows/${id}/pen`, ravi, { studentId: asha.id });
+    expect((await line(asha.as, 1)).statusCode).toBe(204);
+  });
+
+  it('caps lines per page and per show', async () => {
+    const { ravi, id, line, turn } = await book();
+    for (let n = 0; n < INK_STROKES_MAX; n += 1) await line(ravi, 1);
+    expect((await line(ravi, 1)).json()).toMatchObject({ code: 'INK_FULL' });
+    await turn(ravi, id, { page: 2 });
+    expect((await line(ravi, 2)).statusCode).toBe(204);
+    for (let page = 2; page <= INK_SHOW_STROKES_MAX / INK_STROKES_MAX; page += 1) {
+      await turn(ravi, id, { page });
+      for (let n = page === 2 ? 1 : 0; n < INK_STROKES_MAX; n += 1) await line(ravi, page);
+    }
+    await turn(ravi, id, { page: 6 });
+    expect((await line(ravi, 6)).json()).toMatchObject({ code: 'INK_FULL' });
+  });
+
+  it("still wipes a video's writing when it plays or jumps", async () => {
+    const { ravi, start, move, inject } = await school();
+    const id = (await start(ravi)).json().id as string;
+    const send = () => inject('POST', `/api/v1/shows/${id}/ink`, ravi, { strokeId: randomUUID(), colour: 'red', width: 'medium', points: [1, 1, 1], page: 1 });
+    const count = async () => (await inject('GET', `/api/v1/shows/${id}/ink`, ravi)).json().strokes.length;
+    await send();
+    await move(ravi, id, { playing: true, position: 0 });
+    expect(await count()).toBe(0);
+    await move(ravi, id, { playing: false, position: 0 });
+    await send();
+    await move(ravi, id, { playing: false, position: 60 });
+    expect(await count()).toBe(0);
+  });
+
+  it('counts a page turn as "still here", and sends nothing when the same page is repeated', async () => {
+    const { ravi, asha, c7, clock, id, turn, screen, mine } = await book();
+    const pc = screen(asha.token, c7.id);
+    for (let n = 0; n < 3; n += 1) {
+      clock.t += SHOW_STALE_MS * 0.6;
+      expect((await turn(ravi, id, { page: n + 2 })).statusCode).toBe(200);
+    }
+    expect(await mine(asha.as)).toMatchObject({ id, page: 4 }); // well past SHOW_STALE_MS since the start
+    const before = pc.got.length;
+    await turn(ravi, id, { page: 4 });
+    expect(pc.got).toHaveLength(before);
+  });
+});
+
+describe('Asking for the pen', () => {
+  // Ravi is showing Class 7 the video. Asha and Meera are in Class 7.
+  async function lesson() {
+    const s = await school();
+    await s.inject('POST', '/api/v1/students', s.admin, { name: 'Meera', classId: s.c7.id, rollNo: '2' });
+    const device = await s.enrolDevice('lab_pc');
+    const signedIn = (await s.inject('POST', '/api/v1/auth/student/roll', s.auth(device), { classId: s.c7.id, rollNo: '2' })).json();
+    const meera = { token: signedIn.token as string, as: s.auth(signedIn.token), id: signedIn.principal.studentId as string };
+    const id = (await s.start(s.ravi)).json().id as string;
+    const ask = (who: object) => s.inject('POST', `/api/v1/shows/${id}/pen/ask`, who);
+    const unask = (who: object) => s.inject('DELETE', `/api/v1/shows/${id}/pen/ask`, who);
+    const refuse = (studentId: string, who: object = s.ravi) => s.inject('DELETE', `/api/v1/shows/${id}/pen/asks/${studentId}`, who);
+    const pen = (studentId: string | null) => s.inject('PUT', `/api/v1/shows/${id}/pen`, s.ravi, { studentId });
+    // What the teacher's screen is told when it joins the class's room now.
+    const asks = () => (s.screen(s.raviToken, s.c7.id).last() as unknown as { asks: { studentId: string; name: string }[] }).asks;
+    const myAsk = async (who: object) => (await s.mine(who)).myAsk as string;
+    return { ...s, meera, id, ask, unask, refuse, pen, asks, myAsk };
+  }
+
+  it("puts the student in the teacher's list and tells only that student she is waiting", async () => {
+    const { asha, meera, c7, ask, screen, asks, myAsk } = await lesson();
+    const ashaPc = screen(asha.token, c7.id);
+    const meeraPc = screen(meera.token, c7.id);
+    expect(await myAsk(asha.as)).toBe('none');
+    expect((await ask(asha.as)).statusCode).toBe(204);
+    expect(asks()).toEqual([{ studentId: asha.id, name: 'Asha' }]);
+    expect(await myAsk(asha.as)).toBe('waiting');
+    expect(ashaPc.last()).toMatchObject({ myAsk: 'waiting' });
+    expect((ashaPc.last() as { asks?: object[] }).asks).toBeUndefined(); // who is asking is for the teacher only
+    expect(meeraPc.last()).toMatchObject({ myAsk: 'none' });
+    expect(await myAsk(meera.as)).toBe('none');
+  });
+
+  it('keeps the askers in the order they asked, and lets the teacher allow one while the other waits', async () => {
+    const { asha, meera, ask, pen, asks, myAsk, mine } = await lesson();
+    await ask(meera.as);
+    await ask(asha.as);
+    expect(asks().map((a) => a.name)).toEqual(['Meera', 'Asha']);
+    const given = await pen(asha.id); // the asker's screen has the video open, so she can be given the pen
+    expect(given.json()).toMatchObject({ pen: { studentId: asha.id }, asks: [{ studentId: meera.id }] });
+    expect(await mine(asha.as)).toMatchObject({ pen: { studentId: asha.id }, myAsk: 'none' });
+    expect(await myAsk(meera.as)).toBe('waiting');
+  });
+
+  it('says "not now" to an asker until she asks again, and lets a student take back her ask', async () => {
+    const { asha, meera, ask, unask, refuse, asks, myAsk, c7, screen } = await lesson();
+    await ask(asha.as);
+    await ask(meera.as);
+    const ashaPc = screen(asha.token, c7.id);
+    expect((await refuse(asha.id)).statusCode).toBe(204);
+    expect(ashaPc.last()).toMatchObject({ myAsk: 'refused' });
+    expect(asks()).toEqual([{ studentId: meera.id, name: 'Meera' }]);
+    expect(await myAsk(asha.as)).toBe('refused');
+    await ask(asha.as);
+    expect(await myAsk(asha.as)).toBe('waiting');
+    expect(asks().map((a) => a.name)).toEqual(['Meera', 'Asha']);
+
+    expect((await unask(meera.as)).statusCode).toBe(204);
+    expect(await myAsk(meera.as)).toBe('none');
+    expect(asks().map((a) => a.name)).toEqual(['Asha']);
+  });
+
+  it('keeps asking to its own class, and "not now" to the teacher', async () => {
+    const { asha, kabir, ask, unask, refuse } = await lesson();
+    expect((await ask(kabir.as)).statusCode).toBe(404); // another class
+    expect((await unask(kabir.as)).statusCode).toBe(404);
+    await ask(asha.as);
+    expect((await refuse(asha.id, asha.as)).statusCode).toBe(403); // a student cannot say "not now"
+  });
+
+  it('drops a student who signs out from the list', async () => {
+    const { asha, meera, ask, inject, asks, myAsk } = await lesson();
+    await ask(asha.as);
+    await ask(meera.as);
+    await inject('POST', '/api/v1/auth/logout', asha.as);
+    expect(await myAsk(meera.as)).toBe('waiting');
+    expect(asks()).toEqual([{ studentId: meera.id, name: 'Meera' }]);
+  });
+
+  it('sends nothing new to the screens when a student asks again while waiting', async () => {
+    const { raviToken, asha, c7, ask, screen } = await lesson();
+    const teachersPc = screen(raviToken, c7.id);
+    await ask(asha.as);
+    const before = teachersPc.got.length;
+    expect((await ask(asha.as)).statusCode).toBe(204);
+    expect(teachersPc.got).toHaveLength(before);
+  });
+
+  it('works on a whiteboard too, and writes the asks in the diary', async () => {
+    const { ravi, asha, c7, board, inject, diary } = await lesson();
+    const id = (await board(ravi, c7.id)).json().id as string;
+    diary.length = 0;
+    expect((await inject('POST', `/api/v1/shows/${id}/pen/ask`, asha.as)).statusCode).toBe(204);
+    expect((await inject('DELETE', `/api/v1/shows/${id}/pen/asks/${asha.id}`, ravi)).statusCode).toBe(204);
+    expect(diary.map((l) => l.replace(/show="[^"]+" /, ''))).toEqual(['show.pen.asked student="Asha"', 'show.pen.refused student="Asha"']);
   });
 });

@@ -4,19 +4,23 @@ import { useApp } from '../../app/app-context';
 import { useLatest } from '../../ui/ui';
 import { fetchFile } from './files';
 
-// The kinds whose players can ask for a file part by part and say when that fails.
-const streams = (kind: ContentItem['kind']) => kind === 'image' || kind === 'video' || kind === 'audio';
+// The kinds whose players can ask for a file part by part and say when that fails. A PDF is one of
+// them only where the app draws the pages itself (PdfPages); the built-in reader needs the whole file.
+export const streams = (kind: ContentItem['kind'], streamPdf = false) =>
+  // An activity is in this list for another reason: it must come from the server as its own page, with
+  // the rules that keep it in a closed box. A copy held in the app's memory would run under the app's rules.
+  kind === 'image' || kind === 'video' || kind === 'audio' || kind === 'activity' || (streamPdf && kind === 'pdf');
 
 // An address a picture, PDF, video or sound player can be pointed at for one library file.
 // A picture, video or sound is streamed: the player asks the server for the part it needs, so a big
 // video starts at once and is never held whole in this PC's memory. If streaming does not work on this
 // PC (or there is no native side, as in tests), the file is fetched in pieces and shown from memory,
-// which is also how a PDF is always opened. `onError` is what a player calls when the stream fails;
-// it is undefined once there is nothing else left to try.
-export function useFileUrl(item: Pick<ContentItem, 'id' | 'kind' | 'fileHash' | 'mime' | 'size'>) {
+// which is also how a PDF is opened unless `streamPdf` says the app draws its pages itself. `onError`
+// is what a player calls when the stream fails; it is undefined once there is nothing else left to try.
+export function useFileUrl(item: Pick<ContentItem, 'id' | 'kind' | 'fileHash' | 'mime' | 'size'>, opts?: { streamPdf?: boolean }) {
   const { call, platform } = useApp();
   const [streamFailed, setStreamFailed] = useState(false);
-  const stream = item.fileHash && streams(item.kind) && !streamFailed ? (platform.fileUrl?.(item.fileHash) ?? null) : null;
+  const stream = item.fileHash && streams(item.kind, opts?.streamPdf) && !streamFailed ? (platform.fileUrl?.(item.fileHash) ?? null) : null;
   const [fetched, setFetched] = useState<string | null>(null);
   const [progress, setProgress] = useState<[number, number]>([0, 1]);
   const [error, setError] = useState<string | null>(null);

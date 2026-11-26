@@ -8,8 +8,6 @@ export const StaffLogin = z.object({
 });
 export type StaffLogin = z.infer<typeof StaffLogin>;
 
-export const StudentQrLogin = z.object({ qrToken: z.string().min(16).max(128) });
-
 // Easy sign-in: class, section and roll number, with no PIN. Only a student the teacher has added
 // gets in: the class, section and roll number together are that student's ID.
 export const StudentRollLogin = z.object({

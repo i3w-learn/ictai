@@ -1,9 +1,7 @@
 import { sameRoll, type DevicePrincipal, type RosterEntry, type SchoolClass, type Section, type SessionResult } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import { HOUR, MINUTE, type Clock } from '../../core/clock.js';
-import { AppError, lockedOut, notFound } from '../../core/errors.js';
-import type { FailureLimiter } from '../auth/limiter.js';
-import { hashToken } from '../auth/secrets.js';
+import { AppError, notFound } from '../../core/errors.js';
 import type { SessionRepository } from '../auth/session.repository.js';
 import type { SessionService } from '../auth/session.service.js';
 import type { DeviceRepository } from '../devices/device.repository.js';
@@ -13,18 +11,19 @@ import type { StudentAuthRow, StudentRepository } from './student.repository.js'
 // Spec 3: student sessions end after 10 min idle (and at sign-out or lesson end).
 export const STUDENT_SESSION = { idleMs: 10 * MINUTE, maxMs: 8 * HOUR };
 
-// Student sign-in on an enrolled lab PC: class + roll number (and the name, when two share a number),
-// or a QR card. There is no PIN.
+// Student sign-in on an enrolled lab PC: class + roll number (and the name, when two share a number).
+// There is no PIN.
 export class StudentAuthService {
   constructor(
     private readonly now: Clock,
     private readonly classes: ClassRepository,
     private readonly students: StudentRepository,
     private readonly sessions: SessionService,
-    private readonly limiter: FailureLimiter,
     private readonly audit: AuditLog,
     private readonly sessionRows: SessionRepository,
     private readonly devices: DeviceRepository,
+    // Told about every sign-in: it is what marks the student present for the day.
+    private readonly onSignIn: (studentId: string) => void = () => undefined,
   ) {}
 
   listClasses(): SchoolClass[] {
@@ -68,29 +67,9 @@ export class StudentAuthService {
     return this.start(device, st, 'roll');
   }
 
-  // Counted per lab PC: five unknown cards and it waits five minutes.
-  withQr(device: DevicePrincipal, qrToken: string): SessionResult {
-    const key = `qr:${device.deviceId}`;
-    const wait = this.limiter.blockedFor(key);
-    if (wait > 0) throw lockedOut(wait);
-
-    const st = this.students.findByQrHash(hashToken(qrToken));
-    if (!st) {
-      this.failed(device, key, 'qr');
-      throw new AppError(401, 'INVALID_CREDENTIALS', 'This card is not recognised.');
-    }
-    this.limiter.succeed(key);
-    return this.start(device, st, 'qr');
-  }
-
-  // Spec 4.5: wrong tries are logged against the lab PC they came from, never with what was typed.
-  private failed(device: DevicePrincipal, key: string, method: string, studentId: string | null = null) {
-    this.limiter.fail(key);
-    this.audit.record({ kind: 'device', id: device.deviceId }, 'student.signin.failed', studentId, { method });
-  }
-
   private start(device: DevicePrincipal, st: StudentAuthRow, method: string): SessionResult {
     this.audit.record({ kind: 'student', id: st.id }, 'signin', device.deviceId, { method });
+    this.onSignIn(st.id);
     return this.sessions.start('student', st.id, device.deviceId, STUDENT_SESSION);
   }
 }

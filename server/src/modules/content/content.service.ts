@@ -7,7 +7,8 @@ import { checkMyClass, checkSubject, scopeOf, seesClass, seesQuiz, type Scope } 
 import type { ClassRepository } from '../students/class.repository.js';
 import type { ContentRepository } from './content.repository.js';
 import type { FileStore } from './file-store.js';
-import { sniff } from './sniff.js';
+import { noOffice, officeExt, type OfficeConverter } from './office.js';
+import { isActivity, sniff } from './sniff.js';
 
 // An upload in progress. Kept in memory: it does not survive a restart, the person uploads again.
 interface Upload { by: string; fileName: string; size: number; received: number; next: number; startedAt: number }
@@ -31,6 +32,8 @@ export class ContentService {
     private readonly store: FileStore,
     private readonly classes: ClassRepository,
     private readonly audit: AuditLog,
+    // Turns Word, Excel and PowerPoint files into PDFs. Left out, the server has no such program.
+    private readonly office: OfficeConverter = noOffice,
   ) {}
 
   list(actor: StaffPrincipal, classId?: string): ContentItem[] {
@@ -82,15 +85,21 @@ export class ContentService {
     try {
       this.checkFiling(scope, filing);
       if (up.received !== up.size) throw new AppError(400, 'BAD_REQUEST', 'The file did not arrive in one piece. Upload it again.');
-      const type = sniff(this.store.head(id));
-      if (!type) throw new AppError(415, 'UNSUPPORTED_FILE', 'This kind of file cannot be added. Use a PDF, a picture (PNG, JPG, GIF, WebP), a video (MP4, WebM) or sound (MP3, WAV, OGG, M4A).');
+      let type = sniff(this.store.head(id));
+      const office = type ? null : officeExt(this.store.head(id), up.fileName);
+      if (office) {
+        await this.toPdf(id, office);
+        type = sniff(this.store.head(id));
+      }
+      if (!type && isActivity(this.store.head(id, 64), up.fileName)) type = { kind: 'activity', mime: 'text/html; charset=utf-8' };
+      if (!type) throw new AppError(415, 'UNSUPPORTED_FILE', 'This kind of file cannot be added. Use a PDF, a picture (PNG, JPG, GIF, WebP), a video (MP4, WebM), sound (MP3, WAV, OGG, M4A), a Word, Excel or PowerPoint file, or an activity (one .html file).');
       const { hash, size } = await this.store.keep(id);
       this.uploads.delete(id);
       const now = this.now();
       this.content.addFile(hash, size, type.mime, now);
       const itemId = randomUUID();
       this.content.insert({ id: itemId, title: filing.title, kind: type.kind, classId: filing.classId, subject: filing.subject, chapter: filing.chapter, fileHash: hash, fileName: up.fileName, url: null, by: actor.userId, now });
-      this.audit.record({ kind: 'staff', id: actor.userId }, 'content.add', itemId, { title: filing.title, kind: type.kind });
+      this.audit.record({ kind: 'staff', id: actor.userId }, 'content.add', itemId, { title: filing.title, kind: type.kind, ...(office ? { madeFrom: office } : {}) });
       return this.content.get(itemId)!;
     } catch (e) {
       this.cancel(id);
@@ -140,6 +149,21 @@ export class ContentService {
     if (part === 'bad') return { status: 416 as const, size, mime, start: 0, end: -1, body: null };
     const { start, end } = part ?? { start: 0, end: size - 1 };
     return { status: part ? (206 as const) : (200 as const), size, mime, start, end, body: size === 0 ? null : this.store.stream(hash, start, end) };
+  }
+
+  // Swaps an uploaded Office file for the PDF made from it.
+  private async toPdf(uploadId: string, ext: string) {
+    if (!this.office.installed()) {
+      throw new AppError(415, 'OFFICE_NOT_INSTALLED', 'Word, Excel and PowerPoint files need LibreOffice on the Server PC, and it is not installed there. Install LibreOffice on the Server PC, or save this file as a PDF and add the PDF.');
+    }
+    const work = this.store.workDir();
+    try {
+      this.store.replacePart(uploadId, await this.office.toPdf(this.store.partFile(uploadId), ext, work.dir));
+    } catch {
+      throw new AppError(422, 'OFFICE_FAILED', 'This file could not be turned into a PDF. Open it in Word, Excel or PowerPoint, save it as a PDF, and add the PDF.');
+    } finally {
+      work.remove();
+    }
   }
 
   private checkMayOpen(who: Principal, hash: string) {

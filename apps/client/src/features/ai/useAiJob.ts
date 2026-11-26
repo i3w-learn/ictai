@@ -8,7 +8,7 @@ const POLL_MS = 3000;
 
 // The shared heart of the teacher's AI screens: the AI's status, this person's earlier requests of one
 // kind, and the request being followed right now, polled every few seconds until it is finished.
-export function useAiJob<K extends 'quiz' | 'ask'>(kind: K) {
+export function useAiJob<K extends 'quiz' | 'ask' | 'plan'>(kind: K) {
   type Job = AiJobOf<K>;
   const { call } = useApp();
   const [status, setStatus] = useState<AiStatus | null>(null);

@@ -26,7 +26,7 @@ export function AiQuizMaker({ onDraft, onBack }: { onDraft: (d: AiDraft) => void
     : !form.subject.trim() ? 'Choose the subject.'
     : !form.topic.trim() ? 'Type the topic.'
     : !(Number.isInteger(count) && count >= 1 && count <= 20) ? 'Ask for 1 to 20 questions.'
-    : ai.busyElsewhere ? 'Your question is still being answered. Make the quiz when it is done.'
+    : ai.busyElsewhere ? 'Another AI request of yours is still running. Make the quiz when it is done.'
     : null;
 
   const make = useAction(async () => {

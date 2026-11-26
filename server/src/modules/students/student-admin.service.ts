@@ -1,11 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import type { ImportResult, ImportStudents, NewStudent, SchoolClass, Section, SignInCard, StaffPrincipal, Student, UpdateStudent } from '@ict/contracts';
+import type { ImportResult, ImportStudents, NewStudent, SchoolClass, Section, StaffPrincipal, Student, UpdateStudent } from '@ict/contracts';
 import type { AuditLog } from '../../core/audit.js';
 import type { Clock } from '../../core/clock.js';
 import { AppError, forbidden, notFound, unique } from '../../core/errors.js';
 import { checkClass, checkMyClass, scopeOf, seesClass, type Scope } from '../../core/scope.js';
 import type { SessionRepository } from '../auth/session.repository.js';
-import { hashToken, newToken } from '../auth/secrets.js';
 import type { ClassRepository } from './class.repository.js';
 import type { StudentRepository } from './student.repository.js';
 
@@ -13,7 +12,7 @@ import type { StudentRepository } from './student.repository.js';
 const duplicate = (name: string) =>
   new AppError(409, 'ALREADY_EXISTS', `${name} is already in this class with the same roll number.`);
 
-// Staff-side management of classes, sections and student sign-in credentials.
+// Staff-side management of classes, sections and students.
 export class StudentAdminService {
   constructor(
     private readonly now: Clock,
@@ -42,21 +41,18 @@ export class StudentAdminService {
     return unique(() => this.classes.insertSection(classId, name, this.now()), `Section "${name}" already exists.`);
   }
 
-  async addStudent(scope: Scope, s: NewStudent): Promise<Student & { qrToken: string }> {
+  async addStudent(scope: Scope, s: NewStudent): Promise<Student> {
     this.myClass(scope, s.classId);
     if (s.sectionId && !this.classes.sectionInClass(s.sectionId, s.classId)) throw notFound('Section in this class');
     if (this.students.findDuplicate(s.name, s.classId, s.rollNo)) throw duplicate(s.name);
-    const qrToken = newToken();
-    const student = this.students.insert({
+    return this.students.insert({
       id: randomUUID(),
       name: s.name,
       classId: s.classId,
       sectionId: s.sectionId,
       rollNo: s.rollNo,
-      qrTokenHash: hashToken(qrToken),
       now: this.now(),
     });
-    return { ...student, qrToken };
   }
 
   // Each row is judged alone: good rows are added, bad ones come back with the reason.
@@ -75,7 +71,7 @@ export class StudentAdminService {
       const sectionId = section ? sections.get(section.toLowerCase()) : null;
       if (sectionId === undefined) return skip(`Section "${section}" is not in this class. Add the section first.`);
       if (this.students.findDuplicate(name, classId, rollNo)) return skip('Already in this class with the same roll number.');
-      this.students.insert({ id: randomUUID(), name, classId, sectionId, rollNo, qrTokenHash: hashToken(newToken()), now: this.now() });
+      this.students.insert({ id: randomUUID(), name, classId, sectionId, rollNo, now: this.now() });
       result.added++;
     });
     if (result.added > 0) this.audit.record({ kind: 'staff', id: actor.userId }, 'student.import', classId, { added: result.added });
@@ -116,20 +112,6 @@ export class StudentAdminService {
     const moved = this.students.moveClass(fromClassId, toClassId, sectionMap, this.now());
     this.audit.record({ kind: 'staff', id: actor.userId }, 'class.promote', fromClassId, { toClassId, moved });
     return { moved };
-  }
-
-  // New QR tokens replace the old ones, so cards printed earlier stop working.
-  cards(actor: StaffPrincipal, classId: string): SignInCard[] {
-    const now = this.now();
-    this.myClass(scopeOf(actor), classId);
-    // Every student on the class's roster is in it by definition.
-    const cards = this.students.roster(classId).map((r) => {
-      const qrToken = newToken();
-      this.students.setQrHash(r.id, hashToken(qrToken), now);
-      return { studentId: r.id, name: r.name, rollNo: r.rollNo, qrToken };
-    });
-    this.audit.record({ kind: 'staff', id: actor.userId }, 'class.cards', classId, { count: cards.length });
-    return cards;
   }
 
   // An active student in one of this teacher's classes.

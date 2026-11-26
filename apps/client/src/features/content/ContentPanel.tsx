@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link2, Upload } from 'lucide-react';
-import { MAX_FILE_BYTES, type ContentItem, type SchoolClass } from '@ict/contracts';
+import { Link2, Presentation, Upload } from 'lucide-react';
+import { MAX_FILE_BYTES, isOfficeName, type ContentItem, type SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, useAction } from '../../ui/ui';
 import { SubjectField } from '../quizzes/SubjectField';
@@ -10,10 +10,12 @@ const BLANK = { title: '', classId: '', subject: '', chapter: '', url: '' };
 
 // PRD "Content": the school's library. A teacher adds a file or a web link and files it under a class,
 // subject and chapter. Students find it under My books.
-export function ContentPanel({ onOpen, refresh, onChanged }: { onOpen: (item: ContentItem) => void; refresh: number; onChanged: () => void }) {
+// A teacher who may host lessons also gets a blank whiteboard to show to a class (`onWhiteboard`).
+export function ContentPanel({ onOpen, onWhiteboard, refresh, onChanged }: { onOpen: (item: ContentItem) => void; onWhiteboard: () => void; refresh: number; onChanged: () => void }) {
   const { call, state } = useApp();
   const p = state.session?.principal;
   const canAdd = p?.kind === 'staff' && p.permissions.includes('setup.content');
+  const canPresent = p?.kind === 'staff' && p.permissions.includes('lesson.present');
   const [items, setItems] = useState<ContentItem[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [filter, setFilter] = useState('');
@@ -69,7 +71,7 @@ export function ContentPanel({ onOpen, refresh, onChanged }: { onOpen: (item: Co
   const shown = filter ? items.filter((i) => i.classId === filter) : items;
 
   return (
-    <Panel title="Library">
+    <Panel title="Library" actions={canPresent && <Button variant="quiet" onClick={onWhiteboard}><Presentation className="size-4" /> Whiteboard</Button>}>
       {canAdd && (
         <form className="grid gap-3" onSubmit={(e) => e.preventDefault()}>
           <div className="flex flex-wrap items-end gap-3">
@@ -86,9 +88,9 @@ export function ContentPanel({ onOpen, refresh, onChanged }: { onOpen: (item: Co
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <label className="grid gap-1.5" htmlFor="content-file">
-              <span className="text-[0.8125rem] font-medium text-muted-foreground">A file: PDF, picture, video or sound (up to {sizeWords(MAX_FILE_BYTES)})</span>
+              <span className="text-[0.8125rem] font-medium text-muted-foreground">A file: PDF, picture, video, sound, Word, Excel, PowerPoint or an activity (up to {sizeWords(MAX_FILE_BYTES)})</span>
               <input
-                id="content-file" ref={picker} type="file" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.mp4,.webm,.mp3,.wav,.ogg,.m4a"
+                id="content-file" ref={picker} type="file" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.mp4,.webm,.mp3,.wav,.ogg,.m4a,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.html,.htm"
                 className="h-11 rounded-2xl border border-border bg-card px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-3 file:py-1"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
@@ -100,7 +102,10 @@ export function ContentPanel({ onOpen, refresh, onChanged }: { onOpen: (item: Co
           </div>
           {progress && (
             <div className="grid gap-1">
-              <span className="text-sm text-muted-foreground">Sending {file?.name}… {Math.round((progress[0] / progress[1]) * 100)}%</span>
+              <span className="text-sm text-muted-foreground">
+                {/* A Word, Excel or PowerPoint file is turned into a PDF on the server once it has all arrived. */}
+                {file && isOfficeName(file.name) && progress[0] === progress[1] ? `Turning ${file.name} into a PDF. This can take a minute…` : `Sending ${file?.name}… ${Math.round((progress[0] / progress[1]) * 100)}%`}
+              </span>
               <div className="h-2 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-label="Sending the file" aria-valuenow={Math.round((progress[0] / progress[1]) * 100)} aria-valuemin={0} aria-valuemax={100}>
                 <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(progress[0] / progress[1]) * 100}%` }} />
               </div>

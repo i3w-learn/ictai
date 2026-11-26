@@ -37,7 +37,25 @@ fn plain(status: StatusCode) -> Response<Vec<u8>> {
     Response::builder().status(status).body(Vec::new()).unwrap()
 }
 
+/// The page (tauri://localhost or http://tauri.localhost) is at another address than this one, so the
+/// web view lets it read an answer with `fetch`, as the PDF reader does, only when the answer says it
+/// may. Asking for a part (the Range header) can make the web view check first with an OPTIONS request.
+fn allow_page(mut res: Response<Vec<u8>>) -> Response<Vec<u8>> {
+    let h = res.headers_mut();
+    h.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, header::HeaderValue::from_static("*"));
+    h.insert(header::ACCESS_CONTROL_ALLOW_HEADERS, header::HeaderValue::from_static("range"));
+    h.insert(header::ACCESS_CONTROL_EXPOSE_HEADERS, header::HeaderValue::from_static("content-range, accept-ranges, content-length"));
+    res
+}
+
 pub async fn serve(clients: &HttpClients, source: Option<Source>, request: Request<Vec<u8>>) -> Response<Vec<u8>> {
+    if request.method() == tauri::http::Method::OPTIONS {
+        return allow_page(plain(StatusCode::NO_CONTENT));
+    }
+    allow_page(answer(clients, source, request).await)
+}
+
+async fn answer(clients: &HttpClients, source: Option<Source>, request: Request<Vec<u8>>) -> Response<Vec<u8>> {
     let Some(hash) = hash_of(request.uri().path()) else { return plain(StatusCode::BAD_REQUEST) };
     let Some(src) = source else { return plain(StatusCode::UNAUTHORIZED) };
     let Ok(client) = clients.for_fingerprint(&src.cert_fp).await else { return plain(StatusCode::BAD_GATEWAY) };
@@ -68,7 +86,8 @@ pub async fn serve(clients: &HttpClients, source: Option<Source>, request: Reque
     let status = StatusCode::from_u16(res.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     let mut out = Response::builder().status(status);
     // Only what a player needs is passed back; everything else the server sent stays here.
-    for name in ["content-type", "content-range", "accept-ranges", "cache-control", "x-content-type-options"] {
+    // content-security-policy: the server sends one with an activity, to keep that page in a closed box.
+    for name in ["content-type", "content-range", "accept-ranges", "cache-control", "x-content-type-options", "content-security-policy"] {
         if let Some(value) = res.headers().get(name).and_then(|v| v.to_str().ok()) {
             out = out.header(name, value);
         }
@@ -91,6 +110,19 @@ mod tests {
         assert_eq!(hash_of("/../../etc/passwd"), None);
         assert_eq!(hash_of(&format!("/{}", hash.to_uppercase())), None);
         assert_eq!(hash_of(&format!("/{hash}/more")), None);
+    }
+
+    #[tokio::test]
+    async fn lets_the_page_read_parts() {
+        let ask = tauri::http::Request::builder().method("OPTIONS").uri("ictfile://localhost/x").body(Vec::new()).unwrap();
+        let res = super::serve(&crate::http::HttpClients::default(), None, ask).await;
+        assert_eq!(res.status(), 204);
+        assert_eq!(res.headers()["access-control-allow-origin"], "*");
+        assert_eq!(res.headers()["access-control-allow-headers"], "range");
+        let get = tauri::http::Request::builder().uri("ictfile://localhost/x").body(Vec::new()).unwrap();
+        let refused = super::serve(&crate::http::HttpClients::default(), None, get).await;
+        assert_eq!(refused.status(), 400);
+        assert!(refused.headers()["access-control-expose-headers"].to_str().unwrap().contains("content-range"));
     }
 
     /// Live check against a running dev server (`just server`): a file put in the library comes back

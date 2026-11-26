@@ -1,5 +1,5 @@
 import { ZodError, type z, type ZodType } from 'zod';
-import { API, ApiError, plainProblem, type Endpoint, type RouteKey } from '@ict/contracts';
+import { API, ApiError, SLOW_CALL_MS, plainProblem, type Endpoint, type RouteKey } from '@ict/contracts';
 import { PlatformError, type Platform } from '../platform/platform';
 import type { ServerLocator } from './server-locator';
 import { baseUrl, type ServerTarget } from './settings';
@@ -44,7 +44,7 @@ export class ApiClient {
     const { body, query, params } = input as { body?: unknown; query?: Record<string, string>; params?: Record<string, string> };
     const path = buildPath(pattern, params, query);
 
-    const res = await this.send({ method, path, body: ep.body ? checked(ep.body, body ?? {}) : undefined, token });
+    const res = await this.send({ method, path, body: ep.body ? checked(ep.body, body ?? {}) : undefined, token, timeoutMs: ep.slow ? SLOW_CALL_MS : undefined });
     if (res.status >= 400) {
       const err = ApiError.safeParse(res.body);
       throw new ApiCallError(res.status, err.success ? err.data.code : 'UNKNOWN', err.success ? err.data.message : `Server error ${res.status}`);
@@ -63,7 +63,7 @@ export class ApiClient {
     void this.platform.keepAlive?.(req, everyMs)?.catch(() => undefined);
   }
 
-  private async send(r: { method: string; path: string; body?: unknown; token?: string }) {
+  private async send(r: { method: string; path: string; body?: unknown; token?: string; timeoutMs?: number }) {
     const target = this.target.get();
     if (!target) throw new ApiCallError(0, 'NO_SERVER', 'This device is not connected to a server yet.');
     try {

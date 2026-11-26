@@ -4,10 +4,12 @@ import { DEFAULT_PREFS, type StudentPrefs, type StudentRunState } from '@ict/con
 import { useApp } from '../../app/app-context';
 import { Shell, SideMenu, type MenuItem } from '../../ui/dashboard';
 import { cn, useAction } from '../../ui/ui';
+import { tk, useT } from '../../i18n/i18n';
 import { MyBooks } from '../content/MyBooks';
 import { StudentNotices } from '../notices/StudentNotices';
 import { MyNotes } from '../notes/MyNotes';
 import { HowIAmDoing } from '../progress/HowIAmDoing';
+import { PollPopup, useOpenPoll } from '../polls/PollPopup';
 import { PlayQuiz } from '../quizzes/PlayQuiz';
 import { QuizPopup, QuizWaiting, useOpenQuiz } from '../quizzes/QuizInvite';
 import { ThingsToDo } from '../sequences/ThingsToDo';
@@ -20,24 +22,28 @@ import { StudentDashboard } from './StudentDashboard';
 
 type Page = 'home' | 'todo' | 'books' | 'videos' | 'work' | 'progress' | 'notes' | 'settings' | 'ask';
 const MENU: MenuItem<Exclude<Page, 'ask'>>[] = [
-  { key: 'home', label: 'Home', icon: House },
-  { key: 'todo', label: 'Things to do', icon: ListChecks },
-  { key: 'books', label: 'My books', icon: BookOpen },
-  { key: 'videos', label: 'Videos', icon: Film },
-  { key: 'work', label: 'My work', icon: PencilLine },
-  { key: 'progress', label: 'How I am doing', icon: ChartColumn },
-  { key: 'notes', label: 'My notes', icon: NotebookPen },
-  { key: 'settings', label: 'Settings', icon: SlidersHorizontal },
+  { key: 'home', label: tk('Home'), icon: House },
+  { key: 'todo', label: tk('Things to do'), icon: ListChecks },
+  { key: 'books', label: tk('My books'), icon: BookOpen },
+  { key: 'videos', label: tk('Videos'), icon: Film },
+  { key: 'work', label: tk('My work'), icon: PencilLine },
+  { key: 'progress', label: tk('How I am doing'), icon: ChartColumn },
+  { key: 'notes', label: tk('My notes'), icon: NotebookPen },
+  { key: 'settings', label: tk('Settings'), icon: SlidersHorizontal },
 ];
 
 // The student's own screens, one per item in the side menu. A quiz the teacher opens for the class
 // pops up over any of them.
 export function StudentHome({ name }: { name: string }) {
+  const t = useT();
   const [page, setPage] = useState<Page>('home');
   const [playing, setPlaying] = useState<StudentRunState | null>(null);
   // The quiz the student said "Not now" to; a different quiz pops up again.
   const [later, setLater] = useState<string | null>(null);
   const { quiz, clear: clearQuiz } = useOpenQuiz();
+  // A quick question from the teacher (a poll). It pops up until the student answers it or says "Not now".
+  const { poll, set: setPoll } = useOpenPoll();
+  const [pollLater, setPollLater] = useState<string | null>(null);
   // A video the teacher is showing the class right now. It lies over every screen below.
   const classShow = useClassShow();
   const { call } = useApp();
@@ -58,34 +64,48 @@ export function StudentHome({ name }: { name: string }) {
 
   // A quiz takes the whole page, with no menu to wander off into. "Back to home" after it means
   // home, not the page the quiz popped up over.
-  if (playing) return <Shell><PlayQuiz initial={playing} onExit={() => { setPlaying(null); clearQuiz(); setPage('home'); }} /></Shell>;
+  // Practice has no clock, so a child can sit in it for a whole period. The teacher must still be able
+  // to reach them: what she shows the class, a live quiz and a quick question come up over it.
+  if (playing) {
+    const reachable = playing.mode === 'practice';
+    return (
+      <Shell>
+        {reachable && classShow && <ClassShow live={classShow} />}
+        {reachable && quiz && quiz.runId !== later && !classShow && <QuizPopup quiz={quiz} onJoined={setPlaying} onLater={() => setLater(quiz.runId)} />}
+        {reachable && poll && poll.myChoice === null && poll.id !== pollLater && !classShow && !(quiz && quiz.runId !== later) && <PollPopup poll={poll} onAnswered={setPoll} onLater={() => setPollLater(poll.id)} />}
+        <PlayQuiz key={playing.runId} initial={playing} onExit={() => { setPlaying(null); clearQuiz(); setPage('home'); }} />
+      </Shell>
+    );
+  }
 
   // The one warm-coloured thing on the screen, so "I am stuck" is always easy to find.
   const ask = (
     <button
-      type="button" title="Ask a question" aria-current={page === 'ask' ? 'page' : undefined} onClick={() => setPage('ask')}
+      type="button" title={t('Ask a question')} aria-current={page === 'ask' ? 'page' : undefined} onClick={() => setPage('ask')}
       className={cn('ui-ask flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[hsl(20_85%_42%)] p-3 text-left text-white transition-shadow hover:shadow-lg lg:flex-col lg:items-start lg:p-4', page === 'ask' && 'ring-2 ring-foreground ring-offset-2 ring-offset-card')}
     >
       <span className="ui-bubble grid size-9 shrink-0 place-items-center rounded-xl bg-white/20 lg:size-12 lg:rounded-2xl"><Sparkles className="size-5 lg:size-6" /></span>
       <span className="hidden lg:block">
-        <span className="block font-display text-lg font-semibold">Ask a question</span>
-        <span className="text-sm text-white/85">Stuck on something? Get a hint in simple words.</span>
+        <span className="block font-display text-lg font-semibold">{t('Ask a question')}</span>
+        <span className="text-sm text-white/85">{t('Stuck on something? Get a hint in simple words.')}</span>
       </span>
     </button>
   );
   return (
-    <Shell menu={<SideMenu label="Your pages" items={MENU} current={page as Exclude<Page, 'ask'>} onPick={setPage} footer={ask} />}>
+    <Shell menu={<SideMenu label={t('Your pages')} items={MENU.map((m) => ({ ...m, label: t(m.label) }))} current={page as Exclude<Page, 'ask'>} onPick={setPage} footer={ask} />}>
       {classShow && <ClassShow live={classShow} />}
       {/* While the teacher is showing a video, a quiz that is open waits: its popup would lie over the
           video, and over the pen of a student the teacher has asked to write on it. It comes up when the video goes. */}
       {quiz && quiz.runId !== later && !classShow && <QuizPopup quiz={quiz} onJoined={setPlaying} onLater={() => setLater(quiz.runId)} />}
+      {/* A poll waits behind the teacher's video and behind a quiz popup, like the quiz does. */}
+      {poll && poll.myChoice === null && poll.id !== pollLater && !classShow && !(quiz && quiz.runId !== later) && <PollPopup poll={poll} onAnswered={setPoll} onLater={() => setPollLater(poll.id)} />}
       {page === 'home' && (
         <StudentDashboard
           name={name} go={setPage}
           top={<>{quiz && <QuizWaiting quiz={quiz} onJoined={setPlaying} />}<StudentNotices /></>}
         />
       )}
-      {page === 'todo' && <ThingsToDo onWork={() => setPage('work')} />}
+      {page === 'todo' && <ThingsToDo onWork={() => setPage('work')} onPlay={setPlaying} />}
       {page === 'books' && <MyBooks />}
       {page === 'videos' && <MyBooks key="videos" videos />}
       {page === 'work' && <MyWork />}

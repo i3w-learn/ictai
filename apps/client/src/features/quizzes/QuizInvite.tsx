@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { OpenRunForStudent, StudentRunState } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, Card, ErrorNote, Panel, useAction } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 
 const ASK_EVERY_MS = 4000;
 
@@ -32,14 +33,15 @@ function useJoin(quiz: OpenRunForStudent, onJoined: (s: StudentRunState) => void
 // Pops up over whatever the student is doing as soon as the teacher opens a quiz for their class.
 export function QuizPopup({ quiz, onJoined, onLater }: { quiz: OpenRunForStudent; onJoined: (s: StudentRunState) => void; onLater: () => void }) {
   const join = useJoin(quiz, onJoined);
+  const t = useT();
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4" role="dialog" aria-modal="true" aria-labelledby="quiz-popup-title">
       <Card className="grid w-full max-w-md gap-4 p-8 text-center">
-        <span className="text-sm font-semibold tracking-[0.14em] text-primary uppercase">{quiz.status === 'active' ? 'Quiz has started' : 'Quiz is starting'}</span>
+        <span className="text-sm font-semibold tracking-[0.14em] text-primary uppercase">{quiz.status === 'active' ? t('Quiz has started') : t('Quiz is starting')}</span>
         <h2 id="quiz-popup-title" className="font-display text-3xl font-semibold">{quiz.title}</h2>
-        <p className="text-muted-foreground">Your teacher has opened this quiz for your class.</p>
-        <Button className="h-14 text-lg" autoFocus disabled={join.busy} onClick={() => join.run()}>Join the quiz</Button>
-        <Button variant="quiet" onClick={onLater}>Not now</Button>
+        <p className="text-muted-foreground">{t('Your teacher has opened this quiz for your class.')}</p>
+        <Button className="h-14 text-lg" autoFocus disabled={join.busy} onClick={() => join.run()}>{t('Join the quiz')}</Button>
+        <Button variant="quiet" onClick={onLater}>{t('Not now')}</Button>
         <ErrorNote message={join.error} />
       </Card>
     </div>
@@ -49,9 +51,10 @@ export function QuizPopup({ quiz, onJoined, onLater }: { quiz: OpenRunForStudent
 // Stays on the home screen for a student who pressed "Not now", so they can still get in.
 export function QuizWaiting({ quiz, onJoined }: { quiz: OpenRunForStudent; onJoined: (s: StudentRunState) => void }) {
   const join = useJoin(quiz, onJoined);
+  const t = useT();
   return (
-    <Panel title="Quiz" actions={<Button disabled={join.busy} onClick={() => join.run()}>Join the quiz</Button>}>
-      <p><b>{quiz.title}</b> <span className="text-muted-foreground">· {quiz.status === 'active' ? 'has started' : 'is about to start'}</span></p>
+    <Panel title={t('Quiz')} actions={<Button disabled={join.busy} onClick={() => join.run()}>{t('Join the quiz')}</Button>}>
+      <p><b>{quiz.title}</b> <span className="text-muted-foreground">· {quiz.status === 'active' ? t('has started') : t('is about to start')}</span></p>
       <ErrorNote message={join.error} />
     </Panel>
   );

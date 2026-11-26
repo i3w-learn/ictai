@@ -7,6 +7,7 @@ import type { Db } from '../../infra/db/index.js';
 import type { SettingsRepository } from './settings.repository.js';
 
 const AI_ENABLED = 'ai_enabled';
+const LOCK_OUTSIDE_PERIODS = 'lock_outside_periods';
 
 // PRD "Settings": the Super Admin's school-wide choices, and each student's own screen choices.
 export class SettingsService {
@@ -20,12 +21,17 @@ export class SettingsService {
   ) {}
 
   school(): SchoolSettings {
-    return { schoolName: this.settings.schoolName(), aiEnabled: this.aiEnabled(), periods: this.settings.periods() };
+    return { schoolName: this.settings.schoolName(), aiEnabled: this.aiEnabled(), lockOutsidePeriods: this.lockOutsidePeriods(), periods: this.settings.periods() };
   }
 
   // Asked by the AI before it takes a request. On until the Super Admin switches it off.
   aiEnabled(): boolean {
     return this.settings.flag(AI_ENABLED, true);
+  }
+
+  // Asked by the lock policy on every tick. Off until the Super Admin switches it on.
+  lockOutsidePeriods(): boolean {
+    return this.settings.flag(LOCK_OUTSIDE_PERIODS, false);
   }
 
   save(actor: StaffPrincipal, input: SchoolSettings): SchoolSettings {
@@ -38,10 +44,11 @@ export class SettingsService {
     this.db.transaction(() => {
       this.settings.setSchoolName(input.schoolName);
       this.settings.setFlag(AI_ENABLED, input.aiEnabled);
+      this.settings.setFlag(LOCK_OUTSIDE_PERIODS, input.lockOutsidePeriods);
       this.settings.replacePeriods(input.periods, randomUUID, (periodId) => this.onPeriodRemoved(periodId));
     })();
     this.audit.record({ kind: 'staff', id: actor.userId }, 'settings.change', null, {
-      schoolName: before.schoolName !== input.schoolName, ai: before.aiEnabled !== input.aiEnabled, periods: input.periods.length,
+      schoolName: before.schoolName !== input.schoolName, ai: before.aiEnabled !== input.aiEnabled, lock: before.lockOutsidePeriods !== input.lockOutsidePeriods, periods: input.periods.length,
     });
     return this.school();
   }

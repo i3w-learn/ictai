@@ -10,6 +10,7 @@ export function aiRoutes(app: FastifyInstance, deps: { ai: AiService }) {
   route(app, 'GET /api/v1/ai/status', () => ai.status());
   route(app, 'POST /api/v1/ai/quiz', ({ body, query, principal }) => ai.requestQuiz(asStaff(principal), body, query.wait === '1'), jobStatus);
   route(app, 'POST /api/v1/ai/ask', ({ body, query, principal }) => ai.requestAsk(asStaff(principal), body, query.wait === '1'), jobStatus);
+  route(app, 'POST /api/v1/ai/plan', ({ body, query, principal }) => ai.requestPlan(asStaff(principal), body, query.wait === '1'), jobStatus);
   route(app, 'GET /api/v1/ai/tutor', ({ principal }) => ai.myTutor(asStudent(principal)));
   route(app, 'POST /api/v1/ai/tutor', ({ body, principal }) => ai.requestTutor(asStudent(principal), body));
   route(app, 'GET /api/v1/ai/tutor/:id', ({ params, principal }) => ai.tutorJob(asStudent(principal), params.id));

@@ -1,10 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { MonitorPlay, Pause, Pencil, Volume2, VolumeX } from 'lucide-react';
-import { Show, showPosition, showRoom, type ScreenEvent } from '@ict/contracts';
+import { Show, showPosition, showRoom, WHITEBOARD_ASPECT, type ContentItem, type ScreenEvent } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { useLatest } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 import { useFileUrl } from '../content/useFileUrl';
 import { InkLayer, InkToolbar, useInk, useInkProblem, type InkTools } from './Ink';
+import type { InkBoard } from './ink-board';
+import { PenAsk } from './PenAsk';
+import { pageWords } from './show-pages';
+
+// pdf.js is big, so it is fetched only when the teacher first shows a book.
+const PdfPages = lazy(() => import('../content/PdfPages').then((m) => ({ default: m.PdfPages })));
 
 // A show as this screen received it: what the server said, and when (on this PC's own stopwatch).
 export interface LiveShow { show: Show; gotAt: number }
@@ -50,7 +57,130 @@ export function useClassShow(): LiveShow | null {
 // is still there when the teacher stops showing.
 export function ClassShow({ live }: { live: LiveShow }) {
   const { show } = live;
+  if (show.kind === 'video') return show.item ? <ClassVideo live={live} item={show.item} /> : null;
+  if (show.kind !== 'whiteboard' && !show.item) return null;
+  // A new show starts afresh: nothing left over from the last one (a book that would not open, say).
+  return <ClassPages key={show.id} live={live} />;
+}
+
+// A PDF, a picture or a blank whiteboard, on the page the teacher is on, with the writing of that
+// page only. The student with the pen may write on it at any time.
+function ClassPages({ live }: { live: LiveShow }) {
+  const { show } = live;
   const { call, state } = useApp();
+  const t = useT();
+  const me = state.session?.principal;
+  const myId = me?.kind === 'student' ? me.studentId : '';
+  const board = useInk(show, myId, me?.kind === 'student' ? me.name : '');
+  const inkProblem = useInkProblem(board);
+  const hasPen = !!myId && show.pen?.studentId === myId;
+  const [picked, setPicked] = useState<InkTools>({ tool: 'pen', colour: 'blue', width: 'medium' });
+  const tools: InkTools = hasPen ? picked : { ...picked, tool: null };
+  const [failed, setFailed] = useState(false);
+  const title = show.item?.title ?? t('Whiteboard');
+
+  // Tells the server how the show is going on this PC, for its diary, as for a video. Each is said
+  // once for this show (also when React runs an effect twice, as it does in development).
+  const said = useRef(new Set<ScreenEvent>());
+  const showId = show.id;
+  const say = useLatest((event: ScreenEvent) => {
+    if (said.current.has(event)) return;
+    said.current.add(event);
+    void call('POST /api/v1/shows/:id/screen', { params: { id: showId }, body: { event, position: 0, behind: 0 } }).catch(() => undefined);
+  });
+  useEffect(() => { say.current('opened'); }, [say]);
+  const ready = () => say.current('ready');
+  const fail = () => { setFailed(true); say.current('failed'); };
+
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={t('Your teacher is showing: {title}', { title })}>
+      <div className="flex flex-wrap items-center gap-3 px-5 py-3">
+        <MonitorPlay className="size-5 shrink-0 text-white/70" />
+        <p className="min-w-48 flex-1 text-lg font-semibold">{title}</p>
+        {show.kind !== 'image' && <p className="text-lg font-semibold tabular-nums" role="status">{pageWords(show.page, show.pages, t)}</p>}
+        <p className="text-sm text-white/70">{t('{teacher} is showing this to Class {name}', { teacher: show.byName, name: show.className })}</p>
+        {!failed && hasPen && (
+          <div className="flex flex-wrap items-center gap-2 rounded-full bg-primary px-4 py-1 text-sm font-semibold text-primary-foreground" role="status">
+            <Pencil className="size-4" />
+            <span>{t('You have the pen. Write on the page.')}</span>
+            <InkToolbar tools={tools} onTools={setPicked} />
+          </div>
+        )}
+        {!failed && myId && !hasPen && <PenAsk show={show} />}
+        {!failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{t(inkProblem)}</p>}
+      </div>
+      <div className="relative min-h-0 flex-1">
+        {show.kind === 'whiteboard' ? (
+          <ShownBoard board={board} tools={tools} own={myId} onReady={ready} />
+        ) : show.item && (
+          <ShownFile item={show.item} page={show.page} board={board} tools={tools} own={myId} failed={failed} onReady={ready} onFail={fail} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface PageProps { board: InkBoard | null; tools: InkTools; own: string; onReady: () => void }
+
+// A blank 16:9 board, as big as fits, with plain bars where the screen has another shape: a line
+// lands in the same place on every screen.
+function ShownBoard({ board, tools, own, onReady }: PageProps) {
+  const told = useLatest(onReady);
+  useEffect(() => { told.current(); }, [told]);
+  return (
+    <div className="absolute inset-0 grid place-items-center p-3 [container-type:size]">
+      <div className="relative aspect-video w-[min(100cqw,calc(100cqh*16/9))] rounded-lg bg-white">
+        <InkLayer board={board} aspect={WHITEBOARD_ASPECT} tools={tools} own={own} />
+      </div>
+    </div>
+  );
+}
+
+// A book on the teacher's page, or a picture, shown whole, with the writing laid over it.
+function ShownFile({ item, page, board, tools, own, failed, onReady, onFail }: PageProps & {
+  item: ContentItem; page: number; failed: boolean; onFail: () => void;
+}) {
+  // A streamed file that cannot be read is fetched whole instead; past that, the screen says so.
+  const t = useT();
+  const { url, percent, error, onError } = useFileUrl(item, { streamPdf: true });
+  const [aspect, setAspect] = useState<number | null>(null);
+  const told = useLatest(onFail);
+  useEffect(() => { if (error) told.current(); }, [told, error]);
+  const broken = onError ?? onFail;
+  const layer = <InkLayer board={board} aspect={aspect} tools={tools} own={own} />;
+
+  if (failed || error) {
+    const what = item.kind === 'pdf' ? t('This book cannot be opened on this PC. Tell your teacher.') : t('This picture cannot be shown on this PC. Tell your teacher.');
+    return <p className="absolute inset-0 grid place-items-center p-8 text-center text-lg text-white/80">{what}</p>;
+  }
+  if (!url) return <p className="absolute inset-0 grid place-items-center text-lg text-white/80" role="status">{t('Opening… {percent}%', { percent })}</p>;
+  if (item.kind === 'image') {
+    return (
+      <>
+        <img
+          src={url} alt={item.title} onError={broken} className="absolute inset-0 size-full object-contain" onContextMenu={(e) => e.preventDefault()}
+          onLoad={(e) => { const { naturalWidth: w, naturalHeight: h } = e.currentTarget; if (w && h) setAspect(w / h); onReady(); }}
+        />
+        {layer}
+      </>
+    );
+  }
+  return (
+    <div className="absolute inset-0 text-white/80">
+      <Suspense fallback={<p className="grid h-full place-items-center" role="status">{t('Opening…')}</p>}>
+        <PdfPages
+          url={url} page={page} onPages={() => undefined} onError={broken} layer={layer}
+          onAspect={(a) => { setAspect(a); onReady(); }}
+        />
+      </Suspense>
+    </div>
+  );
+}
+
+function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow['show']['item']> }) {
+  const { show } = live;
+  const { call, state } = useApp();
+  const t = useT();
   const me = state.session?.principal;
   const myId = me?.kind === 'student' ? me.studentId : '';
   const board = useInk(show, myId, me?.kind === 'student' ? me.name : '');
@@ -60,7 +190,7 @@ export function ClassShow({ live }: { live: LiveShow }) {
   // With the pen, the pen is in hand at once; it works while the teacher has the video paused.
   const [picked, setPicked] = useState<InkTools>({ tool: 'pen', colour: 'blue', width: 'medium' });
   const tools: InkTools = hasPen && !show.playing ? picked : { ...picked, tool: null };
-  const { url, percent, error, onError } = useFileUrl(show.item);
+  const { url, percent, error, onError } = useFileUrl(item);
   const video = useRef<HTMLVideoElement>(null);
   const latest = useLatest(live);
   const [muted, setMuted] = useState(false);
@@ -141,40 +271,41 @@ export function ClassShow({ live }: { live: LiveShow }) {
   const sound = () => { const v = video.current; if (!v) return; v.muted = !v.muted; setMuted(v.muted); };
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={`Your teacher is showing: ${show.item.title}`}>
+    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={t('Your teacher is showing: {title}', { title: item.title })}>
       <div className="flex flex-wrap items-center gap-3 px-5 py-3">
         <MonitorPlay className="size-5 shrink-0 text-white/70" />
-        <p className="min-w-48 flex-1 text-lg font-semibold">{show.item.title}</p>
-        <p className="text-sm text-white/70">{show.byName} is showing this to Class {show.className}</p>
+        <p className="min-w-48 flex-1 text-lg font-semibold">{item.title}</p>
+        <p className="text-sm text-white/70">{t('{teacher} is showing this to Class {name}', { teacher: show.byName, name: show.className })}</p>
         {/* These sit up here, never on the picture: a lesson often has writing right at its bottom edge. */}
         {url && !failed && waiting && (
-          <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">Waiting for the Server PC…</p>
+          <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{t('Waiting for the Server PC…')}</p>
         )}
         {url && !failed && hasPen && (
           <div className="flex flex-wrap items-center gap-2 rounded-full bg-primary px-4 py-1 text-sm font-semibold text-primary-foreground" role="status">
             <Pencil className="size-4" />
-            <span>{show.playing ? 'You have the pen. You can write when your teacher pauses the video.' : 'You have the pen. Write on the video.'}</span>
+            <span>{show.playing ? t('You have the pen. You can write when your teacher pauses the video.') : t('You have the pen. Write on the video.')}</span>
             {!show.playing && <InkToolbar tools={tools} onTools={setPicked} />}
           </div>
         )}
-        {url && !failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{inkProblem}</p>}
+        {url && !failed && myId && !hasPen && <PenAsk show={show} />}
+        {url && !failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{t(inkProblem)}</p>}
         {url && !failed && !show.playing && (
-          <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="status"><Pause className="size-4 fill-current" strokeWidth={0} /> Paused by your teacher</p>
+          <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="status"><Pause className="size-4 fill-current" strokeWidth={0} /> {t('Paused by your teacher')}</p>
         )}
         {url && !failed && muted && show.playing && (
-          <button type="button" onClick={sound} className="flex cursor-pointer items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-white"><Volume2 className="size-4" /> Turn sound on</button>
+          <button type="button" onClick={sound} className="flex cursor-pointer items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-white"><Volume2 className="size-4" /> {t('Turn sound on')}</button>
         )}
         {url && !failed && (
-          <button type="button" onClick={sound} aria-label={muted ? 'Turn sound on' : 'Turn sound off'} className="grid size-11 cursor-pointer place-items-center rounded-full hover:bg-white/15 focus-visible:outline-white">
+          <button type="button" onClick={sound} aria-label={muted ? t('Turn sound on') : t('Turn sound off')} className="grid size-11 cursor-pointer place-items-center rounded-full hover:bg-white/15 focus-visible:outline-white">
             {muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
           </button>
         )}
       </div>
       <div className="relative min-h-0 flex-1">
         {failed || error ? (
-          <p className="absolute inset-0 grid place-items-center p-8 text-center text-lg text-white/80">This video cannot be played on this PC. Tell your teacher.</p>
+          <p className="absolute inset-0 grid place-items-center p-8 text-center text-lg text-white/80">{t('This video cannot be played on this PC. Tell your teacher.')}</p>
         ) : !url ? (
-          <p className="absolute inset-0 grid place-items-center text-lg text-white/80" role="status">Opening… {percent}%</p>
+          <p className="absolute inset-0 grid place-items-center text-lg text-white/80" role="status">{t('Opening… {percent}%', { percent })}</p>
         ) : (
           <video
             key={`${url} ${attempt}`} ref={video} src={url} playsInline preload="auto" disablePictureInPicture

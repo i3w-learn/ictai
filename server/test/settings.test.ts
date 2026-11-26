@@ -20,7 +20,23 @@ async function setup() {
 describe('School settings', () => {
   it('starts with AI on and no periods, and any staff member can read them', async () => {
     const { inject, teacher } = await setup();
-    expect((await inject('GET', '/api/v1/settings', teacher)).json()).toEqual({ schoolName: 'ICT Lab Server', aiEnabled: true, periods: [] });
+    expect((await inject('GET', '/api/v1/settings', teacher)).json()).toEqual({ schoolName: 'ICT Lab Server', aiEnabled: true, lockOutsidePeriods: false, periods: [] });
+  });
+
+  it('keeps the "lock when no class is booked" switch, off to start', async () => {
+    const { inject, admin, teacher, base } = await setup();
+    expect((await inject('GET', '/api/v1/settings', teacher)).json().lockOutsidePeriods).toBe(false);
+    const res = await inject('PUT', '/api/v1/settings', admin, { ...base, lockOutsidePeriods: true });
+    expect(res.json().lockOutsidePeriods).toBe(true);
+    expect((await inject('GET', '/api/v1/settings', teacher)).json().lockOutsidePeriods).toBe(true);
+  });
+
+  it('takes a settings form without the switch as off', async () => {
+    const { inject, admin, base } = await setup();
+    await inject('PUT', '/api/v1/settings', admin, { ...base, lockOutsidePeriods: true });
+    const res = await inject('PUT', '/api/v1/settings', admin, base);
+    expect(res.statusCode).toBe(200);
+    expect(res.json().lockOutsidePeriods).toBe(false);
   });
 
   it('gives each period a lasting id that survives a rename', async () => {
