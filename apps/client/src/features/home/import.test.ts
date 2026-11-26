@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { translate, type T } from '../../i18n/i18n';
 import { parseCsv, toImportRows } from './import';
+
+const t: T = (text, vars) => translate('en', text, vars);
 
 describe('parseCsv', () => {
   it('reads quoted cells, doubled quotes and commas inside quotes', () => {
@@ -17,21 +20,21 @@ describe('parseCsv', () => {
 
 describe('toImportRows', () => {
   it('finds columns by their headings, in any order', () => {
-    expect(toImportRows('Roll No,Section,Student Name\n7,A,Asha\n,,Kabir')).toEqual({
+    expect(toImportRows('Roll No,Section,Student Name\n7,A,Asha\n,,Kabir', t)).toEqual({
       firstLine: 2, rows: [{ name: 'Asha', rollNo: '7', section: 'A' }, { name: 'Kabir', rollNo: null, section: null }],
     });
   });
 
   it('reads name, roll, section when there is no heading row', () => {
-    expect(toImportRows('Asha,7,A\nKabir')).toEqual({
+    expect(toImportRows('Asha,7,A\nKabir', t)).toEqual({
       firstLine: 1, rows: [{ name: 'Asha', rollNo: '7', section: 'A' }, { name: 'Kabir', rollNo: null, section: null }],
     });
   });
 
   it('explains an empty file, a heading with no students, and too many students', () => {
-    expect(toImportRows(' \n')).toEqual({ problem: 'This file is empty.' });
-    expect(toImportRows('Name,Roll')).toEqual({ problem: 'This file has a heading row but no students.' });
+    expect(toImportRows(' \n', t)).toEqual({ problem: 'This file is empty.' });
+    expect(toImportRows('Name,Roll', t)).toEqual({ problem: 'This file has a heading row but no students.' });
     const many = Array.from({ length: 501 }, (_, i) => `S${i}`).join('\n');
-    expect(toImportRows(many)).toEqual({ problem: 'This file has 501 students. Add at most 500 at a time.' });
+    expect(toImportRows(many, t)).toEqual({ problem: 'This file has 501 students. Add at most 500 at a time.' });
   });
 });

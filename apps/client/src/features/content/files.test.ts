@@ -45,9 +45,9 @@ describe('library files', () => {
   });
 
   it('says why a file cannot be sent', () => {
-    expect(fileProblem({ size: 0 })).toBe('This file is empty.');
-    expect(fileProblem({ size: MAX_FILE_BYTES + 1 })).toMatch(/limit is 512 MB/);
-    expect(fileProblem({ size: 5000 })).toBeNull();
+    expect(fileProblem({ size: 0 }, t)).toBe('This file is empty.');
+    expect(fileProblem({ size: MAX_FILE_BYTES + 1 }, t)).toMatch(/limit is 512 MB/);
+    expect(fileProblem({ size: 5000 }, t)).toBeNull();
   });
 
   it('writes sizes in words', () => {

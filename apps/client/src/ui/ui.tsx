@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { useT } from '../i18n/i18n';
+import { tk, useT } from '../i18n/i18n';
 
 // Joins class names; later Tailwind classes win over earlier ones.
 export function cn(...inputs: ClassValue[]) {
@@ -106,8 +106,11 @@ export function Note({ children }: { children: ReactNode }) {
   return <div className="rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-secondary-foreground">{children}</div>;
 }
 
+// A message made on this PC (marked with tk where it is made) is said in the chosen language.
+// A message sent by the server has no Marathi line, so it shows as the server wrote it.
 export function ErrorNote({ message }: { message: string | null }) {
-  return message ? <p className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">{message}</p> : null;
+  const t = useT();
+  return message ? <p className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">{t(message)}</p> : null;
 }
 
 // A button that asks "Sure?" inline before acting. No browser confirm(): it blocks the webview.
@@ -145,7 +148,7 @@ export function useAction<A extends unknown[]>(fn: (...args: A) => Promise<void>
     try {
       await latest.current(...args);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong.');
+      setError(e instanceof Error ? e.message : tk('Something went wrong.'));
     } finally {
       setBusy(false);
     }

@@ -1,6 +1,7 @@
 import type { Band, StudentResultRow } from '@ict/contracts';
+import { tk } from '../../i18n/i18n';
 
-export const BAND_LABEL: Record<Band, string> = { great: 'Doing great', growing: 'Growing', needs: 'Needs you', none: 'Not started' };
+export const BAND_LABEL: Record<Band, string> = { great: tk('Doing great'), growing: tk('Growing'), needs: tk('Needs you'), none: tk('Not started') };
 
 // Text starting with = + - @ would run as a formula in Excel, so it gets a leading apostrophe.
 const cell = (v: string | number | null) => {
@@ -9,7 +10,9 @@ const cell = (v: string | number | null) => {
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
-// A file Excel opens directly. The BOM makes Excel read Hindi names correctly.
+// A file Excel opens directly. The BOM makes Excel read Hindi names correctly. The column names and
+// the group words stay in English in the file, whatever language the screen is in, because other
+// programs read it.
 export function toCsv(rows: StudentResultRow[]): string {
   const lines = [
     ['Name', 'Roll no', 'Class', 'Section', 'Quizzes taken', 'Average %', 'Group'],

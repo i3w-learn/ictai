@@ -1,3 +1,5 @@
+import { mrStaff } from './mr-staff';
+
 // Marathi for every sentence the screens say. The English sentence is the key, exactly as written
 // in the screen. Words in {curly brackets} are filled in later and must stay as they are.
 //
@@ -78,7 +80,7 @@ export const mr: Record<string, string> = {
   'Nothing to type here.': 'येथे काही लिहायची गरज नाही.',
   'Ask your teacher': 'तुमच्या शिक्षकांना विचारा',
   'The lab is locked.': 'लॅब बंद केली आहे.',
-  'On the server PC, open Devices and press Unlock the lab.': 'सर्व्हर पीसीवर Devices उघडा आणि Unlock the lab दाबा.',
+  'On the server PC, open Devices and press Unlock the lab.': 'सर्व्हर पीसीवर “उपकरणे” उघडा आणि “लॅब उघडा” दाबा.',
   'This board then joins by itself.': 'मग हा बोर्ड आपोआप सामील होईल.',
   'This PC then joins by itself.': 'मग हा पीसी आपोआप सामील होईल.',
   'Not the server this PC expected': 'या पीसीला अपेक्षित असलेला हा सर्व्हर नाही',
@@ -383,4 +385,6 @@ export const mr: Record<string, string> = {
   'Thinking… this can take a minute.': 'विचार करत आहे… याला एक मिनिट लागू शकतो.',
   'The helper can be wrong. If something looks odd, ask your teacher.': 'मदतनीस चुकू शकतो. काही वेगळे वाटले तर तुमच्या शिक्षकांना विचारा.',
   'Your earlier questions': 'तुमचे आधीचे प्रश्न',
+  // --- The teacher and admin screens (mr-staff.ts) ---
+  ...mrStaff,
 };

@@ -4,6 +4,7 @@ import type { ContentItem, SchoolSettings } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Shell, SideMenu, type MenuItem } from '../../ui/dashboard';
 import { Centered, PageTitle } from '../../ui/ui';
+import { tk, useLang } from '../../i18n/i18n';
 import { StudentHome } from './StudentHome';
 import { AuditPanel } from './AuditPanel';
 import { DevicesPanel } from './DevicesPanel';
@@ -35,12 +36,12 @@ import { TeachersPanel } from '../results/TeachersPanel';
 // The pages in the console's side menu.
 type Page = 'today' | 'teach' | 'videos' | 'reports' | 'school' | 'system';
 const MENU: MenuItem<Page>[] = [
-  { key: 'today', label: 'Today', icon: House },
-  { key: 'teach', label: 'Teach', icon: GraduationCap },
-  { key: 'videos', label: 'Videos', icon: Film },
-  { key: 'reports', label: 'Reports', icon: ClipboardList },
-  { key: 'school', label: 'School', icon: School },
-  { key: 'system', label: 'System', icon: Wrench },
+  { key: 'today', label: tk('Today'), icon: House },
+  { key: 'teach', label: tk('Teach'), icon: GraduationCap },
+  { key: 'videos', label: tk('Videos'), icon: Film },
+  { key: 'reports', label: tk('Reports'), icon: ClipboardList },
+  { key: 'school', label: tk('School'), icon: School },
+  { key: 'system', label: tk('System'), icon: Wrench },
 ];
 
 // The console's screens that open over a menu page.
@@ -56,13 +57,9 @@ type View =
   | { kind: 'whiteboard' }
   | { kind: 'student'; studentId: string };
 
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-}
-
 export function Home() {
   const { state, dispatch } = useApp();
+  const { t, locale } = useLang();
   const p = state.session!.principal;
   const [view, setView] = useState<View>({ kind: 'dash' });
   const [page, setPage] = useState<Page>('today');
@@ -127,12 +124,15 @@ export function Home() {
     };
     const menu = MENU.filter((m) => panels[m.key].some(Boolean));
     const current = menu.find((m) => m.key === page) ?? menu[0];
-    const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+    const today = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+    const h = new Date().getHours();
+    const name = p.displayName;
+    const greeting = h < 12 ? t('Good morning, {name}', { name }) : h < 17 ? t('Good afternoon, {name}', { name }) : t('Good evening, {name}', { name });
     return (
-      <Shell menu={menu.length > 1 && current && <SideMenu label="Pages" items={menu} current={current.key} onPick={setPage} />}>
+      <Shell menu={menu.length > 1 && current && <SideMenu label={t('Pages')} items={menu.map((m) => ({ ...m, label: t(m.label) }))} current={current.key} onPick={setPage} />}>
         <div className="mx-auto grid max-w-6xl gap-8">
           <header className="pb-1">
-            <PageTitle eyebrow={`${today} · ${greeting()}, ${p.displayName}`}>{current?.key === 'today' || !current ? 'Your lab today' : current.label}</PageTitle>
+            <PageTitle eyebrow={`${today} · ${greeting}`}>{current?.key === 'today' || !current ? t('Your lab today') : t(current.label)}</PageTitle>
           </header>
           {current && panels[current.key]}
         </div>
@@ -143,7 +143,7 @@ export function Home() {
   return (
     <Shell>
       <Centered>
-        <PageTitle sub="Live lessons arrive in the next milestone (M2).">Ready, {p.kind === 'staff' ? p.displayName : 'device'}</PageTitle>
+        <PageTitle sub={t('Live lessons arrive in the next milestone (M2).')}>{t('Ready, {name}', { name: p.kind === 'staff' ? p.displayName : t('device') })}</PageTitle>
       </Centered>
     </Shell>
   );

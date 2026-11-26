@@ -1,7 +1,14 @@
-import type { Slot, StudentToday } from '@ict/contracts';
+import type { SCHOOL_DAYS, Slot, StudentToday } from '@ict/contracts';
+import { tk, type T } from '../../i18n/i18n';
 
 // "Class 7" or "Class 7 A".
-export const slotLabel = (s: Pick<Slot, 'className' | 'sectionName'>) => `Class ${s.className}${s.sectionName ? ` ${s.sectionName}` : ''}`;
+export const slotLabel = (s: Pick<Slot, 'className' | 'sectionName'>, t: T) =>
+  s.sectionName ? t('Class {name} {section}', { name: s.className, section: s.sectionName }) : t('Class {name}', { name: s.className });
+
+// The school days as the screens say them: t(DAY[day]).
+export const DAY: Record<(typeof SCHOOL_DAYS)[number], string> = {
+  Monday: tk('Monday'), Tuesday: tk('Tuesday'), Wednesday: tk('Wednesday'), Thursday: tk('Thursday'), Friday: tk('Friday'), Saturday: tk('Saturday'),
+};
 
 type LabPeriod = StudentToday['periods'][number];
 

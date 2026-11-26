@@ -21,7 +21,7 @@ The full list, by who uses it.
 - Pick what the PC is: Server PC (staff), student PC or smart board.
 - Find the lab server and join the lab. Change server and Reset device ask before they wipe anything.
 - The app sizes itself to the screen, from a 1024 wide monitor up to 4K.
-- English or Marathi: a switch in the top bar, remembered on each PC. The student screens are in both; the teacher screens are still in English only.
+- English or Marathi: a switch in the top bar, remembered on each PC. Every screen is in both: student, teacher and admin. Messages that come from the server, and what the school types (names, subjects), stay as they are.
 
 **Student**
 - Sign in by class and roll number (and section or name when needed).

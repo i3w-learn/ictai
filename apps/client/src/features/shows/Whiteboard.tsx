@@ -10,12 +10,14 @@ import { PenRequests } from './PenRequests';
 import { PenRow } from './PenRow';
 import { turnPage } from './show-pages';
 import { useShowHost } from './useShowHost';
+import { useT } from '../../i18n/i18n';
 
 // A blank board the teacher shows to one class and writes on, page by page. Every student PC of the
 // class shows the page she is on. The board lives only while it is shown: leaving this screen, or
 // "Stop showing", ends it and its writing.
 export function Whiteboard({ onBack }: { onBack: () => void }) {
   const { call, state } = useApp();
+  const t = useT();
   const me = state.session?.principal;
   const myName = me?.kind === 'staff' ? me.displayName : '';
 
@@ -57,21 +59,21 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
     // The whole window: one slim row of buttons on top, and under it the board as big as fits.
     <div className="flex h-full w-full flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Back</Button>
-        <h1 className="min-w-48 flex-1 font-display text-2xl font-semibold">Whiteboard</h1>
+        <Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> {t('Back')}</Button>
+        <h1 className="min-w-48 flex-1 font-display text-2xl font-semibold">{t('Whiteboard')}</h1>
         {showing ? (
           <div className="flex flex-wrap items-center gap-3" role="status">
-            <span className="flex h-11 items-center gap-2 rounded-full bg-primary/10 px-5 text-base font-semibold text-primary"><MonitorPlay className="size-5 shrink-0" /> Class {live?.className} can see this board now</span>
+            <span className="flex h-11 items-center gap-2 rounded-full bg-primary/10 px-5 text-base font-semibold text-primary"><MonitorPlay className="size-5 shrink-0" /> {t('Class {name} can see this board now', { name: live?.className ?? '' })}</span>
             <PenRow host={host} />
-            <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>Stop showing</Button>
+            <Button variant="quiet" disabled={host.busy.stop} onClick={() => host.stop()}>{t('Stop showing')}</Button>
           </div>
         ) : (
-          <div className="flex flex-wrap items-center gap-3" title="A blank board opens on every student PC of the class.">
-          <Select aria-label="Class to show the whiteboard to" className="w-auto rounded-full !text-base" value={classId} onChange={(e) => setPickedClass(e.target.value)}>
-            <option value="">Choose a class</option>
-            {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
+          <div className="flex flex-wrap items-center gap-3" title={t('A blank board opens on every student PC of the class.')}>
+          <Select aria-label={t('Class to show the whiteboard to')} className="w-auto rounded-full !text-base" value={classId} onChange={(e) => setPickedClass(e.target.value)}>
+            <option value="">{t('Choose a class')}</option>
+            {classes.map((c) => <option key={c.id} value={c.id}>{t('Class {name}', { name: c.name })}</option>)}
           </Select>
-          <Button disabled={!classId || host.busy.start} onClick={() => host.start()}><MonitorPlay className="size-4" /> Start whiteboard</Button>
+          <Button disabled={!classId || host.busy.start} onClick={() => host.start()}><MonitorPlay className="size-4" /> {t('Start whiteboard')}</Button>
           </div>
         )}
       </div>
@@ -89,7 +91,7 @@ export function Whiteboard({ onBack }: { onBack: () => void }) {
         </div>
         {showing && (
           <PageRail page={here.page} pages={here.pages} onGo={go}>
-            <Button variant="quiet" className="min-h-16 flex-col text-base" disabled={here.pages >= WHITEBOARD_PAGES_MAX} onClick={addPage}><Plus className="size-5" /> Add page</Button>
+            <Button variant="quiet" className="min-h-16 flex-col text-base" disabled={here.pages >= WHITEBOARD_PAGES_MAX} onClick={addPage}><Plus className="size-5" /> {t('Add page')}</Button>
           </PageRail>
         )}
       </div>

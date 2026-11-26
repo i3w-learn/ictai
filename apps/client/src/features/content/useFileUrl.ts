@@ -3,6 +3,7 @@ import type { ContentItem } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { useLatest } from '../../ui/ui';
 import { fetchFile } from './files';
+import { tk, useT } from '../../i18n/i18n';
 
 // The kinds whose players can ask for a file part by part and say when that fails. A PDF is one of
 // them only where the app draws the pages itself (PdfPages); the built-in reader needs the whole file.
@@ -19,6 +20,7 @@ export const streams = (kind: ContentItem['kind'], streamPdf = false) =>
 // is what a player calls when the stream fails; it is undefined once there is nothing else left to try.
 export function useFileUrl(item: Pick<ContentItem, 'id' | 'kind' | 'fileHash' | 'mime' | 'size'>, opts?: { streamPdf?: boolean }) {
   const { call, platform } = useApp();
+  const t = useT();
   const [streamFailed, setStreamFailed] = useState(false);
   const stream = item.fileHash && streams(item.kind, opts?.streamPdf) && !streamFailed ? (platform.fileUrl?.(item.fileHash) ?? null) : null;
   const [fetched, setFetched] = useState<string | null>(null);
@@ -35,11 +37,11 @@ export function useFileUrl(item: Pick<ContentItem, 'id' | 'kind' | 'fileHash' | 
     const api = { chunk: (hash: string, index: number) => call('GET /api/v1/files/:hash/chunks/:index', { params: { hash, index } }) };
     fetchFile(api, itemNow.current, (d, t) => { if (!stopped) setProgress([d, t]); }, () => stopped).then(
       (blob) => { if (blob && !stopped) { made = URL.createObjectURL(blob); setFetched(made); } },
-      (e) => { if (!stopped) setError(e instanceof Error ? e.message : 'Could not open this file.'); },
+      (e) => { if (!stopped) setError(e instanceof Error ? e.message : tk('Could not open this file.')); },
     );
     // Leaving the screen stops the fetch and frees the memory the file took.
     return () => { stopped = true; if (made) URL.revokeObjectURL(made); };
   }, [call, itemNow, id, fileHash, stream]);
 
-  return { url: stream ?? fetched, percent: Math.round((progress[0] / progress[1]) * 100), error, onError: stream ? () => setStreamFailed(true) : undefined };
+  return { url: stream ?? fetched, percent: Math.round((progress[0] / progress[1]) * 100), error: error && t(error), onError: stream ? () => setStreamFailed(true) : undefined };
 }

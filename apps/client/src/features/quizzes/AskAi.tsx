@@ -3,6 +3,7 @@ import { ArrowLeft, Sparkles } from 'lucide-react';
 import { AI_QUESTION_MAX, type AiAskRequest } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Note, Panel, Select, TextArea, useAction } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 import { AiUnavailable, LANGUAGES } from '../ai/ai-shared';
 import { useAiJob } from '../ai/useAiJob';
 
@@ -10,6 +11,7 @@ import { useAiJob } from '../ai/useAiJob';
 // Nothing leaves the school; the answer may take a minute and may be wrong, so the screen says so.
 export function AskAi({ onBack }: { onBack: () => void }) {
   const { call } = useApp();
+  const t = useT();
   const [question, setQuestion] = useState('');
   const [language, setLanguage] = useState<AiAskRequest['language']>('en');
   const ai = useAiJob('ask');
@@ -27,25 +29,25 @@ export function AskAi({ onBack }: { onBack: () => void }) {
   return (
     <div className="mx-auto grid max-w-4xl gap-6">
       <div className="flex items-center gap-3">
-        <Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> Quizzes</Button>
-        <h1 className="font-display text-2xl font-semibold">Ask AI</h1>
+        <Button variant="quiet" onClick={onBack}><ArrowLeft className="size-4" /> {t('Quizzes')}</Button>
+        <h1 className="font-display text-2xl font-semibold">{t('Ask AI')}</h1>
       </div>
 
       {ai.status && !ai.usable ? <AiUnavailable status={ai.status} /> : ai.status && (
         <>
-          <Panel title="What do you want to ask?">
+          <Panel title={t('What do you want to ask?')}>
             <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); if (canAsk) void ask.run(); }}>
-              <TextArea id="ask-question" label="Your question" rows={4} maxLength={AI_QUESTION_MAX} placeholder="Why does the moon change shape during the month?" value={question} onChange={(e) => setQuestion(e.target.value)} />
+              <TextArea id="ask-question" label={t('Your question')} rows={4} maxLength={AI_QUESTION_MAX} placeholder={t('Why does the moon change shape during the month?')} value={question} onChange={(e) => setQuestion(e.target.value)} />
               <div className="flex flex-wrap items-end gap-3">
                 <label className="grid gap-1.5">
-                  <span className="text-[0.8125rem] font-medium text-muted-foreground">Answer in</span>
-                  <Select aria-label="Answer in" className="min-w-40" value={language} onChange={(e) => setLanguage(e.target.value as AiAskRequest['language'])}>
+                  <span className="text-[0.8125rem] font-medium text-muted-foreground">{t('Answer in')}</span>
+                  <Select aria-label={t('Answer in')} className="min-w-40" value={language} onChange={(e) => setLanguage(e.target.value as AiAskRequest['language'])}>
                     {Object.entries(LANGUAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </Select>
                 </label>
-                <Button type="submit" disabled={!canAsk}><Sparkles className="size-4" /> Ask</Button>
+                <Button type="submit" disabled={!canAsk}><Sparkles className="size-4" /> {t('Ask')}</Button>
                 <span className="text-sm text-muted-foreground">
-                  {ai.busyElsewhere ? 'Another AI request of yours is still running. Ask when it is done.' : 'The AI runs on the Server PC. Nothing leaves the school.'}
+                  {ai.busyElsewhere ? t('Another AI request of yours is still running. Ask when it is done.') : t('The AI runs on the Server PC. Nothing leaves the school.')}
                 </span>
               </div>
               <ErrorNote message={ask.error} />
@@ -53,15 +55,15 @@ export function AskAi({ onBack }: { onBack: () => void }) {
           </Panel>
 
           {job && (
-            <Panel title="Your question">
+            <Panel title={t('Your question')}>
               <p className="text-[0.9375rem] font-medium whitespace-pre-wrap">{job.request.question}</p>
-              {job.status === 'queued' && <Note>You are number {job.position} in line. Your answer starts after the ones before it.</Note>}
-              {job.status === 'running' && <Note>Writing your answer… this can take a minute. You can keep working; it will be under Earlier questions.</Note>}
+              {job.status === 'queued' && <Note>{t('You are number {position} in line. Your answer starts after the ones before it.', { position: job.position ?? '' })}</Note>}
+              {job.status === 'running' && <Note>{t('Writing your answer… this can take a minute. You can keep working; it will be under Earlier questions.')}</Note>}
               {ai.trouble && <Note>{ai.trouble}</Note>}
               {job.status === 'failed' && (
                 <div className="grid gap-3">
                   <ErrorNote message={job.error} />
-                  <div><Button variant="quiet" onClick={() => setQuestion(job.request.question)}>Try again</Button></div>
+                  <div><Button variant="quiet" onClick={() => setQuestion(job.request.question)}>{t('Try again')}</Button></div>
                 </div>
               )}
               {job.status === 'done' && job.result && <Answer text={job.result.answer} />}
@@ -69,13 +71,13 @@ export function AskAi({ onBack }: { onBack: () => void }) {
           )}
 
           {earlier.length > 0 && (
-            <Panel title="Earlier questions">
+            <Panel title={t('Earlier questions')}>
               <ul className="grid gap-2">
                 {earlier.map((j) => (
                   <li key={j.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-border px-3 py-2">
                     <span className="min-w-48 flex-1 truncate font-medium">{j.request.question}</span>
                     <span className="text-xs text-muted-foreground">{LANGUAGES[j.request.language]}</span>
-                    <Button variant="quiet" disabled={ai.waiting} onClick={() => ai.follow(j)}>Show answer</Button>
+                    <Button variant="quiet" disabled={ai.waiting} onClick={() => ai.follow(j)}>{t('Show answer')}</Button>
                   </li>
                 ))}
               </ul>
@@ -89,10 +91,11 @@ export function AskAi({ onBack }: { onBack: () => void }) {
 }
 
 function Answer({ text }: { text: string }) {
+  const t = useT();
   return (
     <div className="grid gap-3">
       <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap">{text}</p>
-      <p className="text-sm text-muted-foreground">The AI can be wrong. Check the answer before you teach it.</p>
+      <p className="text-sm text-muted-foreground">{t('The AI can be wrong. Check the answer before you teach it.')}</p>
     </div>
   );
 }

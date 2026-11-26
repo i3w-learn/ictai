@@ -20,9 +20,9 @@ export const sizeWords = (bytes: number) =>
   bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
 // Why a picked file cannot be sent, in words for the teacher; null when it can.
-export function fileProblem(file: { size: number }): string | null {
-  if (file.size === 0) return 'This file is empty.';
-  if (file.size > MAX_FILE_BYTES) return `This file is ${sizeWords(file.size)}. The limit is ${sizeWords(MAX_FILE_BYTES)}.`;
+export function fileProblem(file: { size: number }, t: T): string | null {
+  if (file.size === 0) return t('This file is empty.');
+  if (file.size > MAX_FILE_BYTES) return t('This file is {size}. The limit is {limit}.', { size: sizeWords(file.size), limit: sizeWords(MAX_FILE_BYTES) });
   return null;
 }
 

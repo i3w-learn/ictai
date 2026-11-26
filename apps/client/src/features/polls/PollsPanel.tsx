@@ -3,13 +3,17 @@ import { MessageCircleQuestion, Plus, Star, X } from 'lucide-react';
 import { pollRoom, type Poll, type SchoolClass } from '@ict/contracts';
 import { useApp, useRelayRoom } from '../../app/app-context';
 import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, controlClass, useAction } from '../../ui/ui';
+import { useLang, useT, type T } from '../../i18n/i18n';
 
-const whenShort = (at: number) => new Date(at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const whenShort = (at: number, locale: string | undefined) => new Date(at).toLocaleString(locale, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 // One poll with how the class answered: a bar for each option, or for each number of stars.
 export function PollResult({ poll }: { poll: Poll }) {
+  const t = useT();
   const most = Math.max(1, ...poll.counts);
-  const labels = poll.kind === 'rating' ? poll.counts.map((_, i) => `${i + 1} star${i === 0 ? '' : 's'}`) : poll.options;
+  const labels = poll.kind === 'rating' ? poll.counts.map((_, i) => (i === 0 ? t('{n} star', { n: i + 1 }) : t('{n} stars', { n: i + 1 }))) : poll.options;
+  // The sentence is translated whole; the number in the middle is shown in bold.
+  const [averageBefore, averageAfter] = t('average {average} of 5').split('{average}');
   return (
     <div className="grid gap-1.5">
       {labels.map((label, i) => (
@@ -20,23 +24,25 @@ export function PollResult({ poll }: { poll: Poll }) {
         </div>
       ))}
       <p className="mt-1 text-sm text-muted-foreground">
-        {poll.answered === 0 ? 'No answers yet.' : `${poll.answered} ${poll.answered === 1 ? 'answer' : 'answers'}`}
-        {poll.average != null && <> · average <b className="text-foreground">{poll.average}</b> of 5</>}
+        {poll.answered === 0 ? t('No answers yet.') : poll.answered === 1 ? t('{n} answer', { n: poll.answered }) : t('{n} answers', { n: poll.answered })}
+        {poll.average != null && <> · {averageBefore}<b className="text-foreground">{poll.average}</b>{averageAfter}</>}
       </p>
     </div>
   );
 }
 
-const BLANK = { question: '', kind: 'choice' as Poll['kind'], options: ['Yes', 'No'] };
+// A new poll starts with Yes and No, in the language of the screen.
+const blank = (t: T) => ({ question: '', kind: 'choice' as Poll['kind'], options: [t('Yes'), t('No')] });
 
 // Spec 4.3 "Polls": ask a class one quick question and watch the answers come in. Nothing is scored
 // and no names are shown.
 export function PollsPanel({ refresh }: { refresh: number }) {
   const { call } = useApp();
+  const { t, locale } = useLang();
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [classId, setClassId] = useState('');
   const [polls, setPolls] = useState<Poll[]>([]);
-  const [form, setForm] = useState(BLANK);
+  const [form, setForm] = useState(() => blank(t));
 
   const load = useAction(async () => {
     const cls = await call('GET /api/v1/classes');
@@ -57,11 +63,11 @@ export function PollsPanel({ refresh }: { refresh: number }) {
   }
 
   const options = form.options.map((o) => o.trim());
-  const problem = !classId ? 'Add a class first.' : !form.question.trim() ? 'Type the question.' : form.kind === 'choice' && options.some((o) => !o) ? 'Fill in every option, or remove the empty one.' : null;
+  const problem = !classId ? t('Add a class first.') : !form.question.trim() ? t('Type the question.') : form.kind === 'choice' && options.some((o) => !o) ? t('Fill in every option, or remove the empty one.') : null;
 
   const ask = useAction(async () => {
     await call('POST /api/v1/polls', { body: { classId, question: form.question, kind: form.kind, options: form.kind === 'choice' ? options : [] } });
-    setForm(BLANK);
+    setForm(blank(t));
     await load.run();
   });
   const close = useAction(async (id: string) => {
@@ -75,22 +81,22 @@ export function PollsPanel({ refresh }: { refresh: number }) {
   const setOption = (i: number, text: string) => setForm({ ...form, options: form.options.map((o, j) => (j === i ? text : o)) });
 
   return (
-    <Panel title="Polls">
+    <Panel title={t('Polls')}>
       <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); if (!problem) void ask.run(); }}>
         <div className="flex flex-wrap items-end gap-3">
           <label className="grid gap-1.5">
-            <span className="text-[0.8125rem] font-medium text-muted-foreground">Class</span>
-            <Select aria-label="Poll class" value={classId} onChange={(e) => setClassId(e.target.value)}>
-              {classes.length === 0 && <option value="">No classes yet</option>}
-              {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
+            <span className="text-[0.8125rem] font-medium text-muted-foreground">{t('Class')}</span>
+            <Select aria-label={t('Poll class')} value={classId} onChange={(e) => setClassId(e.target.value)}>
+              {classes.length === 0 && <option value="">{t('No classes yet')}</option>}
+              {classes.map((c) => <option key={c.id} value={c.id}>{t('Class {name}', { name: c.name })}</option>)}
             </Select>
           </label>
-          <Field id="poll-question" className="min-w-72 flex-1" label="Question" placeholder="Was today's lesson easy to follow?" maxLength={300} value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} />
+          <Field id="poll-question" className="min-w-72 flex-1" label={t('Question')} placeholder={t("Was today's lesson easy to follow?")} maxLength={300} value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} />
           <label className="grid gap-1.5">
-            <span className="text-[0.8125rem] font-medium text-muted-foreground">Students answer with</span>
-            <Select aria-label="Kind of poll" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as Poll['kind'] })}>
-              <option value="choice">One of my options</option>
-              <option value="rating">1 to 5 stars</option>
+            <span className="text-[0.8125rem] font-medium text-muted-foreground">{t('Students answer with')}</span>
+            <Select aria-label={t('Kind of poll')} value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as Poll['kind'] })}>
+              <option value="choice">{t('One of my options')}</option>
+              <option value="rating">{t('1 to 5 stars')}</option>
             </Select>
           </label>
         </div>
@@ -98,22 +104,22 @@ export function PollsPanel({ refresh }: { refresh: number }) {
           <div className="flex flex-wrap items-center gap-2">
             {form.options.map((o, i) => (
               <span key={i} className="flex items-center gap-1">
-                <input aria-label={`Option ${i + 1}`} className={`${controlClass} w-44`} maxLength={120} placeholder={`Option ${i + 1}`} value={o} onChange={(e) => setOption(i, e.target.value)} />
-                {form.options.length > 2 && <button type="button" aria-label={`Remove option ${i + 1}`} className="grid size-9 cursor-pointer place-items-center rounded-full text-muted-foreground hover:bg-secondary" onClick={() => setForm({ ...form, options: form.options.filter((_, j) => j !== i) })}><X className="size-4" /></button>}
+                <input aria-label={t('Option {n}', { n: i + 1 })} className={`${controlClass} w-44`} maxLength={120} placeholder={t('Option {n}', { n: i + 1 })} value={o} onChange={(e) => setOption(i, e.target.value)} />
+                {form.options.length > 2 && <button type="button" aria-label={t('Remove option {n}', { n: i + 1 })} className="grid size-9 cursor-pointer place-items-center rounded-full text-muted-foreground hover:bg-secondary" onClick={() => setForm({ ...form, options: form.options.filter((_, j) => j !== i) })}><X className="size-4" /></button>}
               </span>
             ))}
-            {form.options.length < 6 && <Button type="button" variant="quiet" onClick={() => setForm({ ...form, options: [...form.options, ''] })}><Plus className="size-4" /> Option</Button>}
+            {form.options.length < 6 && <Button type="button" variant="quiet" onClick={() => setForm({ ...form, options: [...form.options, ''] })}><Plus className="size-4" /> {t('Option')}</Button>}
           </div>
         )}
         <div className="flex flex-wrap items-center gap-4">
-          <Button type="submit" disabled={!!problem || ask.busy}><MessageCircleQuestion className="size-4" /> Ask the class</Button>
-          <span className="text-sm text-muted-foreground">{problem ?? 'It opens on every student screen of the class. Nothing is scored and you see no names.'}</span>
+          <Button type="submit" disabled={!!problem || ask.busy}><MessageCircleQuestion className="size-4" /> {t('Ask the class')}</Button>
+          <span className="text-sm text-muted-foreground">{problem ?? t('It opens on every student screen of the class. Nothing is scored and you see no names.')}</span>
         </div>
         <ErrorNote message={ask.error} />
       </form>
 
       {polls.length === 0 ? (
-        <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">No polls for this class yet.</p>
+        <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">{t('No polls for this class yet.')}</p>
       ) : (
         <ul className="grid gap-3">
           {polls.map((p) => (
@@ -122,12 +128,12 @@ export function PollsPanel({ refresh }: { refresh: number }) {
                 <span className="min-w-56 flex-1">
                   <span className="font-medium">{p.question}</span>
                   {p.open
-                    ? <span className="ml-2 inline-flex items-center gap-1.5 rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success"><span className="size-2 animate-pulse rounded-full bg-success" /> Open on student screens</span>
-                    : <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-muted-foreground">Closed</span>}
-                  <span className="mt-0.5 block text-xs text-muted-foreground">{p.kind === 'rating' && <Star className="mr-1 inline size-3" />}{`by ${p.byName} · ${whenShort(p.createdAt)}`}</span>
+                    ? <span className="ml-2 inline-flex items-center gap-1.5 rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success"><span className="size-2 animate-pulse rounded-full bg-success" /> {t('Open on student screens')}</span>
+                    : <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-muted-foreground">{t('Closed')}</span>}
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{p.kind === 'rating' && <Star className="mr-1 inline size-3" />}{`${t('by {name}', { name: p.byName })} · ${whenShort(p.createdAt, locale)}`}</span>
                 </span>
-                {p.open && <Button disabled={close.busy} onClick={() => close.run(p.id)}>Close poll</Button>}
-                <ConfirmButton question="Delete this poll and its answers?" onConfirm={() => void remove.run(p.id)}>Delete</ConfirmButton>
+                {p.open && <Button disabled={close.busy} onClick={() => close.run(p.id)}>{t('Close poll')}</Button>}
+                <ConfirmButton question={t('Delete this poll and its answers?')} onConfirm={() => void remove.run(p.id)}>{t('Delete')}</ConfirmButton>
               </div>
               <PollResult poll={p} />
             </li>

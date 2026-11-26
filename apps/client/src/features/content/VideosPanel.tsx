@@ -4,11 +4,13 @@ import type { ContentItem } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { ErrorNote, Panel, useAction } from '../../ui/ui';
 import { sizeWords } from './files';
+import { useT } from '../../i18n/i18n';
 
 // Every video in the library, class by class: the ones that came with the app and the ones teachers
 // added. Tap one to play it, and from there show it to the class.
 export function VideosPanel({ onOpen, refresh }: { onOpen: (item: ContentItem) => void; refresh: number }) {
   const { call } = useApp();
+  const t = useT();
   const [videos, setVideos] = useState<ContentItem[] | null>(null);
   const load = useAction(async () => setVideos((await call('GET /api/v1/content', { query: {} })).filter((i) => i.kind === 'video')));
   const { run: loadNow } = load;
@@ -16,11 +18,11 @@ export function VideosPanel({ onOpen, refresh }: { onOpen: (item: ContentItem) =
 
   const classes = [...new Set((videos ?? []).map((v) => v.className))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   return (
-    <Panel title="Videos in the library">
-      {videos?.length === 0 && <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">No videos yet. Add one under Teach → Library.</p>}
+    <Panel title={t('Videos in the library')}>
+      {videos?.length === 0 && <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">{t('No videos yet. Add one under Teach → Library.')}</p>}
       {classes.map((name) => (
         <section key={name} className="grid gap-2">
-          <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">Class {name}</h3>
+          <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">{t('Class {name}', { name })}</h3>
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
             {videos!.filter((v) => v.className === name).map((v) => (
               <li key={v.id}>

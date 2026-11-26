@@ -3,6 +3,7 @@ import { API, ApiError, SLOW_CALL_MS, plainProblem, type Endpoint, type RouteKey
 import { PlatformError, type Platform } from '../platform/platform';
 import type { ServerLocator } from './server-locator';
 import { baseUrl, type ServerTarget } from './settings';
+import { tk } from '../i18n/i18n';
 
 type Ep<K extends RouteKey> = (typeof API)[K];
 type Field<K extends RouteKey, F extends string> = Ep<K> extends Record<F, infer S> ? S : undefined;
@@ -13,7 +14,8 @@ export type CallInput<K extends RouteKey> = {
 };
 export type CallOutput<K extends RouteKey> = Field<K, 'response'> extends ZodType ? z.output<Field<K, 'response'>> : void;
 
-// A failed call the user can be told about: the server's { code, message }.
+// A failed call the user can be told about: the server's { code, message }. A message made here, on
+// this PC, is marked with tk, and the screen that shows it translates it (ErrorNote does).
 export class ApiCallError extends Error {
   constructor(
     readonly status: number,
@@ -65,13 +67,13 @@ export class ApiClient {
 
   private async send(r: { method: string; path: string; body?: unknown; token?: string; timeoutMs?: number }) {
     const target = this.target.get();
-    if (!target) throw new ApiCallError(0, 'NO_SERVER', 'This device is not connected to a server yet.');
+    if (!target) throw new ApiCallError(0, 'NO_SERVER', tk('This device is not connected to a server yet.'));
     try {
       return await this.platform.request({ ...r, baseUrl: baseUrl(target), certFp: target.certFp });
     } catch (e) {
       if (!(e instanceof PlatformError) || e.kind !== 'network') throw e;
       const moved = await this.locator.relocate(target);
-      if (!moved) throw new ApiCallError(0, 'SERVER_UNREACHABLE', 'Cannot reach the school server. Check the network cable or Wi-Fi. If the server PC was reinstalled, click Change server.');
+      if (!moved) throw new ApiCallError(0, 'SERVER_UNREACHABLE', tk('Cannot reach the school server. Check the network cable or Wi-Fi. If the server PC was reinstalled, click Change server.'));
       this.target.set(moved);
       return this.platform.request({ ...r, baseUrl: baseUrl(moved), certFp: moved.certFp });
     }
