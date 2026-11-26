@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Section, Student } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ConfirmButton, ErrorNote, Field, Select, useAction } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 
 type Mode = 'view' | 'edit';
 
@@ -9,6 +10,7 @@ type Mode = 'view' | 'edit';
 // a student signs in with class, roll number and name.
 export function StudentRow({ student: s, className, sections, onChanged }: { student: Student; className: string; sections: Section[]; onChanged: () => Promise<void> }) {
   const { call } = useApp();
+  const t = useT();
   const [mode, setMode] = useState<Mode>('view');
   const [edit, setEdit] = useState({ name: s.name, rollNo: s.rollNo ?? '', sectionId: s.sectionId ?? '' });
 
@@ -35,23 +37,23 @@ export function StudentRow({ student: s, className, sections, onChanged }: { stu
         <span className="flex-1 font-medium">
           {s.name}
           <span className="ml-2 text-xs font-normal text-muted-foreground">
-            {[`Class ${className}${section ? section : ''}`, s.rollNo ? `Roll ${s.rollNo}` : 'No roll number: signs in with a card only'].filter(Boolean).join(' · ')}
+            {[t('Class {name}', { name: `${className}${section ? section : ''}` }), s.rollNo ? t('Roll {roll}', { roll: s.rollNo }) : t('No roll number: signs in with a card only')].filter(Boolean).join(' · ')}
           </span>
         </span>
-        <Button variant="quiet" onClick={() => setMode(mode === 'edit' ? 'view' : 'edit')}>Edit</Button>
-        <ConfirmButton question={`Delete ${s.name}?`} onConfirm={() => void remove.run()}>Delete</ConfirmButton>
+        <Button variant="quiet" onClick={() => setMode(mode === 'edit' ? 'view' : 'edit')}>{t('Edit')}</Button>
+        <ConfirmButton question={t('Delete {name}?', { name: s.name })} onConfirm={() => void remove.run()}>{t('Delete')}</ConfirmButton>
       </div>
 
       {mode === 'edit' && (
         <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); void save.run(); }}>
-          <Field id={`name-${s.id}`} className="w-64" label="Name" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
-          <Field id={`roll-${s.id}`} className="w-28" label="Roll no" value={edit.rollNo} onChange={(e) => setEdit({ ...edit, rollNo: e.target.value })} />
-          <Select aria-label="Section" value={edit.sectionId} onChange={(e) => setEdit({ ...edit, sectionId: e.target.value })}>
-            <option value="">No section</option>
-            {sections.map((x) => <option key={x.id} value={x.id}>Section {x.name}</option>)}
+          <Field id={`name-${s.id}`} className="w-64" label={t('Name')} value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+          <Field id={`roll-${s.id}`} className="w-28" label={t('Roll no')} value={edit.rollNo} onChange={(e) => setEdit({ ...edit, rollNo: e.target.value })} />
+          <Select aria-label={t('Section')} value={edit.sectionId} onChange={(e) => setEdit({ ...edit, sectionId: e.target.value })}>
+            <option value="">{t('No section')}</option>
+            {sections.map((x) => <option key={x.id} value={x.id}>{t('Section {name}', { name: x.name })}</option>)}
           </Select>
-          <Button type="submit" disabled={!edit.name.trim() || save.busy}>Save</Button>
-          <Button type="button" variant="quiet" onClick={() => { setMode('view'); setEdit({ name: s.name, rollNo: s.rollNo ?? '', sectionId: s.sectionId ?? '' }); save.clear(); }}>Cancel</Button>
+          <Button type="submit" disabled={!edit.name.trim() || save.busy}>{t('Save')}</Button>
+          <Button type="button" variant="quiet" onClick={() => { setMode('view'); setEdit({ name: s.name, rollNo: s.rollNo ?? '', sectionId: s.sectionId ?? '' }); save.clear(); }}>{t('Cancel')}</Button>
         </form>
       )}
 

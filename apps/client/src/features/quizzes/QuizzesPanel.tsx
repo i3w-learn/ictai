@@ -4,10 +4,12 @@ import { TEAM_COUNTS, type OpenRun, type QuizSummary, type SchoolClass } from '@
 import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
 import { Button, ConfirmButton, ErrorNote, Panel, Select, useAction } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 
 // The teacher's quizzes, filtered by class, with Lab Mode one click away.
 export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, onPlan, refresh }: { refresh: number; onEdit: (quizId: string | null) => void; onLab: (runId: string) => void; onAi: () => void; onAsk: () => void; onPlan: () => void }) {
   const { call, state } = useApp();
+  const t = useT();
   const can = (p: 'lesson.start' | 'ai.teacher') => state.session?.principal.kind === 'staff' && state.session.principal.permissions.includes(p);
   const canHost = can('lesson.start');
   // The Super Admin can switch AI off for the school; the buttons then go away instead of leading to a refusal.
@@ -51,24 +53,26 @@ export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, onPlan, refresh }: { 
   });
 
   const className = (id: string) => classes.find((c) => c.id === id)?.name ?? '?';
+  // The sentence is translated whole; the button's name in the middle is shown in bold.
+  const [noneBefore, noneAfter] = t('No quizzes yet. Click {button} to write one.').split('{button}');
 
   return (
-    <Panel title="Quizzes" actions={
+    <Panel title={t('Quizzes')} actions={
       <div className="flex flex-wrap justify-end gap-2">
-        {canAi && <Button variant="quiet" onClick={onAsk}><MessageCircleQuestion className="size-4" /> Ask AI</Button>}
-        {canAi && <Button variant="quiet" onClick={onPlan}><ClipboardPen className="size-4" /> Plan a lesson</Button>}
-        {canAi && <Button variant="quiet" onClick={onAi}><Sparkles className="size-4" /> Make quiz with AI</Button>}
-        <Button onClick={() => onEdit(null)}><Plus className="size-4" strokeWidth={2.25} /> New quiz</Button>
+        {canAi && <Button variant="quiet" onClick={onAsk}><MessageCircleQuestion className="size-4" /> {t('Ask AI')}</Button>}
+        {canAi && <Button variant="quiet" onClick={onPlan}><ClipboardPen className="size-4" /> {t('Plan a lesson')}</Button>}
+        {canAi && <Button variant="quiet" onClick={onAi}><Sparkles className="size-4" /> {t('Make quiz with AI')}</Button>}
+        <Button onClick={() => onEdit(null)}><Plus className="size-4" strokeWidth={2.25} /> {t('New quiz')}</Button>
       </div>
     }>
-      <Select aria-label="Class" value={classId} onChange={(e) => setClassId(e.target.value)}>
-        <option value="">All classes</option>
-        {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
+      <Select aria-label={t('Class')} value={classId} onChange={(e) => setClassId(e.target.value)}>
+        <option value="">{t('All classes')}</option>
+        {classes.map((c) => <option key={c.id} value={c.id}>{t('Class {name}', { name: c.name })}</option>)}
       </Select>
 
       {quizzes.length === 0 ? (
         <p className="rounded-3xl border border-dashed border-border p-10 text-center text-muted-foreground">
-          No quizzes yet. Click <b className="text-foreground">New quiz</b> to write one.
+          {noneBefore}<b className="text-foreground">{t('New quiz')}</b>{noneAfter}
         </p>
       ) : (
         <ul className="grid gap-2">
@@ -77,29 +81,29 @@ export function QuizzesPanel({ onEdit, onLab, onAi, onAsk, onPlan, refresh }: { 
               <span className="min-w-48 flex-1">
                 <span className="font-medium">{q.title}</span>
                 <span className="ml-2 text-xs text-muted-foreground">
-                  {[`Class ${className(q.classId)}`, q.subject, `${q.questionCount} questions`, `${q.totalMarks} marks`].filter(Boolean).join(' · ')}
+                  {[t('Class {name}', { name: className(q.classId) }), q.subject, t('{n} questions', { n: q.questionCount }), t('{n} marks', { n: q.totalMarks })].filter(Boolean).join(' · ')}
                 </span>
               </span>
               {/* A quiz that is open is not started again: the row says so and leads back to it. */}
               {q.open && (
                 <>
-                  <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-semibold text-success">{q.open.mode === 'practice' ? 'Practice is open' : 'Lab Mode is open'}</span>
-                  <Button onClick={() => onLab(q.open!.runId)}>See it</Button>
+                  <span className="rounded-full bg-success/10 px-3 py-1 text-sm font-semibold text-success">{q.open.mode === 'practice' ? t('Practice is open') : t('Lab Mode is open')}</span>
+                  <Button onClick={() => onLab(q.open!.runId)}>{t('See it')}</Button>
                 </>
               )}
-              {!q.open && q.lastPracticeRunId && <Button variant="quiet" title="The tries and best scores of the last practice" onClick={() => onLab(q.lastPracticeRunId!)}>Practice scores</Button>}
+              {!q.open && q.lastPracticeRunId && <Button variant="quiet" title={t('The tries and best scores of the last practice')} onClick={() => onLab(q.lastPracticeRunId!)}>{t('Practice scores')}</Button>}
               {canHost && !q.open && (
                 <>
-                  <Select aria-label={`Teams for ${q.title}`} className="min-w-32" value={teams[q.id] ?? 0} onChange={(e) => setTeams({ ...teams, [q.id]: Number(e.target.value) as OpenRun['teams'] })}>
-                    <option value={0}>No teams</option>
-                    {TEAM_COUNTS.map((n) => <option key={n} value={n}>{n} teams</option>)}
+                  <Select aria-label={t('Teams for {title}', { title: q.title })} className="min-w-32" value={teams[q.id] ?? 0} onChange={(e) => setTeams({ ...teams, [q.id]: Number(e.target.value) as OpenRun['teams'] })}>
+                    <option value={0}>{t('No teams')}</option>
+                    {TEAM_COUNTS.map((n) => <option key={n} value={n}>{t('{n} teams', { n })}</option>)}
                   </Select>
-                  <Button disabled={startLab.busy} onClick={() => startLab.run(q.id)}><Play className="size-4" strokeWidth={2.25} /> Start Lab Mode</Button>
-                  <Button variant="quiet" disabled={startLab.busy} title="Students do it in their own time, with no clock, as often as they like. Not used for report cards." onClick={() => startLab.run(q.id, 'practice')}><Dumbbell className="size-4" /> Give as practice</Button>
+                  <Button disabled={startLab.busy} onClick={() => startLab.run(q.id)}><Play className="size-4" strokeWidth={2.25} /> {t('Start Lab Mode')}</Button>
+                  <Button variant="quiet" disabled={startLab.busy} title={t('Students do it in their own time, with no clock, as often as they like. Not used for report cards.')} onClick={() => startLab.run(q.id, 'practice')}><Dumbbell className="size-4" /> {t('Give as practice')}</Button>
                 </>
               )}
-              <Button variant="quiet" onClick={() => onEdit(q.id)}>Edit</Button>
-              <ConfirmButton question={`Delete "${q.title}"?`} onConfirm={() => void remove.run(q.id)}>Delete</ConfirmButton>
+              <Button variant="quiet" onClick={() => onEdit(q.id)}>{t('Edit')}</Button>
+              <ConfirmButton question={t('Delete "{title}"?', { title: q.title })} onConfirm={() => void remove.run(q.id)}>{t('Delete')}</ConfirmButton>
             </li>
           ))}
         </ul>

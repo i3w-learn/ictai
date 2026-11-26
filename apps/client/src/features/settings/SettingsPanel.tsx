@@ -3,10 +3,12 @@ import { Plus, Trash2 } from 'lucide-react';
 import { MAX_PERIODS, overlappingPeriods, type Period, type SchoolSettings } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Field, Note, Panel, useAction } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 
 // PRD "Settings" (Super Admin only): the school's name, the AI switch, and the periods of the school day.
 export function SettingsPanel({ onSaved }: { onSaved: (saved: SchoolSettings) => void }) {
   const { call } = useApp();
+  const t = useT();
   const [saved, setSaved] = useState<SchoolSettings | null>(null);
   const [form, setForm] = useState<SchoolSettings | null>(null);
   const [done, setDone] = useState(false);
@@ -27,7 +29,7 @@ export function SettingsPanel({ onSaved }: { onSaved: (saved: SchoolSettings) =>
     onSaved(s);
   });
 
-  if (!form || !saved) return <Panel title="Settings"><ErrorNote message={load.error} /></Panel>;
+  if (!form || !saved) return <Panel title={t('Settings')}><ErrorNote message={load.error} /></Panel>;
 
   const change = (patch: Partial<SchoolSettings>) => { setForm({ ...form, ...patch }); setDone(false); };
   const setPeriod = (i: number, patch: Partial<Period>) => change({ periods: form.periods.map((p, k) => (k === i ? { ...p, ...patch } : p)) });
@@ -35,51 +37,51 @@ export function SettingsPanel({ onSaved }: { onSaved: (saved: SchoolSettings) =>
   const addPeriod = () => {
     const last = form.periods[form.periods.length - 1];
     const start = last?.end ?? '09:00';
-    change({ periods: [...form.periods, { name: `Period ${form.periods.length + 1}`, start, end: plusMinutes(start, 40) }] });
+    change({ periods: [...form.periods, { name: t('Period {n}', { n: form.periods.length + 1 }), start, end: plusMinutes(start, 40) }] });
   };
 
   const clash = overlappingPeriods(form.periods.filter((p) => p.start < p.end));
   const problem =
-    !form.schoolName.trim() ? 'Type the school name.'
-    : form.periods.some((p) => !p.name.trim()) ? 'Name every period.'
-    : form.periods.some((p) => p.start >= p.end) ? 'Every period must end after it starts.'
-    : clash ? `"${clash[0].name}" and "${clash[1].name}" overlap.`
+    !form.schoolName.trim() ? t('Type the school name.')
+    : form.periods.some((p) => !p.name.trim()) ? t('Name every period.')
+    : form.periods.some((p) => p.start >= p.end) ? t('Every period must end after it starts.')
+    : clash ? t('"{a}" and "{b}" overlap.', { a: clash[0].name, b: clash[1].name })
     : null;
   const dirty = JSON.stringify(form) !== JSON.stringify(saved);
 
   return (
-    <Panel title="Settings">
+    <Panel title={t('Settings')}>
       <div className="flex flex-wrap items-end gap-6">
-        <Field id="set-school" className="w-80" label="School name" maxLength={80} value={form.schoolName} onChange={(e) => change({ schoolName: e.target.value })} />
+        <Field id="set-school" className="w-80" label={t('School name')} maxLength={80} value={form.schoolName} onChange={(e) => change({ schoolName: e.target.value })} />
         <label htmlFor="set-ai" className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm">
           <input id="set-ai" type="checkbox" className="size-4 accent-[var(--primary)]" checked={form.aiEnabled} onChange={(e) => change({ aiEnabled: e.target.checked })} />
-          Teachers can use AI (Ask AI, Make quiz with AI)
+          {t('Teachers can use AI (Ask AI, Make quiz with AI)')}
         </label>
         <label htmlFor="set-lock" className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm">
           <input id="set-lock" type="checkbox" className="size-4 accent-[var(--primary)]" checked={form.lockOutsidePeriods} onChange={(e) => change({ lockOutsidePeriods: e.target.checked })} />
-          Lock the lab PCs when no class is booked in the lab
+          {t('Lock the lab PCs when no class is booked in the lab')}
         </label>
       </div>
 
       <div className="grid gap-2">
-        <span className="text-[0.8125rem] font-medium text-muted-foreground">Periods of the school day</span>
-        {form.periods.length === 0 && <p className="text-sm text-muted-foreground">No periods yet. Add the lab periods so the timetable can use them.</p>}
+        <span className="text-[0.8125rem] font-medium text-muted-foreground">{t('Periods of the school day')}</span>
+        {form.periods.length === 0 && <p className="text-sm text-muted-foreground">{t('No periods yet. Add the lab periods so the timetable can use them.')}</p>}
         {form.periods.map((p, i) => (
           <div key={i} className="flex flex-wrap items-end gap-3">
-            <Field id={`period-${i}-name`} className="w-48" label={i === 0 ? 'Name' : `Period ${i + 1} name`} value={p.name} maxLength={40} onChange={(e) => setPeriod(i, { name: e.target.value })} />
-            <Field id={`period-${i}-start`} className="w-40" label="Starts" type="time" value={p.start} onChange={(e) => setPeriod(i, { start: e.target.value })} />
-            <Field id={`period-${i}-end`} className="w-40" label="Ends" type="time" value={p.end} onChange={(e) => setPeriod(i, { end: e.target.value })} />
-            <Button type="button" variant="quiet" aria-label={`Remove ${p.name || `period ${i + 1}`}`} onClick={() => change({ periods: form.periods.filter((_, k) => k !== i) })}><Trash2 className="size-4" /></Button>
+            <Field id={`period-${i}-name`} className="w-48" label={i === 0 ? t('Name') : t('Period {n} name', { n: i + 1 })} value={p.name} maxLength={40} onChange={(e) => setPeriod(i, { name: e.target.value })} />
+            <Field id={`period-${i}-start`} className="w-40" label={t('Starts')} type="time" value={p.start} onChange={(e) => setPeriod(i, { start: e.target.value })} />
+            <Field id={`period-${i}-end`} className="w-40" label={t('Ends')} type="time" value={p.end} onChange={(e) => setPeriod(i, { end: e.target.value })} />
+            <Button type="button" variant="quiet" aria-label={t('Remove {name}', { name: p.name || t('period {n}', { n: i + 1 }) })} onClick={() => change({ periods: form.periods.filter((_, k) => k !== i) })}><Trash2 className="size-4" /></Button>
           </div>
         ))}
-        <div><Button type="button" variant="quiet" disabled={form.periods.length >= MAX_PERIODS} onClick={addPeriod}><Plus className="size-4" /> Add period</Button></div>
+        <div><Button type="button" variant="quiet" disabled={form.periods.length >= MAX_PERIODS} onClick={addPeriod}><Plus className="size-4" /> {t('Add period')}</Button></div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button disabled={!!problem || !dirty || save.busy} onClick={() => save.run()}>Save settings</Button>
-        <span className="text-sm text-muted-foreground">{problem ?? (dirty ? 'You have changes that are not saved.' : '')}</span>
+        <Button disabled={!!problem || !dirty || save.busy} onClick={() => save.run()}>{t('Save settings')}</Button>
+        <span className="text-sm text-muted-foreground">{problem ?? (dirty ? t('You have changes that are not saved.') : '')}</span>
       </div>
-      {done && !dirty && <Note>Saved.</Note>}
+      {done && !dirty && <Note>{t('Saved.')}</Note>}
       <ErrorNote message={save.error ?? load.error} />
     </Panel>
   );

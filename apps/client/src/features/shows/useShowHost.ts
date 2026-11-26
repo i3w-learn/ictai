@@ -4,6 +4,7 @@ import { useApp } from '../../app/app-context';
 import { ApiCallError } from '../../core/api-client';
 import { useAction, useLatest } from '../../ui/ui';
 import { startingPlace } from './show-pages';
+import { tk, useT } from '../../i18n/i18n';
 
 // The teacher's side of one show: start it, keep it alive, turn its pages, give the pen, stop it.
 // `start` says what to show. For a video, `peek` asks the player where it is right now; its play,
@@ -14,6 +15,7 @@ import { startingPlace } from './show-pages';
 // class's screens are put right if a message was lost, and the server keeps saying who is watching.
 export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate) | null>) {
   const { call, keepAlive, relay } = useApp();
+  const t = useT();
   const what = useLatest(start);
   const [showing, setShowing] = useState(false);
   const showId = useRef<string | null>(null);
@@ -59,7 +61,7 @@ export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate
       (now) => { if (showId.current === id && sent.current === n) { setLive(now); setPageError(null); } },
       (e) => {
         if (lost(e, id) || showId.current !== id || sent.current !== n) return;
-        setPageError(e instanceof Error ? e.message : 'The class could not be moved to this page.');
+        setPageError(e instanceof Error ? e.message : tk('The class could not be moved to this page.'));
       },
     );
   };
@@ -106,8 +108,8 @@ export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate
   // still here; and the class's screens are put right if one has drifted.
   useEffect(() => {
     if (!showing) return;
-    const t = setInterval(() => refreshNow.current(), SHOW_BEAT_MS);
-    return () => clearInterval(t);
+    const timer = setInterval(() => refreshNow.current(), SHOW_BEAT_MS);
+    return () => clearInterval(timer);
   }, [showing, refreshNow]);
   // While showing, listen to the class's room too: a student asking for the pen shows up at once,
   // not at the next "still here".
@@ -138,7 +140,7 @@ export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate
     turn,
     givePen: givePen.run,
     refusePen: refusePen.run,
-    error: startShow.error ?? stopShow.error ?? givePen.error ?? refusePen.error ?? pageError,
+    error: startShow.error ?? stopShow.error ?? givePen.error ?? refusePen.error ?? (pageError && t(pageError)),
     tell,
     busy: { start: startShow.busy, stop: stopShow.busy, pen: givePen.busy || refusePen.busy },
   };

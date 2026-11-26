@@ -3,7 +3,9 @@ import { SCHOOL_DAYS, type Period, type SchoolClass, type Slot, type Timetable }
 import { useApp } from '../../app/app-context';
 import { useSections } from '../home/useSections';
 import { Button, ErrorNote, Field, Panel, Select, cn, useAction } from '../../ui/ui';
-import { slotLabel } from './timetable';
+import { useT } from '../../i18n/i18n';
+import { rich } from '../home/audit-words';
+import { DAY, slotLabel } from './timetable';
 
 type Cell = { day: number; period: Period };
 
@@ -11,6 +13,7 @@ type Cell = { day: number; period: Period };
 // Saturday. The school has one lab, so each box holds one class. Click a box to book or free it.
 export function TimetablePanel({ refresh }: { refresh: number }) {
   const { call, state } = useApp();
+  const t = useT();
   const p = state.session?.principal;
   const scope = p?.kind === 'staff' ? p.classIds : null;
   const [grid, setGrid] = useState<Timetable | null>(null);
@@ -51,12 +54,12 @@ export function TimetablePanel({ refresh }: { refresh: number }) {
     setOpen(null);
   });
 
-  if (!grid) return <Panel title="Timetable"><ErrorNote message={load.error} /></Panel>;
+  if (!grid) return <Panel title={t('Timetable')}><ErrorNote message={load.error} /></Panel>;
   if (grid.periods.length === 0) {
     return (
-      <Panel title="Timetable">
+      <Panel title={t('Timetable')}>
         <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">
-          No periods yet. The Super Admin adds the periods of the school day in <b className="text-foreground">Settings</b>; then the lab can be booked here.
+          {rich(t('No periods yet. The Super Admin adds the periods of the school day in {settings}; then the lab can be booked here.'), { settings: <b className="text-foreground">{t('Settings')}</b> })}
         </p>
       </Panel>
     );
@@ -64,14 +67,14 @@ export function TimetablePanel({ refresh }: { refresh: number }) {
 
   const booked = open && slotAt(open.day, open.period.id!);
   return (
-    <Panel title="Timetable">
-      <p className="text-sm text-muted-foreground">Who has the lab, period by period. Click a box to book it for a class or to free it. One class per box: the school has one lab.</p>
+    <Panel title={t('Timetable')}>
+      <p className="text-sm text-muted-foreground">{t('Who has the lab, period by period. Click a box to book it for a class or to free it. One class per box: the school has one lab.')}</p>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-separate border-spacing-1 text-sm">
           <thead>
             <tr>
-              <th className="w-36 px-2 py-1 text-left text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">Period</th>
-              {SCHOOL_DAYS.map((d) => <th key={d} className="px-2 py-1 text-left text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">{d}</th>)}
+              <th className="w-36 px-2 py-1 text-left text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">{t('Period')}</th>
+              {SCHOOL_DAYS.map((d) => <th key={d} className="px-2 py-1 text-left text-[0.6875rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">{t(DAY[d])}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -79,7 +82,7 @@ export function TimetablePanel({ refresh }: { refresh: number }) {
               <tr key={period.id}>
                 <th className="px-2 py-1 text-left align-top font-medium">
                   {period.name}
-                  <span className="block text-xs font-normal text-muted-foreground tabular-nums">{period.start} to {period.end}</span>
+                  <span className="block text-xs font-normal text-muted-foreground tabular-nums">{t('{start} to {end}', { start: period.start, end: period.end })}</span>
                 </th>
                 {SCHOOL_DAYS.map((dayName, i) => {
                   const day = i + 1;
@@ -89,14 +92,14 @@ export function TimetablePanel({ refresh }: { refresh: number }) {
                     <td key={day} className="align-top">
                       <button
                         type="button" disabled={!mine(s)} onClick={() => pick({ day, period })}
-                        aria-label={`${dayName}, ${period.name}: ${s ? slotLabel(s) : 'free'}`}
+                        aria-label={`${t(DAY[dayName])}, ${period.name}: ${s ? slotLabel(s, t) : t('free')}`}
                         className={cn(
                           'min-h-14 w-full cursor-pointer rounded-xl border px-2 py-1.5 text-left transition-colors disabled:cursor-not-allowed',
                           s ? 'border-primary/30 bg-primary/10' : 'border-dashed border-border text-muted-foreground hover:border-primary/50',
                           isOpen && 'ring-2 ring-primary',
                         )}
                       >
-                        {s ? <><span className="block font-semibold">{slotLabel(s)}</span>{s.subject && <span className="text-xs text-muted-foreground">{s.subject}</span>}</> : 'Free'}
+                        {s ? <><span className="block font-semibold">{slotLabel(s, t)}</span>{s.subject && <span className="text-xs text-muted-foreground">{s.subject}</span>}</> : t('Free')}
                       </button>
                     </td>
                   );
@@ -109,28 +112,28 @@ export function TimetablePanel({ refresh }: { refresh: number }) {
 
       {open && (
         <form className="grid gap-3 rounded-2xl border border-border bg-secondary/50 p-4" onSubmit={(e) => { e.preventDefault(); if (form.classId) void save.run(); }}>
-          <strong>{SCHOOL_DAYS[open.day - 1]} · {open.period.name} <span className="font-normal text-muted-foreground tabular-nums">({open.period.start} to {open.period.end})</span></strong>
+          <strong>{t(DAY[SCHOOL_DAYS[open.day - 1]!])} · {open.period.name} <span className="font-normal text-muted-foreground tabular-nums">({t('{start} to {end}', { start: open.period.start, end: open.period.end })})</span></strong>
           <div className="flex flex-wrap items-end gap-3">
             <label className="grid gap-1.5">
-              <span className="text-[0.8125rem] font-medium text-muted-foreground">Class</span>
-              <Select aria-label="Class with the lab" value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value, sectionId: '' })}>
-                <option value="">Choose a class</option>
-                {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
+              <span className="text-[0.8125rem] font-medium text-muted-foreground">{t('Class')}</span>
+              <Select aria-label={t('Class with the lab')} value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value, sectionId: '' })}>
+                <option value="">{t('Choose a class')}</option>
+                {classes.map((c) => <option key={c.id} value={c.id}>{t('Class {name}', { name: c.name })}</option>)}
               </Select>
             </label>
             {sections.length > 0 && (
               <label className="grid gap-1.5">
-                <span className="text-[0.8125rem] font-medium text-muted-foreground">Section</span>
-                <Select aria-label="Section with the lab" className="min-w-32" value={form.sectionId} onChange={(e) => setForm({ ...form, sectionId: e.target.value })}>
-                  <option value="">All sections</option>
+                <span className="text-[0.8125rem] font-medium text-muted-foreground">{t('Section')}</span>
+                <Select aria-label={t('Section with the lab')} className="min-w-32" value={form.sectionId} onChange={(e) => setForm({ ...form, sectionId: e.target.value })}>
+                  <option value="">{t('All sections')}</option>
                   {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </Select>
               </label>
             )}
-            <Field id="slot-subject" className="w-48" label="Subject (optional)" placeholder="Maths" maxLength={60} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
-            <Button type="submit" disabled={!form.classId || save.busy}>{booked ? 'Change' : 'Book the lab'}</Button>
-            {booked && <Button type="button" variant="quiet" disabled={free.busy} onClick={() => free.run()}>Free this period</Button>}
-            <Button type="button" variant="quiet" onClick={() => setOpen(null)}>Cancel</Button>
+            <Field id="slot-subject" className="w-48" label={t('Subject (optional)')} placeholder={t('Maths')} maxLength={60} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
+            <Button type="submit" disabled={!form.classId || save.busy}>{booked ? t('Change') : t('Book the lab')}</Button>
+            {booked && <Button type="button" variant="quiet" disabled={free.busy} onClick={() => free.run()}>{t('Free this period')}</Button>}
+            <Button type="button" variant="quiet" onClick={() => setOpen(null)}>{t('Cancel')}</Button>
           </div>
           <ErrorNote message={save.error ?? free.error} />
         </form>

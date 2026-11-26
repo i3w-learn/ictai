@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { SchoolClass, StaffMember, UpdateTeacher } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ConfirmButton, ErrorNote, Field, Panel, useAction } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 import { scopeLabel } from './scope-label';
 
 const EMPTY = { username: '', displayName: '', password: '', classIds: [] as string[], subjects: '' };
@@ -12,6 +13,7 @@ const toSubjects = (text: string) => [...new Set(text.split(',').map((x) => x.tr
 // Spec 4.1: the Super Admin adds, edits and deletes teachers, and picks each teacher's classes and subjects.
 export function StaffPanel({ classesChanged }: { classesChanged: number }) {
   const { call } = useApp();
+  const t = useT();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [form, setForm] = useState(EMPTY);
@@ -44,12 +46,12 @@ export function StaffPanel({ classesChanged }: { classesChanged: number }) {
     && form.classIds.length > 0 && toSubjects(form.subjects).length > 0;
 
   return (
-    <Panel title="Teachers">
+    <Panel title={t('Teachers')}>
       <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); void add.run(); }}>
         <div className="flex flex-wrap items-end gap-3">
-          <Field id="staff-username" className="w-44" label="Username" autoComplete="off" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-          <Field id="staff-name" className="w-56" label="Name" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
-          <Field id="staff-password" className="w-48" label="Starting password (8+)" type="password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <Field id="staff-username" className="w-44" label={t('Username')} autoComplete="off" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+          <Field id="staff-name" className="w-56" label={t('Name')} value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
+          <Field id="staff-password" className="w-48" label={t('Starting password (8+)')} type="password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
         </div>
         <ScopeFields
           classes={classes}
@@ -57,7 +59,7 @@ export function StaffPanel({ classesChanged }: { classesChanged: number }) {
           subjects={form.subjects}
           onChange={(v) => setForm({ ...form, ...v })}
         />
-        <div><Button type="submit" disabled={!ready || add.busy}>Add teacher</Button></div>
+        <div><Button type="submit" disabled={!ready || add.busy}>{t('Add teacher')}</Button></div>
       </form>
 
       <ul className="grid gap-2">
@@ -72,6 +74,7 @@ export function StaffPanel({ classesChanged }: { classesChanged: number }) {
 
 function StaffRow({ member: s, classes, onUpdate, onRemove }: { member: StaffMember; classes: SchoolClass[]; onUpdate: (body: UpdateTeacher) => void; onRemove: () => void }) {
   const { call } = useApp();
+  const t = useT();
   const [mode, setMode] = useState<'view' | 'rename' | 'password' | 'scope'>('view');
   const [name, setName] = useState(s.displayName);
   const [scope, setScope] = useState({ classIds: s.classIds, subjects: s.subjects.join(', ') });
@@ -94,30 +97,30 @@ function StaffRow({ member: s, classes, onUpdate, onRemove }: { member: StaffMem
         <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">{s.displayName.charAt(0).toUpperCase()}</span>
         <span className={disabled ? 'flex-1 text-muted-foreground line-through' : 'flex-1 font-medium'}>
           {s.displayName} <span className="ml-1 text-xs font-normal text-muted-foreground">@{s.username}</span>
-          {s.role === 'super_admin' && <span className="ml-2 text-xs font-semibold text-role-admin">Super Admin</span>}
-          {done && <span className="ml-2 text-xs font-normal text-success">Password changed</span>}
+          {s.role === 'super_admin' && <span className="ml-2 text-xs font-semibold text-role-admin">{t('Super Admin')}</span>}
+          {done && <span className="ml-2 text-xs font-normal text-success">{t('Password changed')}</span>}
           {s.role === 'teacher' && (
             <span className="block text-xs font-normal text-muted-foreground">
-              {scopeLabel(s, className)}
+              {scopeLabel(s, className, t)}
             </span>
           )}
         </span>
         {s.role === 'teacher' && (
           <>
-            <Toggle label="Can host lessons" checked={s.canHostLessons} onChange={(v) => onUpdate({ canHostLessons: v })} />
-            <Toggle label="Can upload content" checked={s.canUploadContent} onChange={(v) => onUpdate({ canUploadContent: v })} />
-            <Button variant="quiet" onClick={() => onUpdate({ status: disabled ? 'active' : 'disabled' })}>{disabled ? 'Enable' : 'Disable'}</Button>
-            <Button variant="quiet" onClick={() => setMode(mode === 'scope' ? 'view' : 'scope')}>Classes & subjects</Button>
-            <Button variant="quiet" onClick={() => setMode(mode === 'rename' ? 'view' : 'rename')}>Rename</Button>
-            <Button variant="quiet" onClick={() => { setMode(mode === 'password' ? 'view' : 'password'); setDone(false); }}>Reset password</Button>
-            <ConfirmButton question={`Delete ${s.displayName}?`} onConfirm={onRemove}>Delete</ConfirmButton>
+            <Toggle label={t('Can host lessons')} checked={s.canHostLessons} onChange={(v) => onUpdate({ canHostLessons: v })} />
+            <Toggle label={t('Can upload content')} checked={s.canUploadContent} onChange={(v) => onUpdate({ canUploadContent: v })} />
+            <Button variant="quiet" onClick={() => onUpdate({ status: disabled ? 'active' : 'disabled' })}>{disabled ? t('Enable') : t('Disable')}</Button>
+            <Button variant="quiet" onClick={() => setMode(mode === 'scope' ? 'view' : 'scope')}>{t('Classes & subjects')}</Button>
+            <Button variant="quiet" onClick={() => setMode(mode === 'rename' ? 'view' : 'rename')}>{t('Rename')}</Button>
+            <Button variant="quiet" onClick={() => { setMode(mode === 'password' ? 'view' : 'password'); setDone(false); }}>{t('Reset password')}</Button>
+            <ConfirmButton question={t('Delete {name}?', { name: s.displayName })} onConfirm={onRemove}>{t('Delete')}</ConfirmButton>
           </>
         )}
       </div>
       {mode === 'rename' && (
         <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); onUpdate({ displayName: name }); setMode('view'); }}>
-          <Field id={`name-${s.id}`} className="w-56" label="Name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Button type="submit" disabled={!name.trim()}>Save</Button>
+          <Field id={`name-${s.id}`} className="w-56" label={t('Name')} value={name} onChange={(e) => setName(e.target.value)} />
+          <Button type="submit" disabled={!name.trim()}>{t('Save')}</Button>
         </form>
       )}
       {mode === 'scope' && (
@@ -126,13 +129,13 @@ function StaffRow({ member: s, classes, onUpdate, onRemove }: { member: StaffMem
           onSubmit={(e) => { e.preventDefault(); onUpdate({ classIds: scope.classIds, subjects: toSubjects(scope.subjects) }); setMode('view'); }}
         >
           <ScopeFields classes={classes} classIds={scope.classIds} subjects={scope.subjects} onChange={(v) => setScope({ ...scope, ...v })} idPrefix={s.id} />
-          <div><Button type="submit" disabled={!scope.classIds.length || !toSubjects(scope.subjects).length}>Save</Button></div>
+          <div><Button type="submit" disabled={!scope.classIds.length || !toSubjects(scope.subjects).length}>{t('Save')}</Button></div>
         </form>
       )}
       {mode === 'password' && (
         <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); void reset.run(); }}>
-          <Field id={`pw-${s.id}`} className="w-56" label="New password (8+)" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <Button type="submit" disabled={password.length < 8 || reset.busy}>Save</Button>
+          <Field id={`pw-${s.id}`} className="w-56" label={t('New password (8+)')} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Button type="submit" disabled={password.length < 8 || reset.busy}>{t('Save')}</Button>
           <ErrorNote message={reset.error} />
         </form>
       )}
@@ -157,25 +160,26 @@ function ScopeFields({ classes, classIds, subjects, onChange, idPrefix = 'new' }
   onChange: (v: { classIds?: string[]; subjects?: string }) => void;
   idPrefix?: string;
 }) {
+  const t = useT();
   const flip = (id: string) => onChange({ classIds: classIds.includes(id) ? classIds.filter((x) => x !== id) : [...classIds, id] });
   return (
     <div className="flex flex-wrap items-end gap-6">
       <div className="grid gap-1.5">
-        <span className="text-[0.8125rem] font-medium text-muted-foreground">Classes</span>
+        <span className="text-[0.8125rem] font-medium text-muted-foreground">{t('Classes')}</span>
         {classes.length === 0 ? (
-          <span className="text-sm text-muted-foreground">Add a class in Students first.</span>
+          <span className="text-sm text-muted-foreground">{t('Add a class in Students first.')}</span>
         ) : (
           <div className="flex flex-wrap gap-3">
             {classes.map((c) => (
               <label key={c.id} className="flex cursor-pointer items-center gap-1.5 text-sm">
                 <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={classIds.includes(c.id)} onChange={() => flip(c.id)} />
-                Class {c.name}
+                {t('Class {name}', { name: c.name })}
               </label>
             ))}
           </div>
         )}
       </div>
-      <Field id={`${idPrefix}-subjects`} className="w-72" label="Subjects (comma between)" placeholder="Maths, Science" value={subjects} onChange={(e) => onChange({ subjects: e.target.value })} />
+      <Field id={`${idPrefix}-subjects`} className="w-72" label={t('Subjects (comma between)')} placeholder={t('Maths, Science')} value={subjects} onChange={(e) => onChange({ subjects: e.target.value })} />
     </div>
   );
 }

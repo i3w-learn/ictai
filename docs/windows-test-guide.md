@@ -53,6 +53,9 @@ time they signed in. Press **Mark absent**, then **Mark present**: the list chan
    and subjects stay as the teacher typed them.
 3. Check that the Marathi letters are whole and clear (no empty boxes), also in **माझ्या नोंदी** while typing.
 4. Close the app and open it again: it is still in Marathi. Press **English** to go back.
+5. Server PC: press **मराठी**, sign in as a teacher, and open each tab (आज, शिकवा, व्हिडिओ, अहवाल, शाळा).
+   Every heading, button and message is in Marathi, the letters are whole, and no button's words are cut off.
+   Sign in as the Super Admin and look at **प्रणाली** too. Names the school typed stay as typed.
 
 The teacher's pages on the Server PC are still in English only; the switch is there but changes little.
 

@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { translate, type T } from '../../i18n/i18n';
 import { clockOf, labNow, slotLabel } from './timetable';
+
+const t: T = (text, vars) => translate('en', text, vars);
 
 const p1 = { periodName: 'Period 1', start: '09:00', end: '09:40', subject: 'Maths' };
 const p3 = { periodName: 'Period 3', start: '10:20', end: '11:00', subject: null };
 
 describe('timetable', () => {
   it('names a booking by class and section', () => {
-    expect(slotLabel({ className: '7', sectionName: null })).toBe('Class 7');
-    expect(slotLabel({ className: '7', sectionName: 'A' })).toBe('Class 7 A');
+    expect(slotLabel({ className: '7', sectionName: null }, t)).toBe('Class 7');
+    expect(slotLabel({ className: '7', sectionName: 'A' }, t)).toBe('Class 7 A');
   });
 
   it('knows whether the student is in a lab period, waiting for one, or done', () => {

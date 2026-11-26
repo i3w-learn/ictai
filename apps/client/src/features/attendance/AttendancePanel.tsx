@@ -2,22 +2,25 @@ import { useEffect, useState } from 'react';
 import type { AttendanceDay, AttendanceRow, SchoolClass } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { Button, ErrorNote, Field, Panel, Select, cn, useAction } from '../../ui/ui';
+import { useLang, type T } from '../../i18n/i18n';
+import { rich } from '../home/audit-words';
 
 const ASK_EVERY_MS = 10_000;
 
-const timeOf = (at: number) => new Date(at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+const timeOf = (at: number, locale: string | undefined) => new Date(at).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
 
 // Why the student is marked the way they are, in a few words.
-export function reason(r: AttendanceRow): string {
-  if (r.by === 'signin' && r.at != null) return `Signed in at ${timeOf(r.at)}`;
-  if (r.by === 'teacher') return 'Marked by a teacher';
-  return 'Did not sign in';
+export function reason(r: AttendanceRow, t: T, locale: string | undefined): string {
+  if (r.by === 'signin' && r.at != null) return t('Signed in at {time}', { time: timeOf(r.at, locale) });
+  if (r.by === 'teacher') return t('Marked by a teacher');
+  return t('Did not sign in');
 }
 
 // Spec 4.4 "Attendance": who of a class was in the lab on a day. Signing in on a lab PC marks a
 // student present; a teacher can change it here.
 export function AttendancePanel({ refresh, canEdit }: { refresh: number; canEdit: boolean }) {
   const { call } = useApp();
+  const { t, locale } = useLang();
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [classId, setClassId] = useState('');
   // '' = today, as the server sees it.
@@ -52,28 +55,28 @@ export function AttendancePanel({ refresh, canEdit }: { refresh: number; canEdit
   const present = data?.rows.filter((r) => r.present).length ?? 0;
 
   return (
-    <Panel title="Attendance">
+    <Panel title={t('Attendance')}>
       <div className="flex flex-wrap items-end gap-3">
         <label className="grid gap-1.5">
-          <span className="text-[0.8125rem] font-medium text-muted-foreground">Class</span>
-          <Select aria-label="Attendance class" value={classId} onChange={(e) => setClassId(e.target.value)}>
-            {classes.length === 0 && <option value="">No classes yet</option>}
-            {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
+          <span className="text-[0.8125rem] font-medium text-muted-foreground">{t('Class')}</span>
+          <Select aria-label={t('Attendance class')} value={classId} onChange={(e) => setClassId(e.target.value)}>
+            {classes.length === 0 && <option value="">{t('No classes yet')}</option>}
+            {classes.map((c) => <option key={c.id} value={c.id}>{t('Class {name}', { name: c.name })}</option>)}
           </Select>
         </label>
-        <Field id="attendance-date" className="w-44" label="Day" type="date" max={data?.today} value={date || data?.today || ''} onChange={(e) => setDate(e.target.value === data?.today ? '' : e.target.value)} />
+        <Field id="attendance-date" className="w-44" label={t('Day')} type="date" max={data?.today} value={date || data?.today || ''} onChange={(e) => setDate(e.target.value === data?.today ? '' : e.target.value)} />
         {data && data.rows.length > 0 && (
-          <p className="pb-2.5 text-muted-foreground"><b className="text-foreground">{present}</b> of {data.rows.length} present</p>
+          <p className="pb-2.5 text-muted-foreground">{rich(t('{n} of {total} present'), { n: <b className="text-foreground">{present}</b>, total: data.rows.length })}</p>
         )}
       </div>
 
       {data && (data.rows.length === 0 ? (
-        <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">No students in this class yet.</p>
+        <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">{t('No students in this class yet.')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-muted-foreground">
-              <tr><th className="py-2 font-medium">Roll</th><th className="font-medium">Name</th><th className="font-medium">Section</th><th className="font-medium">Status</th><th className="font-medium" /></tr>
+              <tr><th className="py-2 font-medium">{t('Roll')}</th><th className="font-medium">{t('Name')}</th><th className="font-medium">{t('Section')}</th><th className="font-medium">{t('Status')}</th><th className="font-medium" /></tr>
             </thead>
             <tbody>
               {data.rows.map((r) => (
@@ -82,11 +85,11 @@ export function AttendancePanel({ refresh, canEdit }: { refresh: number; canEdit
                   <td className="font-medium">{r.name}</td>
                   <td>{r.sectionName ?? '—'}</td>
                   <td>
-                    <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', r.present ? 'bg-success/15 text-success' : 'bg-secondary text-muted-foreground')}>{r.present ? 'Present' : 'Absent'}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{reason(r)}</span>
+                    <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', r.present ? 'bg-success/15 text-success' : 'bg-secondary text-muted-foreground')}>{r.present ? t('Present') : t('Absent')}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{reason(r, t, locale)}</span>
                   </td>
                   <td className="py-1 text-right">
-                    {canEdit && <Button variant="quiet" className="min-h-9" disabled={mark.busy} onClick={() => mark.run(r, !r.present)}>{r.present ? 'Mark absent' : 'Mark present'}</Button>}
+                    {canEdit && <Button variant="quiet" className="min-h-9" disabled={mark.busy} onClick={() => mark.run(r, !r.present)}>{r.present ? t('Mark absent') : t('Mark present')}</Button>}
                   </td>
                 </tr>
               ))}

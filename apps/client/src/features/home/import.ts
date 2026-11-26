@@ -1,4 +1,5 @@
 import { MAX_IMPORT_ROWS, type ImportStudents } from '@ict/contracts';
+import type { T } from '../../i18n/i18n';
 
 // Splits a CSV file (what Excel makes with "Save as → CSV") into rows of cells.
 // Handles quoted cells, doubled quotes, and commas or line breaks inside quotes.
@@ -33,9 +34,10 @@ type Rows = ImportStudents['rows'];
 // Turns the file into student rows. With a heading row ("Name", "Roll no", "Section", in any
 // order) the columns are found by their headings; without one they are read as name, roll, section.
 // `firstLine` is the file line the first student is on, so problems can name the line as Excel shows it.
-export function toImportRows(text: string): { rows: Rows; firstLine: number } | { problem: string } {
+// The headings are looked for in English, whatever language the screens are in.
+export function toImportRows(text: string, t: T): { rows: Rows; firstLine: number } | { problem: string } {
   const table = parseCsv(text);
-  if (table.length === 0) return { problem: 'This file is empty.' };
+  if (table.length === 0) return { problem: t('This file is empty.') };
 
   const head = table[0]!.map((h) => h.trim().toLowerCase());
   const find = (...words: string[]) => head.findIndex((h) => words.some((w) => h.includes(w)));
@@ -44,8 +46,8 @@ export function toImportRows(text: string): { rows: Rows; firstLine: number } | 
   const cols = hasHeading ? { name: nameCol, roll: find('roll'), section: find('section', 'sec') } : { name: 0, roll: 1, section: 2 };
   const body = hasHeading ? table.slice(1) : table;
 
-  if (body.length === 0) return { problem: 'This file has a heading row but no students.' };
-  if (body.length > MAX_IMPORT_ROWS) return { problem: `This file has ${body.length} students. Add at most ${MAX_IMPORT_ROWS} at a time.` };
+  if (body.length === 0) return { problem: t('This file has a heading row but no students.') };
+  if (body.length > MAX_IMPORT_ROWS) return { problem: t('This file has {n} students. Add at most {max} at a time.', { n: body.length, max: MAX_IMPORT_ROWS }) };
   const at = (r: string[], col: number) => (col >= 0 ? r[col]?.trim() || null : null);
   return { firstLine: hasHeading ? 2 : 1, rows: body.map((r) => ({ name: (r[cols.name] ?? '').trim().slice(0, 200), rollNo: at(r, cols.roll)?.slice(0, 200) ?? null, section: at(r, cols.section)?.slice(0, 200) ?? null })) };
 }

@@ -5,6 +5,7 @@ import { useApp } from '../../app/app-context';
 import { Button, ConfirmButton, ErrorNote, Field, Panel, Select, useAction } from '../../ui/ui';
 import { SubjectField } from '../quizzes/SubjectField';
 import { fileProblem, KIND_WORDS, sendFile, sizeWords } from './files';
+import { useT } from '../../i18n/i18n';
 
 const BLANK = { title: '', classId: '', subject: '', chapter: '', url: '' };
 
@@ -13,6 +14,7 @@ const BLANK = { title: '', classId: '', subject: '', chapter: '', url: '' };
 // A teacher who may host lessons also gets a blank whiteboard to show to a class (`onWhiteboard`).
 export function ContentPanel({ onOpen, onWhiteboard, refresh, onChanged }: { onOpen: (item: ContentItem) => void; onWhiteboard: () => void; refresh: number; onChanged: () => void }) {
   const { call, state } = useApp();
+  const t = useT();
   const p = state.session?.principal;
   const canAdd = p?.kind === 'staff' && p.permissions.includes('setup.content');
   const canPresent = p?.kind === 'staff' && p.permissions.includes('lesson.present');
@@ -65,48 +67,48 @@ export function ContentPanel({ onOpen, onWhiteboard, refresh, onChanged }: { onO
     onChanged();
   });
 
-  const tooBig = file ? fileProblem(file) : null;
-  const problem = !form.title.trim() ? 'Type a title.' : !form.classId ? 'Pick a class.' : null;
+  const tooBig = file ? fileProblem(file, t) : null;
+  const problem = !form.title.trim() ? t('Type a title.') : !form.classId ? t('Pick a class.') : null;
   const busy = addFile.busy || addLink.busy;
   const shown = filter ? items.filter((i) => i.classId === filter) : items;
 
   return (
-    <Panel title="Library" actions={canPresent && <Button variant="quiet" onClick={onWhiteboard}><Presentation className="size-4" /> Whiteboard</Button>}>
+    <Panel title={t('Library')} actions={canPresent && <Button variant="quiet" onClick={onWhiteboard}><Presentation className="size-4" /> {t('Whiteboard')}</Button>}>
       {canAdd && (
         <form className="grid gap-3" onSubmit={(e) => e.preventDefault()}>
           <div className="flex flex-wrap items-end gap-3">
-            <Field id="content-title" className="w-72" label="Title" placeholder="Water cycle diagram" maxLength={120} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <Field id="content-title" className="w-72" label={t('Title')} placeholder={t('Water cycle diagram')} maxLength={120} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             <label className="grid gap-1.5">
-              <span className="text-[0.8125rem] font-medium text-muted-foreground">Class</span>
-              <Select aria-label="Library class" value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })}>
-                <option value="">Choose a class</option>
-                {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
+              <span className="text-[0.8125rem] font-medium text-muted-foreground">{t('Class')}</span>
+              <Select aria-label={t('Library class')} value={form.classId} onChange={(e) => setForm({ ...form, classId: e.target.value })}>
+                <option value="">{t('Choose a class')}</option>
+                {classes.map((c) => <option key={c.id} value={c.id}>{t('Class {name}', { name: c.name })}</option>)}
               </Select>
             </label>
-            <SubjectField id="content-subject" placeholder="Science" value={form.subject} onChange={(subject) => setForm({ ...form, subject })} />
-            <Field id="content-chapter" className="w-48" label="Chapter (optional)" placeholder="Water" maxLength={80} value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value })} />
+            <SubjectField id="content-subject" placeholder={t('Science')} value={form.subject} onChange={(subject) => setForm({ ...form, subject })} />
+            <Field id="content-chapter" className="w-48" label={t('Chapter (optional)')} placeholder={t('Water')} maxLength={80} value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value })} />
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <label className="grid gap-1.5" htmlFor="content-file">
-              <span className="text-[0.8125rem] font-medium text-muted-foreground">A file: PDF, picture, video, sound, Word, Excel, PowerPoint or an activity (up to {sizeWords(MAX_FILE_BYTES)})</span>
+              <span className="text-[0.8125rem] font-medium text-muted-foreground">{t('A file: PDF, picture, video, sound, Word, Excel, PowerPoint or an activity (up to {size})', { size: sizeWords(MAX_FILE_BYTES) })}</span>
               <input
                 id="content-file" ref={picker} type="file" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.mp4,.webm,.mp3,.wav,.ogg,.m4a,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.html,.htm"
                 className="h-11 rounded-2xl border border-border bg-card px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-secondary file:px-3 file:py-1"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </label>
-            <Button type="button" disabled={!!problem || !file || !!tooBig || busy} onClick={() => { addLink.clear(); void addFile.run(); }}><Upload className="size-4" /> Add file</Button>
-            <span className="pb-2.5 text-sm text-muted-foreground">or</span>
-            <Field id="content-url" className="w-72" label="A web link" placeholder="https://…" maxLength={500} value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
-            <Button type="button" variant="quiet" disabled={!!problem || !form.url.trim() || busy} onClick={() => { addFile.clear(); void addLink.run(); }}><Link2 className="size-4" /> Add link</Button>
+            <Button type="button" disabled={!!problem || !file || !!tooBig || busy} onClick={() => { addLink.clear(); void addFile.run(); }}><Upload className="size-4" /> {t('Add file')}</Button>
+            <span className="pb-2.5 text-sm text-muted-foreground">{t('or')}</span>
+            <Field id="content-url" className="w-72" label={t('A web link')} placeholder="https://…" maxLength={500} value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
+            <Button type="button" variant="quiet" disabled={!!problem || !form.url.trim() || busy} onClick={() => { addFile.clear(); void addLink.run(); }}><Link2 className="size-4" /> {t('Add link')}</Button>
           </div>
           {progress && (
             <div className="grid gap-1">
               <span className="text-sm text-muted-foreground">
                 {/* A Word, Excel or PowerPoint file is turned into a PDF on the server once it has all arrived. */}
-                {file && isOfficeName(file.name) && progress[0] === progress[1] ? `Turning ${file.name} into a PDF. This can take a minute…` : `Sending ${file?.name}… ${Math.round((progress[0] / progress[1]) * 100)}%`}
+                {file && isOfficeName(file.name) && progress[0] === progress[1] ? t('Turning {name} into a PDF. This can take a minute…', { name: file.name }) : t('Sending {name}… {percent}%', { name: file?.name ?? '', percent: Math.round((progress[0] / progress[1]) * 100) })}
               </span>
-              <div className="h-2 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-label="Sending the file" aria-valuenow={Math.round((progress[0] / progress[1]) * 100)} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-2 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-label={t('Sending the file')} aria-valuenow={Math.round((progress[0] / progress[1]) * 100)} aria-valuemin={0} aria-valuemax={100}>
                 <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(progress[0] / progress[1]) * 100}%` }} />
               </div>
             </div>
@@ -117,14 +119,14 @@ export function ContentPanel({ onOpen, onWhiteboard, refresh, onChanged }: { onO
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Select aria-label="Show library of" value={filter} onChange={(e) => setFilter(e.target.value)}>
-          <option value="">All classes</option>
-          {classes.map((c) => <option key={c.id} value={c.id}>Class {c.name}</option>)}
+        <Select aria-label={t('Show library of')} value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <option value="">{t('All classes')}</option>
+          {classes.map((c) => <option key={c.id} value={c.id}>{t('Class {name}', { name: c.name })}</option>)}
         </Select>
-        <span className="text-sm text-muted-foreground">{shown.length} {shown.length === 1 ? 'item' : 'items'}</span>
+        <span className="text-sm text-muted-foreground">{shown.length === 1 ? t('{n} item', { n: shown.length }) : t('{n} items', { n: shown.length })}</span>
       </div>
       {shown.length === 0 ? (
-        <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">Nothing in the library yet. Students see what you add under My books.</p>
+        <p className="rounded-3xl border border-dashed border-border p-8 text-center text-muted-foreground">{t('Nothing in the library yet. Students see what you add under My books.')}</p>
       ) : (
         <ul className="grid gap-2">
           {shown.map((i) => (
@@ -132,11 +134,11 @@ export function ContentPanel({ onOpen, onWhiteboard, refresh, onChanged }: { onO
               <span className="min-w-56 flex-1">
                 <span className="font-medium">{i.title}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
-                  {[KIND_WORDS[i.kind], `Class ${i.className}`, i.subject, i.chapter, i.size ? sizeWords(i.size) : null, i.needsInternet ? 'needs internet' : null].filter(Boolean).join(' · ')}
+                  {[t(KIND_WORDS[i.kind]), t('Class {name}', { name: i.className }), i.subject, i.chapter, i.size ? sizeWords(i.size) : null, i.needsInternet ? t('needs internet') : null].filter(Boolean).join(' · ')}
                 </span>
               </span>
-              <Button variant="quiet" onClick={() => onOpen(i)}>Open</Button>
-              {canAdd && <ConfirmButton question={`Remove "${i.title}"?`} onConfirm={() => void remove.run(i.id)}>Remove</ConfirmButton>}
+              <Button variant="quiet" onClick={() => onOpen(i)}>{t('Open')}</Button>
+              {canAdd && <ConfirmButton question={t('Remove "{title}"?', { title: i.title })} onConfirm={() => void remove.run(i.id)}>{t('Remove')}</ConfirmButton>}
             </li>
           ))}
         </ul>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { AiJob, AiJobOf, AiStatus } from '@ict/contracts';
 import { useApp } from '../../app/app-context';
 import { useAction } from '../../ui/ui';
+import { useT } from '../../i18n/i18n';
 import { acceptPoll, isOpen, otherKindOpen, pollTrouble } from './ai-jobs';
 
 const POLL_MS = 3000;
@@ -11,6 +12,7 @@ const POLL_MS = 3000;
 export function useAiJob<K extends 'quiz' | 'ask' | 'plan'>(kind: K) {
   type Job = AiJobOf<K>;
   const { call } = useApp();
+  const t = useT();
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [recent, setRecent] = useState<Job[]>([]);
   // Kept as the whole union inside: TypeScript cannot look into Extract<…, K> while K is still open.
@@ -59,7 +61,7 @@ export function useAiJob<K extends 'quiz' | 'ask' | 'plan'>(kind: K) {
     status, recent, job: job as Job | null, follow, load, waiting, busyElsewhere,
     // Nothing may start while a request of any kind is still in progress.
     canStart: !waiting && !busyElsewhere,
-    trouble: waiting ? pollTrouble(failures) : null,
+    trouble: waiting && pollTrouble(failures) ? t('Cannot reach the server. Still trying…') : null,
     usable: !!status && status.enabled && status.installed,
   };
 }

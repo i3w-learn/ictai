@@ -1,6 +1,7 @@
 import { RelayEnvelope } from '@ict/contracts';
 import type { Platform, RelayEvent } from '../platform/platform';
 import { baseUrl, type ServerTarget } from './settings';
+import { tk } from '../i18n/i18n';
 
 export type RelayStatus = 'off' | 'connecting' | 'online' | 'reconnecting';
 
@@ -183,7 +184,7 @@ export class RelayClient {
     // keep the room listed so a later reconnect asks for it again in case access came back.
     if (t === 'error' && room && this.rooms.has(room)) {
       this.latest.delete(room);
-      const message = (p as { message?: string } | undefined)?.message ?? 'You can no longer see this.';
+      const message = (p as { message?: string } | undefined)?.message ?? tk('You can no longer see this.');
       for (const fn of this.errors.get(room) ?? []) fn(message);
     }
   }
