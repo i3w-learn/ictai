@@ -2,7 +2,9 @@
 //! Like HTTPS, it lives here because the web view can't pin the server's self-signed certificate.
 //! Incoming text goes to the web view as `relay://message`; a closed socket as `relay://closed`.
 //! Each socket gets a number, so the web view can ignore events from one it has replaced.
+//! Each window of the app has its own socket: the console, and the board window when it is open.
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -23,8 +25,9 @@ use crate::pinning::{parse_fingerprint, FingerprintVerifier};
 #[derive(Default)]
 pub struct RelayState {
     next_conn: AtomicU64,
+    // One socket for each window, by the window's name.
     // Dropping the sender ends the writer task, which closes the socket.
-    outbox: Mutex<Option<mpsc::UnboundedSender<Message>>>,
+    outbox: Mutex<HashMap<String, mpsc::UnboundedSender<Message>>>,
 }
 
 #[derive(Clone, Serialize)]
@@ -68,15 +71,15 @@ async fn connect(base_url: &str, cert_fp: &str, token: &str) -> Result<Socket, A
     Ok(socket)
 }
 
-/// Opens a socket (closing any earlier one) and returns its number.
-pub async fn open(app: AppHandle, state: &RelayState, base_url: &str, cert_fp: &str, token: &str) -> Result<u64, AppError> {
-    close(state).await;
+/// Opens a socket for the window `window` (closing its earlier one) and returns its number.
+pub async fn open(app: AppHandle, state: &RelayState, window: &str, base_url: &str, cert_fp: &str, token: &str) -> Result<u64, AppError> {
+    close(state, window).await;
     let socket = connect(base_url, cert_fp, token).await?;
 
     let conn = state.next_conn.fetch_add(1, Ordering::Relaxed) + 1;
     let (mut write, mut read) = socket.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
-    *state.outbox.lock().await = Some(tx);
+    state.outbox.lock().await.insert(window.to_string(), tx);
 
     tauri::async_runtime::spawn(async move {
         while let Some(msg) = rx.recv().await {
@@ -87,11 +90,14 @@ pub async fn open(app: AppHandle, state: &RelayState, base_url: &str, cert_fp: &
         let _ = write.close().await;
     });
 
+    // What arrives is addressed to the window that opened the socket. A page that listens to every
+    // event still hears the other window's socket; it tells them apart by the socket's number.
+    let window = window.to_string();
     tauri::async_runtime::spawn(async move {
         let (code, reason) = loop {
             match read.next().await {
                 Some(Ok(Message::Text(text))) => {
-                    let _ = app.emit("relay://message", Incoming { conn, text: text.to_string() });
+                    let _ = app.emit_to(window.as_str(), "relay://message", Incoming { conn, text: text.to_string() });
                 }
                 Some(Ok(Message::Close(frame))) => {
                     break frame.map_or((None, "closed".into()), |f| (Some(u16::from(f.code)), f.reason.to_string()));
@@ -101,20 +107,20 @@ pub async fn open(app: AppHandle, state: &RelayState, base_url: &str, cert_fp: &
                 None => break (None, "closed".into()),
             }
         };
-        let _ = app.emit("relay://closed", Closed { conn, code, reason });
+        let _ = app.emit_to(window.as_str(), "relay://closed", Closed { conn, code, reason });
     });
 
     Ok(conn)
 }
 
-pub async fn send(state: &RelayState, text: String) -> Result<(), AppError> {
+pub async fn send(state: &RelayState, window: &str, text: String) -> Result<(), AppError> {
     let outbox = state.outbox.lock().await;
-    let tx = outbox.as_ref().ok_or_else(|| AppError::Network("Not connected.".into()))?;
+    let tx = outbox.get(window).ok_or_else(|| AppError::Network("Not connected.".into()))?;
     tx.send(Message::text(text)).map_err(|_| AppError::Network("Not connected.".into()))
 }
 
-pub async fn close(state: &RelayState) {
-    state.outbox.lock().await.take();
+pub async fn close(state: &RelayState, window: &str) {
+    state.outbox.lock().await.remove(window);
 }
 
 #[cfg(test)]

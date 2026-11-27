@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use serde_json::Value;
 use tauri::webview::{DownloadEvent, NewWindowResponse, WebviewWindowBuilder};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindow, WindowEvent};
 
 use crate::discovery::Found;
 use crate::error::AppError;
@@ -61,19 +61,66 @@ async fn probe_server(base_url: String) -> Result<ProbeResult, AppError> {
 }
 
 #[tauri::command]
-async fn relay_open(app: AppHandle, state: State<'_, RelayState>, base_url: String, cert_fp: String, token: String) -> Result<u64, AppError> {
-    relay::open(app, &state, &base_url, &cert_fp, &token).await
+async fn relay_open(app: AppHandle, window: WebviewWindow, state: State<'_, RelayState>, base_url: String, cert_fp: String, token: String) -> Result<u64, AppError> {
+    relay::open(app, &state, window.label(), &base_url, &cert_fp, &token).await
 }
 
 #[tauri::command]
-async fn relay_send(state: State<'_, RelayState>, text: String) -> Result<(), AppError> {
-    relay::send(&state, text).await
+async fn relay_send(window: WebviewWindow, state: State<'_, RelayState>, text: String) -> Result<(), AppError> {
+    relay::send(&state, window.label(), text).await
 }
 
 #[tauri::command]
-async fn relay_close(state: State<'_, RelayState>) -> Result<(), AppError> {
-    relay::close(&state).await;
+async fn relay_close(window: WebviewWindow, state: State<'_, RelayState>) -> Result<(), AppError> {
+    relay::close(&state, window.label()).await;
     Ok(())
+}
+
+/// The name of the app's second window: the lesson alone, for a board plugged into this PC.
+const BOARD_WINDOW: &str = "present";
+
+/// Opens the board window, or brings it to the front when it is already open. With a second screen
+/// plugged in (Windows set to "Extend") it fills that screen; with one screen it is an ordinary
+/// window. It loads the same page as the console; the `#present` at the end tells the page which it is.
+#[tauri::command]
+async fn present_open(app: AppHandle) -> Result<(), AppError> {
+    let failed = |e: tauri::Error| AppError::Internal(e.to_string());
+    if let Some(open) = app.get_webview_window(BOARD_WINDOW) {
+        return open.set_focus().map_err(failed);
+    }
+    let window = WebviewWindowBuilder::new(&app, BOARD_WINDOW, WebviewUrl::App("index.html#present".into()))
+        .title("ICT App: board")
+        .inner_size(960.0, 540.0)
+        .on_new_window(|_url, _features| NewWindowResponse::Deny)
+        .on_download(|_webview, _event| false)
+        .build()
+        .map_err(failed)?;
+
+    // The screen the console is not on, if there is one.
+    let here = app.get_webview_window("main").and_then(|w| w.current_monitor().ok().flatten());
+    let other = here.and_then(|here| window.available_monitors().ok()?.into_iter().find(|m| m.position() != here.position()));
+    if let Some(screen) = other {
+        window.set_position(*screen.position()).map_err(failed)?;
+        window.set_fullscreen(true).map_err(failed)?;
+    }
+
+    // Closed, by the teacher or with the app: its socket goes, and the console is told.
+    let handle = app.clone();
+    window.on_window_event(move |event| {
+        if matches!(event, WindowEvent::Destroyed) {
+            let app = handle.clone();
+            tauri::async_runtime::spawn(async move { relay::close(&app.state::<RelayState>(), BOARD_WINDOW).await });
+            let _ = handle.emit("present://closed", ());
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+fn present_close(app: AppHandle) {
+    if let Some(open) = app.get_webview_window(BOARD_WINDOW) {
+        let _ = open.close();
+    }
 }
 
 /// The page says which server and which signed-in person library files are fetched for.
@@ -139,17 +186,25 @@ pub fn run() {
             });
         })
         // The window is made here, not by the config file, so that it can be given these two rules:
-        // the app never opens a second window (a link that tries is refused), and on a student PC
-        // nothing can be downloaded. The Server PC still saves its Excel files.
+        // a link never opens a second window (the only other window is the board window, which the
+        // app opens itself), and on a student PC nothing can be downloaded. The Server PC still
+        // saves its Excel files.
         .setup(|app| {
             let config = app.config().app.windows.first().expect("tauri.conf.json has the main window").clone();
-            WebviewWindowBuilder::from_config(app.handle(), &config)?
+            let main = WebviewWindowBuilder::from_config(app.handle(), &config)?
                 .on_new_window(|_url, _features| NewWindowResponse::Deny)
                 .on_download(|webview, event| match event {
                     DownloadEvent::Requested { .. } => !webview.state::<Lockdown>().0.load(Ordering::Relaxed),
                     _ => true,
                 })
                 .build()?;
+            // Closing the console closes the board window too, so the app does not stay open behind it.
+            let handle = app.handle().clone();
+            main.on_window_event(move |event| {
+                if matches!(event, WindowEvent::Destroyed) {
+                    present_close(handle.clone());
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -160,6 +215,8 @@ pub fn run() {
             relay_open,
             relay_send,
             relay_close,
+            present_open,
+            present_close,
             load_settings,
             save_settings,
             clear_settings,

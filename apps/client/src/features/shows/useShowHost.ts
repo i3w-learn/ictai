@@ -14,7 +14,7 @@ import { tk, useT } from '../../i18n/i18n';
 // remembered and sent as soon as there is a show, and again every few seconds while showing, so the
 // class's screens are put right if a message was lost, and the server keeps saying who is watching.
 export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate) | null>) {
-  const { call, keepAlive, relay } = useApp();
+  const { call, keepAlive, relay, present } = useApp();
   const t = useT();
   const what = useLatest(start);
   const [showing, setShowing] = useState(false);
@@ -129,6 +129,9 @@ export function useShowHost(start: ShowStart, peek?: RefObject<(() => ShowUpdate
     keepAlive({ key: 'POST /api/v1/shows/:id/beat', input: { params: { id: liveId } } }, SHOW_BEAT_MS);
     return () => keepAlive(null);
   }, [keepAlive, liveId]);
+  // The board window, when it is open, shows what the class is shown.
+  useEffect(() => present?.setShow(showing ? live : null), [present, showing, live]);
+  useEffect(() => () => present?.setShow(null), [present]);
   // Leaving the screen ends the show.
   useEffect(() => () => { const id = showId.current; if (id) void call('DELETE /api/v1/shows/:id', { params: { id } }).catch(() => undefined); }, [call]);
 

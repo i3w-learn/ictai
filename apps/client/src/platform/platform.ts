@@ -66,8 +66,27 @@ export interface Platform {
    * download and every new window. Left out where there is no native side.
    */
   lockDown?(on: boolean): Promise<void>;
+  /**
+   * The board window: a second window of the app that shows only the lesson, for a board plugged
+   * into this PC as a second screen. Left out where the app cannot open one.
+   */
+  present?: BoardWindow;
   /** The role chosen in the Windows installer, if any. */
   installRole(): Promise<AppKind | null>;
+}
+
+export interface BoardWindow {
+  /** True when this page is the board window itself, false in the console. */
+  readonly isBoard: boolean;
+  /** Opens the board window, or brings it to the front. On a second screen it fills that screen. */
+  open(): Promise<void>;
+  close(): Promise<void>;
+  /** Says something to the app's other window. Nothing is kept: a window that is not open misses it. */
+  say(message: unknown): Promise<void>;
+  /** Hears what the other window says. */
+  hear(listener: (message: unknown) => void): () => void;
+  /** Called when the board window has gone, however it was closed. */
+  onClosed(listener: () => void): () => void;
 }
 
 export type PlatformErrorKind = 'network' | 'pin-mismatch' | 'bad-input' | 'storage' | 'internal';

@@ -69,6 +69,7 @@ The full list, by who uses it.
 
 **Smart board**
 - Joins the same server. Live lessons on the board come in a later stage.
+- A board that is only a screen on the Server PC's HDMI cable needs no install. Staff press **Open on the board** in the console: a second window fills the board with only the lesson (video, book page or whiteboard) while the controls stay on the Server PC. The teacher can write on it by touch.
 
 ## System architecture
 

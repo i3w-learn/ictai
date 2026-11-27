@@ -248,6 +248,33 @@ Without the AI kit the page says that AI is not installed, and nothing else on t
 
 Check: lines are smooth, land where the pen touches, and show on the student PC.
 
+### Step 8b: Board window (the lesson alone on the board)
+
+With plain HDMI the board copies the whole Server PC screen, buttons and lists included. The board
+window puts only the lesson on the board and keeps the controls on the Server PC.
+
+1. On the Server PC press `Win + P` and choose **Extend**. The board is now a second, separate screen.
+2. One time only, so that touch lands on the board: Start → type `Tablet PC Settings` → **Setup** →
+   follow the words on screen and touch the board when it asks.
+3. Sign in as a teacher. In the top bar press **Open on the board**.
+   Check: the board goes full screen and says "Waiting for the lesson" with the school's name. The
+   Server PC screen still shows the console.
+4. Open a video from the library and press **Show to Class**. Press play.
+   Check: the video plays on the board and on the student PC, in step. Sound comes once, not twice
+   (the board's copy is silent; the console's copy carries the sound).
+5. Pause the video. Write on the board with the board's pen.
+   Check: the line shows on the Server PC and on the student PC.
+6. Press **Stop showing**. Do the same with a book (turn a page on the Server PC) and with the
+   **Whiteboard**.
+   Check: the board follows each page; between lessons it says "Waiting for the lesson" again.
+7. Press **Sign out**.
+   Check: the board window closes by itself.
+8. Sign in again, open the board window, then close the console window with its X.
+   Check: the board window closes too and the app is gone from the taskbar.
+
+If the board window opens on the Server PC's own screen as a small window, Windows is still on
+**Duplicate**: do line 1 again, close the board window and open it again.
+
 ## If something goes wrong
 
 | What you see | What to do |

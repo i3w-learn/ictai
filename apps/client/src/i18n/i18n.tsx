@@ -52,6 +52,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem(KEY, next); } catch { /* the choice then lasts until the app closes */ }
   }, []);
   useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+  // The app's other window (the board window) changes language with this one.
+  useEffect(() => {
+    const changed = (e: StorageEvent) => { if (e.key === KEY) setLangState(saved()); };
+    window.addEventListener('storage', changed);
+    return () => window.removeEventListener('storage', changed);
+  }, []);
   const value = useMemo<Value>(() => ({ lang, setLang, t: (text, vars) => translate(lang, text, vars), locale: localeOf(lang) }), [lang, setLang]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

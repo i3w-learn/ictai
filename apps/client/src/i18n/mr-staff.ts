@@ -535,4 +535,15 @@ export const mrStaff: Record<string, string> = {
   'Cannot reach the school server. Check the network cable or Wi-Fi. If the server PC was reinstalled, click Change server.': 'शाळेच्या सर्व्हरपर्यंत पोहोचता येत नाही. नेटवर्कची केबल किंवा वाय-फाय तपासा. सर्व्हर पीसी पुन्हा इन्स्टॉल केला असेल, तर "सर्व्हर बदला" वर क्लिक करा.',
   'You can no longer see this.': 'हे आता तुम्हाला पाहता येणार नाही.',
   'This file is {size}. The limit is {limit}.': 'ही फाइल {size} आहे. मर्यादा {limit} आहे.',
+  // The board window
+  'Open on the board': 'बोर्डवर उघडा',
+  'Close the board window': 'बोर्डची विंडो बंद करा',
+  'The board window could not be opened.': 'बोर्डची विंडो उघडता आली नाही.',
+  'A second window with only the lesson, for a board plugged into this PC as a second screen.': 'फक्त धडा दाखवणारी दुसरी विंडो. या पीसीला दुसरी स्क्रीन म्हणून जोडलेल्या बोर्डसाठी.',
+  'Waiting for the lesson': 'धड्याची वाट पाहत आहे',
+  'When the teacher shows a video, a book or the whiteboard to a class, it appears here.': 'शिक्षक इयत्तेला व्हिडिओ, पुस्तक किंवा फळा दाखवतात तेव्हा ते इथे दिसते.',
+  'Sign in on the Server PC to use the board.': 'बोर्ड वापरण्यासाठी सर्व्हर पीसीवर साइन इन करा.',
+  'Close this window': 'ही विंडो बंद करा',
+  'On the board: {title}': 'बोर्डवर: {title}',
+  'Paused': 'थांबवले आहे',
 };
