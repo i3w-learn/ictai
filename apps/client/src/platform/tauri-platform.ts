@@ -1,6 +1,6 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
-import { PlatformError, type AppKind, type FoundServer, type Platform, type RawRequest, type RawResponse, type RelayEvent } from './platform';
+import { emit, listen } from '@tauri-apps/api/event';
+import { PlatformError, type AppKind, type BoardWindow, type FoundServer, type Platform, type RawRequest, type RawResponse, type RelayEvent } from './platform';
 
 // Rust commands reject with { kind, message }; turn that into a PlatformError.
 async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -12,8 +12,29 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
   }
 }
 
+// The console and the board window talk over the app's own events. Both windows hear every event,
+// their own too, so each message says which window it is from.
+const TALK = 'present://say';
+const stopAll = (stops: Promise<() => void>[]) => () => stops.forEach((p) => void p.then((stop) => stop()));
+
+function boardWindow(isBoard: boolean): BoardWindow {
+  return {
+    isBoard,
+    open: () => call<void>('present_open'),
+    close: () => call<void>('present_close'),
+    say: (message) => emit(TALK, { fromBoard: isBoard, message }),
+    hear: (listener) => stopAll([listen<{ fromBoard: boolean; message: unknown }>(TALK, (e) => { if (e.payload.fromBoard !== isBoard) listener(e.payload.message); })]),
+    onClosed: (listener) => stopAll([listen('present://closed', () => listener())]),
+  };
+}
+
 export class TauriPlatform implements Platform {
-  constructor(readonly appVersion: string) {}
+  readonly present: BoardWindow;
+
+  // The board window is opened on the same page as the console, with `#present` at the end.
+  constructor(readonly appVersion: string, isBoard = false) {
+    this.present = boardWindow(isBoard);
+  }
 
   discover(app: AppKind) {
     return call<FoundServer[]>('discover_servers', { app, version: this.appVersion });
@@ -60,7 +81,7 @@ export class TauriPlatform implements Platform {
       listen<{ conn: number; text: string }>('relay://message', (e) => listener({ kind: 'message', ...e.payload })),
       listen<{ conn: number; code: number | null; reason: string }>('relay://closed', (e) => listener({ kind: 'closed', ...e.payload })),
     ];
-    return () => stops.forEach((p) => void p.then((stop) => stop()));
+    return stopAll(stops);
   }
 
   setFileSource(source: { baseUrl: string; certFp: string; token: string } | null) {

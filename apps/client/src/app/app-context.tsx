@@ -3,6 +3,7 @@ import { DEVICE_PING_MS, type RouteKey } from '@ict/contracts';
 import { ApiCallError, ApiClient, type CallInput, type CallOutput } from '../core/api-client';
 import { RelayClient, type RelayStatus } from '../core/relay-client';
 import { lockDown } from '../core/lockdown';
+import { PresentLink } from '../features/present/present-link';
 import { ServerLocator } from '../core/server-locator';
 import { Current, SettingsStore, baseUrl, type ServerTarget } from '../core/settings';
 import type { Platform } from '../platform/platform';
@@ -19,6 +20,8 @@ interface AppContextValue {
   platform: Platform;
   locator: ServerLocator | null;
   relay: RelayClient;
+  // The board window, as the console sees it; null where there is none (and in the board window itself).
+  present: PresentLink | null;
   call: <K extends RouteKey>(key: K, input?: CallInput<K>, credential?: Credential) => Promise<CallOutput<K>>;
   // Has the app itself repeat one call as the signed-in person every `everyMs`, also while its
   // window is hidden; null stops it. See `Platform.keepAlive`.
@@ -84,6 +87,14 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
     relay.attach();
     return () => relay.detach();
   }, [relay]);
+  // The board window is told who is signed in; signing out closes it.
+  const present = useMemo(() => (platform.present && !platform.present.isBoard ? new PresentLink(platform.present) : null), [platform]);
+  useEffect(() => {
+    present?.attach();
+    return () => present?.detach();
+  }, [present]);
+  useEffect(() => present?.setSession(state.session), [present, state.session]);
+
   const sessionToken = state.session?.token ?? null;
   const deviceToken = state.settings.device?.token ?? null;
   // A lab PC or board keeps the socket open as itself while nobody is signed in, so a teacher can
@@ -180,8 +191,8 @@ export function AppProvider({ platform, children }: { platform: Platform; childr
   }, [api, stateRef]);
 
   const value = useMemo<AppContextValue>(
-    () => ({ state, phase: phaseOf(state), dispatch, platform, locator, relay, call, keepAlive, signOut, resetDevice }),
-    [state, platform, locator, relay, call, keepAlive, signOut, resetDevice],
+    () => ({ state, phase: phaseOf(state), dispatch, platform, locator, relay, present, call, keepAlive, signOut, resetDevice }),
+    [state, platform, locator, relay, present, call, keepAlive, signOut, resetDevice],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

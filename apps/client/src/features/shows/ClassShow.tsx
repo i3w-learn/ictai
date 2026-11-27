@@ -56,25 +56,37 @@ export function useClassShow(): LiveShow | null {
 // to press here except the sound. What the teacher writes on the video shows here too, and a student
 // she gives the pen to can write on it for the whole class to see. The screen underneath is kept as it was, so a half-written answer
 // is still there when the teacher stops showing.
-export function ClassShow({ live }: { live: LiveShow }) {
+//
+// `onBoard` is the same show in the teacher's board window (see BoardScreen): there it is the teacher
+// who is looking, so she may always write, nobody asks for the pen, the video is silent (her console
+// plays the sound) and nothing is reported to the server's diary of student screens.
+export function ClassShow({ live, onBoard = false }: { live: LiveShow; onBoard?: boolean }) {
   const { show } = live;
-  if (show.kind === 'video') return show.item ? <ClassVideo live={live} item={show.item} /> : null;
+  if (show.kind === 'video') return show.item ? <ClassVideo live={live} item={show.item} onBoard={onBoard} /> : null;
   if (show.kind !== 'whiteboard' && !show.item) return null;
   // A new show starts afresh: nothing left over from the last one (a book that would not open, say).
-  return <ClassPages key={show.id} live={live} />;
+  return <ClassPages key={show.id} live={live} onBoard={onBoard} />;
+}
+
+// Who is looking at the show on this screen: a student at a lab PC, or the teacher at her board.
+// `id` is the name the writing is kept under; with `own`, the rubber takes only that writer's lines.
+function useWatcher(show: Show, onBoard: boolean) {
+  const me = useApp().state.session?.principal;
+  if (onBoard) return { id: 'teacher', name: me?.kind === 'staff' ? me.displayName : '', student: false, hasPen: true, own: undefined };
+  const id = me?.kind === 'student' ? me.studentId : '';
+  return { id, name: me?.kind === 'student' ? me.name : '', student: !!id, hasPen: !!id && show.pen?.studentId === id, own: id };
 }
 
 // A PDF, a picture or a blank whiteboard, on the page the teacher is on, with the writing of that
 // page only. The student with the pen may write on it at any time.
-function ClassPages({ live }: { live: LiveShow }) {
+function ClassPages({ live, onBoard }: { live: LiveShow; onBoard: boolean }) {
   const { show } = live;
-  const { call, state } = useApp();
+  const { call } = useApp();
   const t = useT();
-  const me = state.session?.principal;
-  const myId = me?.kind === 'student' ? me.studentId : '';
-  const board = useInk(show, myId, me?.kind === 'student' ? me.name : '');
+  const who = useWatcher(show, onBoard);
+  const board = useInk(show, who.id, who.name);
   const inkProblem = useInkProblem(board);
-  const hasPen = !!myId && show.pen?.studentId === myId;
+  const { hasPen } = who;
   const [picked, setPicked] = useState<InkTools>({ tool: 'pen', colour: 'blue', width: 'medium' });
   const tools: InkTools = hasPen ? picked : { ...picked, tool: null };
   const [failed, setFailed] = useState(false);
@@ -85,7 +97,7 @@ function ClassPages({ live }: { live: LiveShow }) {
   const said = useRef(new Set<ScreenEvent>());
   const showId = show.id;
   const say = useLatest((event: ScreenEvent) => {
-    if (said.current.has(event)) return;
+    if (onBoard || said.current.has(event)) return;
     said.current.add(event);
     void call('POST /api/v1/shows/:id/screen', { params: { id: showId }, body: { event, position: 0, behind: 0 } }).catch(() => undefined);
   });
@@ -94,34 +106,41 @@ function ClassPages({ live }: { live: LiveShow }) {
   const fail = () => { setFailed(true); say.current('failed'); };
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={t('Your teacher is showing: {title}', { title })}>
+    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={onBoard ? t('On the board: {title}', { title }) : t('Your teacher is showing: {title}', { title })}>
       <div className="flex flex-wrap items-center gap-3 px-5 py-3">
         <MonitorPlay className="size-5 shrink-0 text-white/70" />
         <p className="min-w-48 flex-1 text-lg font-semibold">{title}</p>
         {show.kind !== 'image' && <p className="text-lg font-semibold tabular-nums" role="status">{pageWords(show.page, show.pages, t)}</p>}
-        <p className="text-sm text-white/70">{t('{teacher} is showing this to Class {name}', { teacher: show.byName, name: show.className })}</p>
-        {!failed && hasPen && (
+        <ShownTo show={show} onBoard={onBoard} />
+        {!failed && onBoard && <div className="rounded-full bg-white/15 px-2 py-1"><InkToolbar tools={tools} onTools={setPicked} /></div>}
+        {!failed && !onBoard && hasPen && (
           <div className="flex flex-wrap items-center gap-2 rounded-full bg-primary px-4 py-1 text-sm font-semibold text-primary-foreground" role="status">
             <Pencil className="size-4" />
             <span>{t('You have the pen. Write on the page.')}</span>
             <InkToolbar tools={tools} onTools={setPicked} />
           </div>
         )}
-        {!failed && myId && !hasPen && <PenAsk show={show} />}
+        {!failed && who.student && !hasPen && <PenAsk show={show} />}
         {!failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{t(inkProblem)}</p>}
       </div>
       <div className="relative min-h-0 flex-1">
         {show.kind === 'whiteboard' ? (
-          <ShownBoard board={board} tools={tools} own={myId} onReady={ready} />
+          <ShownBoard board={board} tools={tools} own={who.own} onReady={ready} />
         ) : show.item && (
-          <ShownFile item={show.item} page={show.page} board={board} tools={tools} own={myId} failed={failed} onReady={ready} onFail={fail} />
+          <ShownFile item={show.item} page={show.page} board={board} tools={tools} own={who.own} failed={failed} onReady={ready} onFail={fail} />
         )}
       </div>
     </div>
   );
 }
 
-interface PageProps { board: InkBoard | null; tools: InkTools; own: string; onReady: () => void }
+// Under the title: whose show it is. The board is in the teacher's own room, so there it is only the class.
+function ShownTo({ show, onBoard }: { show: Show; onBoard: boolean }) {
+  const t = useT();
+  return <p className="text-sm text-white/70">{onBoard ? t('Class {name}', { name: show.className }) : t('{teacher} is showing this to Class {name}', { teacher: show.byName, name: show.className })}</p>;
+}
+
+interface PageProps { board: InkBoard | null; tools: InkTools; own: string | undefined; onReady: () => void }
 
 // A blank 16:9 board, as big as fits, with plain bars where the screen has another shape: a line
 // lands in the same place on every screen.
@@ -178,23 +197,23 @@ function ShownFile({ item, page, board, tools, own, failed, onReady, onFail }: P
   );
 }
 
-function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow['show']['item']> }) {
+function ClassVideo({ live, item, onBoard }: { live: LiveShow; item: NonNullable<LiveShow['show']['item']>; onBoard: boolean }) {
   const { show } = live;
-  const { call, state } = useApp();
+  const { call } = useApp();
   const t = useT();
-  const me = state.session?.principal;
-  const myId = me?.kind === 'student' ? me.studentId : '';
-  const board = useInk(show, myId, me?.kind === 'student' ? me.name : '');
+  const who = useWatcher(show, onBoard);
+  const board = useInk(show, who.id, who.name);
   const inkProblem = useInkProblem(board);
   const [aspect, setAspect] = useState<number | null>(null);
-  const hasPen = !!myId && show.pen?.studentId === myId;
+  const { hasPen } = who;
   // With the pen, the pen is in hand at once; it works while the teacher has the video paused.
   const [picked, setPicked] = useState<InkTools>({ tool: 'pen', colour: 'blue', width: 'medium' });
   const tools: InkTools = hasPen && !show.playing ? picked : { ...picked, tool: null };
   const { url, percent, error, onError } = useFileUrl(item);
   const video = useRef<HTMLVideoElement>(null);
   const latest = useLatest(live);
-  const [muted, setMuted] = useState(false);
+  // The board's video is always silent: the console beside it plays the sound, and two would echo.
+  const [muted, setMuted] = useState(onBoard);
   const [failed, setFailed] = useState(false);
   // The video is not arriving (the Server PC is off, or the cable is out). Changing `attempt` starts
   // the video afresh; following the teacher then puts it at the right place again by itself.
@@ -207,6 +226,7 @@ function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow
   // Tells the server how the video is going on this PC, for its diary. Never shown to the student,
   // and a report that does not get through is simply lost: the lesson matters more than the diary.
   const say = (event: ScreenEvent) => {
+    if (onBoard) return;
     // Playing without sound is said once, not each time the screen tries again.
     if (event === 'silent') { if (saidSilent.current) return; saidSilent.current = true; }
     const v = video.current;
@@ -272,31 +292,32 @@ function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow
   const sound = () => { const v = video.current; if (!v) return; v.muted = !v.muted; setMuted(v.muted); };
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={t('Your teacher is showing: {title}', { title: item.title })}>
+    <div className="fixed inset-0 z-40 flex flex-col bg-black text-white" role="dialog" aria-modal="true" aria-label={onBoard ? t('On the board: {title}', { title: item.title }) : t('Your teacher is showing: {title}', { title: item.title })}>
       <div className="flex flex-wrap items-center gap-3 px-5 py-3">
         <MonitorPlay className="size-5 shrink-0 text-white/70" />
         <p className="min-w-48 flex-1 text-lg font-semibold">{item.title}</p>
-        <p className="text-sm text-white/70">{t('{teacher} is showing this to Class {name}', { teacher: show.byName, name: show.className })}</p>
+        <ShownTo show={show} onBoard={onBoard} />
         {/* These sit up here, never on the picture: a lesson often has writing right at its bottom edge. */}
         {url && !failed && waiting && (
           <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{t('Waiting for the Server PC…')}</p>
         )}
-        {url && !failed && hasPen && (
+        {url && !failed && onBoard && !show.playing && <div className="rounded-full bg-white/15 px-2 py-1"><InkToolbar tools={tools} onTools={setPicked} /></div>}
+        {url && !failed && !onBoard && hasPen && (
           <div className="flex flex-wrap items-center gap-2 rounded-full bg-primary px-4 py-1 text-sm font-semibold text-primary-foreground" role="status">
             <Pencil className="size-4" />
             <span>{show.playing ? t('You have the pen. You can write when your teacher pauses the video.') : t('You have the pen. Write on the video.')}</span>
             {!show.playing && <InkToolbar tools={tools} onTools={setPicked} />}
           </div>
         )}
-        {url && !failed && myId && !hasPen && <PenAsk show={show} />}
+        {url && !failed && who.student && !hasPen && <PenAsk show={show} />}
         {url && !failed && inkProblem && <p className="rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="alert">{t(inkProblem)}</p>}
         {url && !failed && !show.playing && (
-          <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="status"><Pause className="size-4 fill-current" strokeWidth={0} /> {t('Paused by your teacher')}</p>
+          <p className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium" role="status"><Pause className="size-4 fill-current" strokeWidth={0} /> {onBoard ? t('Paused') : t('Paused by your teacher')}</p>
         )}
-        {url && !failed && muted && show.playing && (
+        {url && !failed && !onBoard && muted && show.playing && (
           <button type="button" onClick={sound} className="flex cursor-pointer items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-white"><Volume2 className="size-4" /> {t('Turn sound on')}</button>
         )}
-        {url && !failed && (
+        {url && !failed && !onBoard && (
           <button type="button" onClick={sound} aria-label={muted ? t('Turn sound on') : t('Turn sound off')} className="grid size-11 cursor-pointer place-items-center rounded-full hover:bg-white/15 focus-visible:outline-white">
             {muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
           </button>
@@ -309,7 +330,7 @@ function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow
           <p className="absolute inset-0 grid place-items-center text-lg text-white/80" role="status">{t('Opening… {percent}%', { percent })}</p>
         ) : (
           <video
-            key={`${url} ${attempt}`} ref={video} src={url} playsInline preload="auto" disablePictureInPicture
+            key={`${url} ${attempt}`} ref={video} src={url} muted={onBoard} playsInline preload="auto" disablePictureInPicture
             className="absolute inset-0 size-full object-contain" onContextMenu={(e) => e.preventDefault()}
             onLoadedMetadata={(e) => { known.current = true; if (e.currentTarget.videoWidth && e.currentTarget.videoHeight) setAspect(e.currentTarget.videoWidth / e.currentTarget.videoHeight); follow(); say('ready'); }} onCanPlay={follow}
             // Never worked: try the other way of fetching it, or say so. Worked and then broke: the watchdog starts it afresh.
@@ -317,7 +338,7 @@ function ClassVideo({ live, item }: { live: LiveShow; item: NonNullable<LiveShow
           />
         )}
         {url && !failed && !error && <SchoolMark />}
-        {url && !failed && !error && <InkLayer board={board} aspect={aspect} tools={tools} own={myId} />}
+        {url && !failed && !error && <InkLayer board={board} aspect={aspect} tools={tools} own={who.own} />}
       </div>
     </div>
   );

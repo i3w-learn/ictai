@@ -1,4 +1,5 @@
-import { GraduationCap, Lock, LogOut } from 'lucide-react';
+import { useCallback, useSyncExternalStore } from 'react';
+import { GraduationCap, Lock, LogOut, MonitorUp, MonitorX } from 'lucide-react';
 import { deviceRoom, type Principal, type ScreenLockState } from '@ict/contracts';
 import { EnrolDevice } from '../features/setup/EnrolDevice';
 import { FindServer } from '../features/setup/FindServer';
@@ -8,7 +9,7 @@ import { RelayChip } from '../features/quizzes/RelayChip';
 import { StaffSignIn } from '../features/signin/StaffSignIn';
 import { StudentSignIn } from '../features/signin/StudentSignIn';
 import { AuthShell } from '../ui/auth';
-import { Button, ConfirmButton, cn } from '../ui/ui';
+import { Button, ConfirmButton, cn, useAction } from '../ui/ui';
 import { LanguageProvider, LanguageSwitch, tk, useT } from '../i18n/i18n';
 import { useApp, useRelayRoom } from './app-context';
 import type { Phase } from './app-state';
@@ -72,6 +73,26 @@ function LockedScreen({ byTimetable }: { byTimetable: boolean }) {
   );
 }
 
+// Opens and closes the board window: a second window with only the lesson, for a board plugged into
+// this PC as a second screen. For staff who may show things to a class.
+function BoardButton() {
+  const { present, state } = useApp();
+  const t = useT();
+  const watch = useCallback((fn: () => void) => present?.onChange(fn) ?? (() => undefined), [present]);
+  const open = useSyncExternalStore(watch, () => present?.isOpen ?? false);
+  const flip = useAction(async () => { await (open ? present?.close() : present?.open()); });
+  const me = state.session?.principal;
+  if (!present || me?.kind !== 'staff' || !me.permissions.includes('lesson.present')) return null;
+  return (
+    <>
+      {flip.error && <span className="text-sm font-medium text-destructive" role="alert">{t('The board window could not be opened.')}</span>}
+      <Button variant="quiet" disabled={flip.busy} onClick={() => flip.run()} title={t('A second window with only the lesson, for a board plugged into this PC as a second screen.')}>
+        {open ? <MonitorX className="size-4" /> : <MonitorUp className="size-4" />} {open ? t('Close the board window') : t('Open on the board')}
+      </Button>
+    </>
+  );
+}
+
 // The setup and sign-in screens, beside the coloured panel that says what they are for.
 function Welcome({ phase }: { phase: Exclude<Phase, 'home'> }) {
   const t = useT();
@@ -116,6 +137,7 @@ function AppScreens() {
 
         <LanguageSwitch />
         {state.session && <RelayChip />}
+        <BoardButton />
         {/* Both wipe what this PC knows, and it then has to join the lab again, so they ask first. */}
         {server && !state.session && <ConfirmButton question={t('Leave this server? This PC must join the lab again.')} onConfirm={() => dispatch({ type: 'forget-server' })}>{t('Change server')}</ConfirmButton>}
         {role && !state.session && <ConfirmButton question={t("Wipe this PC's setup? It must be set up again.")} onConfirm={() => void resetDevice()}>{t('Reset device')}</ConfirmButton>}
