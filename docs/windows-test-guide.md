@@ -57,7 +57,7 @@ time they signed in. Press **Mark absent**, then **Mark present**: the list chan
    Every heading, button and message is in Marathi, the letters are whole, and no button's words are cut off.
    Sign in as the Super Admin and look at **प्रणाली** too. Names the school typed stay as typed.
 
-The teacher's pages on the Server PC are still in English only; the switch is there but changes little.
+Messages that come from the server itself, such as "Wrong password", are still in English.
 
 ## Step 4b: The student PC is locked down
 
